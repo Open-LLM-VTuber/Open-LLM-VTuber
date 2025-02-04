@@ -179,7 +179,7 @@ class WebSocketHandler:
         if handler:
             await handler(websocket, client_uid, data)
         else:
-            if msg_type != "group-operation-result":
+            if msg_type != "frontend-playback-complete":
                 logger.warning(f"Unknown message type: {msg_type}")
 
     async def _send_error(self, websocket: WebSocket, error_message: str) -> None:
@@ -272,7 +272,7 @@ class WebSocketHandler:
                 success, message = self.chat_group_manager.add_client_to_group(
                     inviter_uid=client_uid, invitee_uid=target_uid
                 )
-                
+
                 if success and target_uid in self.client_connections:
                     try:
                         # Send group update to the newly invited member
@@ -291,7 +291,7 @@ class WebSocketHandler:
                         )
                     except Exception as e:
                         logger.error(f"Failed to update invited member {target_uid}: {e}")
-                    
+
             else:  # remove operation
                 success, message = self.chat_group_manager.remove_client_from_group(
                     remover_uid=client_uid, target_uid=target_uid
