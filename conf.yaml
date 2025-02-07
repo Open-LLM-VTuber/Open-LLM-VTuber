@@ -278,6 +278,20 @@ character_config:
       seed: 0
       api_name: "/generate_audio"
 
+    cosyvoice2_tts: # Cosy Voice TTS connects to the gradio webui
+      # Check their documentation for deployment and the meaning of the following configurations
+      client_url: "http://127.0.0.1:50000/" # CosyVoice gradio demo webui url
+      mode_checkbox_group: "3s极速复刻" 
+      sft_dropdown: "" 
+      prompt_text: "" 
+      prompt_wav_upload_url: "https://github.com/gradio-app/gradio/raw/main/test/test_files/audio_sample.wav" 
+      prompt_wav_record_url: "https://github.com/gradio-app/gradio/raw/main/test/test_files/audio_sample.wav" 
+      instruct_text: "" 
+      stream: False 
+      seed: 0 
+      speed: 1.0 
+      api_name: "/generate_audio" 
+
     melo_tts:
       speaker: "EN-Default" # ZH
       language: "EN" # ZH

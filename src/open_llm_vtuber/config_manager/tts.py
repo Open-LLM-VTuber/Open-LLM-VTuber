@@ -85,7 +85,43 @@ class CosyvoiceTTSConfig(I18nMixin):
         "seed": Description(en="Random seed", zh="随机种子"),
         "api_name": Description(en="API endpoint name", zh="API 端点名称"),
     }
+    
+class Cosyvoice2TTSConfig(I18nMixin):
+    """Configuration for Cosyvoice2 TTS."""
 
+    client_url: str = Field(..., alias="client_url")
+    mode_checkbox_group: str = Field(..., alias="mode_checkbox_group")
+    sft_dropdown: str = Field(..., alias="sft_dropdown")
+    prompt_text: str = Field(..., alias="prompt_text")
+    prompt_wav_upload_url: str = Field(..., alias="prompt_wav_upload_url")
+    prompt_wav_record_url: str = Field(..., alias="prompt_wav_record_url")
+    instruct_text: str = Field(..., alias="instruct_text")
+    stream: bool = Field(..., alias="stream")
+    seed: int = Field(..., alias="seed")
+    speed: float = Field(..., alias="speed")
+    api_name: str = Field(..., alias="api_name")
+
+    DESCRIPTIONS: ClassVar[Dict[str, Description]] = {
+        "client_url": Description(
+            en="URL of the CosyVoice Gradio web UI", zh="CosyVoice Gradio Web UI 的 URL"
+        ),
+        "mode_checkbox_group": Description(
+            en="Mode checkbox group value", zh="模式复选框组值"
+        ),
+        "sft_dropdown": Description(en="SFT dropdown value", zh="SFT 下拉框值"),
+        "prompt_text": Description(en="Prompt text", zh="提示文本"),
+        "prompt_wav_upload_url": Description(
+            en="URL for prompt WAV file upload", zh="提示音频文件上传 URL"
+        ),
+        "prompt_wav_record_url": Description(
+            en="URL for prompt WAV file recording", zh="提示音频文件录制 URL"
+        ),
+        "instruct_text": Description(en="Instruction text", zh="指令文本"),
+        "stream": Description(en="Streaming inference", zh="流式推理"),
+        "seed": Description(en="Random seed", zh="随机种子"),
+        "speed": Description(en="Speech speed multiplier", zh="语速倍数"),
+        "api_name": Description(en="API endpoint name", zh="API 端点名称"),
+    }
 
 class MeloTTSConfig(I18nMixin):
     """Configuration for Melo TTS."""
@@ -271,6 +307,7 @@ class TTSConfig(I18nMixin):
         "bark_tts",
         "edge_tts",
         "cosyvoice_tts",
+        "cosyvoice2_tts",
         "melo_tts",
         "coqui_tts",
         "x_tts",
@@ -283,6 +320,7 @@ class TTSConfig(I18nMixin):
     bark_tts: Optional[BarkTTSConfig] = Field(None, alias="bark_tts")
     edge_tts: Optional[EdgeTTSConfig] = Field(None, alias="edge_tts")
     cosyvoice_tts: Optional[CosyvoiceTTSConfig] = Field(None, alias="cosyvoice_tts")
+    cosyvoice2_tts: Optional[Cosyvoice2TTSConfig] = Field(None, alias="cosyvoice2_tts")
     melo_tts: Optional[MeloTTSConfig] = Field(None, alias="melo_tts")
     coqui_tts: Optional[CoquiTTSConfig] = Field(None, alias="coqui_tts")
     x_tts: Optional[XTTSConfig] = Field(None, alias="x_tts")
@@ -301,6 +339,9 @@ class TTSConfig(I18nMixin):
         "edge_tts": Description(en="Configuration for Edge TTS", zh="Edge TTS 配置"),
         "cosyvoice_tts": Description(
             en="Configuration for Cosyvoice TTS", zh="Cosyvoice TTS 配置"
+        ),
+        "cosyvoice2_tts": Description(
+            en="Configuration for Cosyvoice2 TTS", zh="Cosyvoice2 TTS 配置"
         ),
         "melo_tts": Description(en="Configuration for Melo TTS", zh="Melo TTS 配置"),
         "coqui_tts": Description(en="Configuration for Coqui TTS", zh="Coqui TTS 配置"),
@@ -329,6 +370,8 @@ class TTSConfig(I18nMixin):
             values.edge_tts.model_validate(values.edge_tts.model_dump())
         elif tts_model == "cosyvoice_tts" and values.cosyvoice_tts is not None:
             values.cosyvoice_tts.model_validate(values.cosyvoice_tts.model_dump())
+        elif tts_model == "cosyvoice2_tts" and values.cosyvoice2_tts is not None:
+            values.cosyvoice2_tts.model_validate(values.cosyvoice2_tts.model_dump())
         elif tts_model == "melo_tts" and values.melo_tts is not None:
             values.melo_tts.model_validate(values.melo_tts.model_dump())
         elif tts_model == "coqui_tts" and values.coqui_tts is not None:

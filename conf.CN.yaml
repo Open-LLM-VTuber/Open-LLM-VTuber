@@ -272,6 +272,20 @@ character_config:
       seed: 0 # 种子
       api_name: "/generate_audio" # API 名称
 
+    cosyvoice2_tts: # Cosy Voice TTS 连接到 gradio webui
+      # 查看他们的文档以了解部署和以下配置的含义
+      client_url: "http://127.0.0.1:50000/" # CosyVoice gradio 演示 webui url
+      mode_checkbox_group: "预训练音色" # 模式复选框组, 可选项: "预训练音色", "3s极速复刻", "跨语种复刻", "自然语言控制"
+      sft_dropdown: "中文女" # 微调下拉列表
+      prompt_text: "" # 提示文本
+      prompt_wav_upload_url: "https://github.com/gradio-app/gradio/raw/main/test/test_files/audio_sample.wav" # 提示 wav 上传 url
+      prompt_wav_record_url: "https://github.com/gradio-app/gradio/raw/main/test/test_files/audio_sample.wav" # 提示 wav 录制 url
+      instruct_text: "" # 指令文本
+      stream: False # 流式生成
+      seed: 0 # 种子
+      speed: 1.0 # 语速
+      api_name: "/generate_audio" # API 名称
+
     melo_tts:
       speaker: "EN-Default" # ZH
       language: "EN" # ZH

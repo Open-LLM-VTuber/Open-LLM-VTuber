@@ -41,6 +41,22 @@ class TTSFactory:
                 seed=kwargs.get("seed"),
                 api_name=kwargs.get("api_name"),
             )
+        elif engine_type == "cosyvoice2_tts":
+            from .cosyvoice2_tts import TTSEngine as Cosyvoice2TTSEngine
+            
+            return Cosyvoice2TTSEngine(
+                client_url=kwargs.get("client_url"),
+                mode_checkbox_group=kwargs.get("mode_checkbox_group"),
+                sft_dropdown=kwargs.get("sft_dropdown"),
+                prompt_text=kwargs.get("prompt_text"),
+                prompt_wav_upload_url=kwargs.get("prompt_wav_upload_url"),
+                prompt_wav_record_url=kwargs.get("prompt_wav_record_url"),
+                instruct_text=kwargs.get("instruct_text"),
+                stream=kwargs.get("stream"),
+                seed=kwargs.get("seed"),
+                speed=kwargs.get("speed"),
+                api_name=kwargs.get("api_name"),
+            )
         elif engine_type == "melo_tts":
             from .melo_tts import TTSEngine as MeloTTSEngine
 
