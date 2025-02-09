@@ -94,6 +94,7 @@ def create_routes(default_context_cache: ServiceContext):
                             )
                             if msg["role"] != "system"
                         ]
+                        print(f"\033[33m messages: \n {messages} \033[0m")
                         await websocket.send_text(
                             json.dumps({"type": "history-data", "messages": messages})
                         )
@@ -106,6 +107,7 @@ def create_routes(default_context_cache: ServiceContext):
                         conf_uid=session_service_context.character_config.conf_uid,
                         history_uid=current_history_uid,
                     )
+                    print("\033[31m create-new-history \033[0m")
                     await websocket.send_text(
                         json.dumps(
                             {
@@ -257,6 +259,7 @@ def create_routes(default_context_cache: ServiceContext):
                         json.dumps({"type": "background-files", "files": bg_files})
                     )
                 else:
+                    print(f"\033[32m {data.get('type')} \033[0m")
                     logger.info("Unknown data type received.")
 
         except WebSocketDisconnect:
