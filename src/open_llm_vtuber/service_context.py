@@ -42,7 +42,8 @@ class ServiceContext:
         self.asr_engine: ASRInterface = None
         self.tts_engine: TTSInterface = None
         self.agent_engine: AgentInterface = None
-        self.translate_engine: TranslateInterface = None
+        # translate_engine can be none if translation is disabled
+        self.translate_engine: TranslateInterface | None = None
 
         # the system prompt is a combination of the persona prompt and live2d expression prompt
         self.system_prompt: str = None
@@ -73,7 +74,7 @@ class ServiceContext:
         asr_engine: ASRInterface,
         tts_engine: TTSInterface,
         agent_engine: AgentInterface,
-        translate_engine: TranslateInterface,
+        translate_engine: TranslateInterface | None,
     ) -> None:
         """
         Load the ServiceContext with the reference of the provided instances.
@@ -237,20 +238,25 @@ class ServiceContext:
 
     def construct_system_prompt(self, persona_prompt: str) -> str:
         """
-        Append live2d expression prompt to persona prompt.
+        Append tool prompts to persona prompt.
 
         Parameters:
         - persona_prompt (str): The persona prompt.
 
         Returns:
-        - str: The system prompt.
+        - str: The system prompt with all tool prompts appended.
         """
         logger.debug(f"constructing persona_prompt: '''{persona_prompt}'''")
 
-        # append live2d expression prompt to persona prompt
-        persona_prompt += prompt_loader.load_util(
-            self.system_config.live2d_expression_prompt
-        ).replace("[<insert_emomap_keys>]", self.live2d_model.emo_str)
+        for prompt_name, prompt_file in self.system_config.tool_prompts.items():
+            prompt_content = prompt_loader.load_util(prompt_file)
+
+            if prompt_name == "live2d_expression_prompt":
+                prompt_content = prompt_content.replace(
+                    "[<insert_emomap_keys>]", self.live2d_model.emo_str
+                )
+
+            persona_prompt += prompt_content
 
         logger.debug("\n === System Prompt ===")
         logger.debug(persona_prompt)

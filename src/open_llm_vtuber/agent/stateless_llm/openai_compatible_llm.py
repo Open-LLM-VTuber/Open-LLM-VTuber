@@ -101,7 +101,9 @@ class AsyncLLM(StatelessLLMInterface):
             yield "Error calling the chat endpoint: Connection error. Failed to connect to the LLM API. Check the configurations and the reachability of the LLM backend. See the logs for details. Troubleshooting with documentation: [https://open-llm-vtuber.github.io/docs/quick-start/#%E5%B8%B8%E8%A7%81%E9%97%AE%E9%A2%98%E6%8E%92%E6%9F%A5]"
 
         except RateLimitError as e:
-            logger.error(f"Error calling the chat endpoint: Rate limit exceeded: {e.response}")
+            logger.error(
+                f"Error calling the chat endpoint: Rate limit exceeded: {e.response}"
+            )
             yield "Error calling the chat endpoint: Rate limit exceeded. Please try again later. See the logs for details."
 
         except APIError as e:

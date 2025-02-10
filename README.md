@@ -40,7 +40,7 @@ English README | [中文README](https://github.com/t41372/Open-LLM-VTuber/blob/m
 ## ⭐️ What is this project?
 
 
-**Open-LLM-VTuber** is a unique **voice-interactive AI companion** that not only supports **real-time voice conversations** but also features a lively **Live2D avatar**. All functionalities can run completely offline on your computer!
+**Open-LLM-VTuber** is a unique **voice-interactive AI companion** that not only supports **real-time voice conversations**  and **visual perception** but also features a lively **Live2D avatar**. All functionalities can run completely offline on your computer!
 
 You can treat it as your personal AI companion — whether you want a `virtual girlfriend`, `boyfriend`, `cute pet`, or any other character, it can meet your expectations. The project fully supports `Windows`, `macOS`, and `Linux`, and offers two usage modes: web version and desktop client (with special support for **transparent background desktop pet mode**, allowing the AI companion to accompany you anywhere on your screen).
 
@@ -68,10 +68,12 @@ This project underwent code refactoring after version `v1.0.0` and is currently 
 - 💻 **Attractive and powerful web and desktop clients**: Offers both web version and desktop client usage modes, supporting rich interactive features and personalization settings. The desktop client can switch freely between window mode and desktop pet mode, allowing the AI companion to be by your side at all times.
 
 - 🎯 **Advanced interaction features**:
+  - 👁️ Visual perception, supporting camera, screen recording and screenshots, allowing your AI companion to see you and your screen
   - 🎤 Voice interruption without headphones (AI won't hear its own voice)
   - 🫱 Touch feedback, interact with your AI companion through clicks or drags
   - 😊 Live2D expressions, set emotion mapping to control model expressions from the backend
   - 🐱 Pet mode, supporting transparent background, global top-most, and mouse click-through - drag your AI companion anywhere on the screen
+  - 💭 Display AI's inner thoughts, allowing you to see AI's expressions, thoughts and actions without them being spoken
   - 🗣️ AI proactive speaking feature
   - 💾 Chat log persistence, switch to previous conversations anytime
   - 🌍 TTS translation support (e.g., chat in Chinese while AI uses Japanese voice)

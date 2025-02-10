@@ -1,13 +1,18 @@
 # System Settings: Setting related to the initialization of the server
 system_config:
-  conf_version: "v1.0.0-alpha.1"
+  conf_version: "v1.0.3"
   host: "localhost" # use 0.0.0.0 if you want other devices to access this page
   port: 12393
   # New setting for alternative configurations
   config_alts_dir: "characters"
-  # This will be appended to the end of system prompt to let LLM include keywords to control facial expressions.
-  # Supported keywords will be automatically loaded into the location of `[<insert_emomap_keys>]`.
-  live2d_expression_prompt: "live2d_expression_prompt"
+  # Tool prompts that will be appended to the persona prompt
+  tool_prompts:
+    # This will be appended to the end of system prompt to let LLM include keywords to control facial expressions.
+    # Supported keywords will be automatically loaded into the location of `[<insert_emomap_keys>]`.
+    live2d_expression_prompt: "live2d_expression_prompt"
+    # Enable this to let LLMs without chain-of-thought capability show inner thoughts, mental activities and actions (in parentheses format) without voice synthesis. See think_tag_prompt for more details.
+    think_tag_prompt: "think_tag_prompt"
+
 
 # configuration for the default character
 character_config:
@@ -211,7 +216,7 @@ character_config:
       # --- For model_type: "sense_voice" ---
       # I've coded so that the sense voice model will get automatically downloaded.
       # For other models, you need to download them yourself
-      sense_voice: "./models/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17/model.onnx" # Path to the SenseVoice model (e.g., "path/to/model.onnx")
+      sense_voice: "./models/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17/model.int8.onnx" # Path to the SenseVoice model (e.g., "path/to/model.onnx")
       tokens: "./models/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17/tokens.txt" # Path to tokens.txt (required for all model types)
       # --- Optional parameters (with defaults shown) ---
       # hotwords_file: ""     # Path to hotwords file (if using hotwords)
@@ -343,12 +348,23 @@ character_config:
     ignore_brackets: True # ignore everything inside brackets
     ignore_parentheses: True # ignore everything inside parentheses
     ignore_asterisks: True # ignore everything wrapped inside asterisks
+    ignore_angle_brackets: True # ignore everything wrapped inside <text>
 
     translator_config:
       # Like... you speak and read the subtitles in English, and the TTS speaks Japanese or that kind of things
       translate_audio: False # Warning: you need to deploy DeeplX to use this. Otherwise it's going to crash
-      translate_provider: "deeplx"
+      translate_provider: "deeplx" # deeplx or tencent
 
       deeplx:
         deeplx_target_lang: "JA"
         deeplx_api_endpoint: "http://localhost:1188/v2/translate"
+      
+      #  Tencent Text Translation  5 million characters per month  Remember to turn off post-payment, need to manually go to Machine Translation Console > System Settings to disable
+      #   https://cloud.tencent.com/document/product/551/35017
+      #   https://console.cloud.tencent.com/cam/capi
+      tencent:
+        secret_id: ""
+        secret_key: ""
+        region: "ap-guangzhou"
+        source_lang: "zh"
+        target_lang: "ja"

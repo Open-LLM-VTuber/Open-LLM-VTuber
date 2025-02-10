@@ -218,7 +218,7 @@ def create_routes(default_context_cache: ServiceContext):
 
                     # Get images if present
                     images = data.get("images")
-                    
+
                     logger.debug(f"data: {data}")
 
                     # Initiate conversation chain task asynchronously
@@ -232,6 +232,7 @@ def create_routes(default_context_cache: ServiceContext):
                             agent_engine=session_service_context.agent_engine,
                             live2d_model=session_service_context.live2d_model,
                             websocket_send=websocket.send_text,
+                            translate_engine=session_service_context.translate_engine,
                             conf_uid=session_service_context.character_config.conf_uid,
                             history_uid=current_history_uid,
                             images=images,

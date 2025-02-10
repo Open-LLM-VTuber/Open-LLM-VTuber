@@ -27,16 +27,23 @@ class BaseOutput(ABC):
 
 @dataclass
 class SentenceOutput(BaseOutput):
-    """Output type for text-based responses"""
+    """
+    Output type for text-based responses.
+    Contains a single sentence pair (display and TTS) with associated actions.
 
-    display_sentences: List[str]  # Text for display
-    tts_sentences: List[str]  # Text for TTS
+    Attributes:
+        display_text: Text to be displayed in UI
+        tts_text: Text to be sent to TTS engine
+        actions: Associated actions (expressions, pictures, sounds)
+    """
+
+    display_text: str  # Text for display
+    tts_text: str  # Text for TTS
     actions: Actions
 
     async def __aiter__(self):
-        """Iterate through sentences and their actions"""
-        for display, tts in zip(self.display_sentences, self.tts_sentences):
-            yield display, tts, self.actions
+        """Yield the sentence pair and actions"""
+        yield self.display_text, self.tts_text, self.actions
 
 
 @dataclass

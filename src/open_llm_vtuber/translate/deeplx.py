@@ -21,7 +21,7 @@ class DeepLXTranslate(TranslateInterface):
             res = json.loads(req)["translations"]
             res = " ".join([d["text"] for d in res])
         except Exception as e:
-            logger.critical(f"Error translating text: {e}")
+            logger.critical(f"Error translating text '{text}'. Error message: {e}")
             logger.critical(f"Response: {req}")
             raise e
 

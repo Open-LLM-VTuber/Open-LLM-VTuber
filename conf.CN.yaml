@@ -5,11 +5,14 @@
 # ===========================
 # 系统设置：与服务器初始化相关的设置
 system_config:
-  conf_version: "v1.0.0-alpha.1" # 配置文件版本
-  host: "0.0.0.0" # 服务器监听的地址，"0.0.0.0" 表示监听所有网络接口；如果需要安全，可以使用 "127.0.0.1"（仅本地访问）
+  conf_version: "v1.0.3" # 配置文件版本
+  host: "localhost" # 服务器监听的地址，"0.0.0.0" 表示监听所有网络接口；如果需要安全，可以使用 "127.0.0.1"（仅本地访问）
   port: 12393 # 服务器监听的端口
   config_alts_dir: "characters" # 用于存放替代配置的目录
-  live2d_expression_prompt: "live2d_expression_prompt" # 将追加到系统提示末尾，让 LLM（大型语言模型）包含控制面部表情的关键字。支持的关键字将自动加载到 `[<insert_emomap_keys>]` 的位置。
+  tool_prompts: # 要插入到角色提示词中的工具提示词
+    live2d_expression_prompt: "live2d_expression_prompt" # 将追加到系统提示末尾，让 LLM（大型语言模型）包含控制面部表情的关键字。支持的关键字将自动加载到 `[<insert_emomap_keys>]` 的位置。
+    # 启用此选项可让不具备思维链的LLM也能展示内心想法、心理活动和动作（以括号形式呈现），但不会进行语音合成。更多详情请参考 think_tag_prompt。
+    think_tag_prompt: "think_tag_prompt"
 
 # 默认角色的配置
 character_config:
@@ -284,9 +287,9 @@ character_config:
       # 将参考音频放到 GPT-Sovits 的根路径，或在此处设置路径
       api_url: "http://127.0.0.1:9880/tts" # API URL
       text_lang: "zh" # 文本语言
-      ref_audio_path: "" # 参考音频路径
-      prompt_lang: "zh" # 提示语言
-      prompt_text: "" # 提示文本
+      ref_audio_path: "" # str.(必需) 参考音频的路径
+      prompt_lang: "zh" # str.(必需) 参考音频提示文本的语言
+      prompt_text: "" # str.(可选) 参考音频的提示文本
       text_split_method: "cut5" # 文本分割方法
       batch_size: "1" # 批处理大小
       media_type: "wav" # 媒体类型
@@ -338,13 +341,24 @@ character_config:
     remove_special_char: True # 从音频生成中删除表情符号等特殊字符
     ignore_brackets: True # 从音频生成中删除中括号包住的内容
     ignore_parentheses: True # 从音频生成中删除括号包住的内容
-    ignore_asterisks: True # 从音频生成中删除星号包住的内容
+    ignore_asterisks: True # 从音频生成中删除星号包住的内容(单双星号)
 
     translator_config:
       # 比如...你说话并阅读英语字幕，而 TTS 说日语之类的
-      translate_audio: False # 警告：您需要部署 DeeplX 才能使用此功能。否则它会崩溃
-      translate_provider: "deeplx" # 翻译提供商
+      translate_audio: False # 警告：请确保翻译引擎配置成功再开启此选项，否则会翻译失败
+      translate_provider: "deeplx" # 翻译提供商, 目前支持 deeplx 或 tencent
 
       deeplx:
         deeplx_target_lang: "JA" # 目标语言
         deeplx_api_endpoint: "http://localhost:1188/v2/translate" # API 端点
+
+
+      #  腾讯文本翻译  每月500万字符  记得关闭后付费,需要手动前往 机器翻译控制台 > 系统设置 关闭
+      #   https://cloud.tencent.com/document/product/551/35017
+      #   https://console.cloud.tencent.com/cam/capi
+      tencent:
+        secret_id: ""
+        secret_key: ""
+        region: "ap-guangzhou"
+        source_lang: "zh"
+        target_lang: "ja"

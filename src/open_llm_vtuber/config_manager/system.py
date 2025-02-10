@@ -11,7 +11,7 @@ class SystemConfig(I18nMixin):
     host: str = Field(..., alias="host")
     port: int = Field(..., alias="port")
     config_alts_dir: str = Field(..., alias="config_alts_dir")
-    live2d_expression_prompt: str = Field(..., alias="live2d_expression_prompt")
+    tool_prompts: Dict[str, str] = Field(..., alias="tool_prompts")
 
     DESCRIPTIONS: ClassVar[Dict[str, Description]] = {
         "conf_version": Description(en="Configuration version", zh="配置文件版本"),
@@ -20,8 +20,9 @@ class SystemConfig(I18nMixin):
         "config_alts_dir": Description(
             en="Directory for alternative configurations", zh="备用配置目录"
         ),
-        "live2d_expression_prompt": Description(
-            en="Prompt for Live2D expressions", zh="Live2D 表情提示词"
+        "tool_prompts": Description(
+            en="Tool prompts to be inserted into persona prompt",
+            zh="要插入到角色提示词中的工具提示词",
         ),
     }
 

@@ -24,25 +24,34 @@ def _get_volume_by_chunks(audio: AudioSegment, chunk_length_ms: int) -> list:
 
 
 def prepare_audio_payload(
-    audio_path: str,
+    audio_path: str | None,
     chunk_length_ms: int = 20,
     display_text: str = None,
     actions: Actions = None,
 ) -> dict[str, any]:
     """
     Prepares the audio payload for sending to a broadcast endpoint.
+    If audio_path is None, returns a payload with audio=None for silent display.
 
     Parameters:
-        audio_path (str): The path to the audio file to be processed.
-        chunk_length_ms (int): The length of each audio chunk in milliseconds.
-        display_text (str, optional): Text to be displayed with the audio.
-        actions (Actions, optional): Actions associated with the audio.
+        audio_path (str | None): The path to the audio file to be processed, or None for silent display
+        chunk_length_ms (int): The length of each audio chunk in milliseconds
+        display_text (str, optional): Text to be displayed with the audio
+        actions (Actions, optional): Actions associated with the audio
 
     Returns:
-        dict: The audio payload to be sent.
+        dict: The audio payload to be sent
     """
     if not audio_path:
-        raise ValueError("audio_path cannot be None or empty.")
+        # Return payload for silent display
+        return {
+            "type": "audio",
+            "audio": None,
+            "volumes": [],
+            "slice_length": chunk_length_ms,
+            "text": display_text,
+            "actions": actions.to_dict() if actions else None,
+        }
 
     try:
         audio = AudioSegment.from_file(audio_path)
