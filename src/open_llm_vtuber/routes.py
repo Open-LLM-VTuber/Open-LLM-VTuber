@@ -62,6 +62,7 @@ def create_routes(default_context_cache: ServiceContext):
         await websocket.send_text(json.dumps({"type": "control", "text": "start-mic"}))
 
         current_conversation_task: asyncio.Task | None = None
+        vad = None
 
         try:
             while True:
@@ -189,6 +190,43 @@ def create_routes(default_context_cache: ServiceContext):
                         received_data_buffer,
                         np.array(data.get("audio"), dtype=np.float32),
                     )
+
+                elif data.get("type") == "unity-audio-data":
+                    if data.get("action") == "start":
+                        from .vad.silero import SileroVAD, SileroVADConfig
+                        if vad is None:
+                            vad = SileroVAD(
+                                config=SileroVADConfig()
+                            )
+                        logger.info("Loaded SileroVAD")
+                        await websocket.send_text(
+                            json.dumps({"type": "control", "text": "allow-unity-audio"})
+                        )
+                        
+                    elif data.get("action") == "end":
+                        del vad; vad = None
+                        logger.info("Removed SileroVAD")
+                        await websocket.send_text(
+                            json.dumps({"type": "control", "text": "reject-unity-audio"})
+                        )
+                    else:
+                        chunk : list[float] = data.get("audio")
+                        for audio_bytes in vad.detect_speech(chunk):
+                            if audio_bytes == b"<|PAUSE|>":
+                                await websocket.send_text(
+                                    json.dumps({"type": "control", "text": "interrupt"})
+                                )
+                            elif audio_bytes == b"<|RESUME|>":
+                                pass
+                            elif len(audio_bytes) > 1024:
+                                # Detected audio activity (voice)
+                                received_data_buffer = np.append(
+                                    received_data_buffer,
+                                    np.frombuffer(audio_bytes, dtype=np.int16).astype(np.float32),
+                                )
+                                await websocket.send_text(
+                                    json.dumps({"type": "control", "text": "mic-audio-end"})
+                                )
 
                 elif data.get("type") in [
                     "mic-audio-end",
