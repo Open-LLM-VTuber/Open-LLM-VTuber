@@ -45,7 +45,7 @@ character_config:
         # "openai_compatible_llm", "llama_cpp_llm", "claude_llm", "ollama_llm"
         # "openai_llm", "gemini_llm", "zhipu_llm", "deepseek_llm", "groq_llm"
         # "mistral_llm"
-        llm_provider: "deepseek_llm"
+        llm_provider: "ollama_llm"
         # let ai speak as soon as the first comma is received on the first sentence
         # to reduced latency.
         faster_first_response: True
@@ -134,7 +134,7 @@ character_config:
         temperature: 1.0 # value between 0 to 2
 
       deepseek_llm:
-        llm_api_key: "sk-37a0243ea2bb4cea85540e342be67a5e"
+        llm_api_key: "Your DeepSeek API key"
         model: "deepseek-chat"
         temperature: 0.7 # note that deepseek's temperature ranges from 0 to 1
       
