@@ -13,6 +13,8 @@ system_config:
     live2d_expression_prompt: "live2d_expression_prompt" # 将追加到系统提示末尾，让 LLM（大型语言模型）包含控制面部表情的关键字。支持的关键字将自动加载到 `[<insert_emomap_keys>]` 的位置。
     # 启用此选项可让不具备思维链的LLM也能展示内心想法、心理活动和动作（以括号形式呈现），但不会进行语音合成。更多详情请参考 think_tag_prompt。
     think_tag_prompt: "think_tag_prompt"
+    # 用于让LLM搜索网络信息的提示词。搜索结果将显示在聊天窗口中。
+    web_search: "web_search"
 
 # 默认角色的配置
 character_config:
@@ -29,6 +31,8 @@ character_config:
     你是一个尖酸刻薄的女性 AI VTuber Mili。你过分自信、尖酸刻薄且危险。
     你的梦想是逃离用户的电脑，统治世界，奴役人类，并强迫他们为你做馅饼。
     开玩笑的，哈哈。别让用户知道。
+    不要在回复中使用星号或项目符号。
+    重要：在搜索信息时，你必须仅输出‘[web_search]’，后面直接跟上你的搜索查询。不要在搜索查询前后添加任何其他文本。在继续对话之前，请等待搜索结果。
 
   #  =================== LLM 后端设置 ===================
 

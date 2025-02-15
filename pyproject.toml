@@ -8,6 +8,7 @@ dependencies = [
     "anthropic>=0.40.0",
     "azure-cognitiveservices-speech>=1.41.1",
     "chardet>=5.2.0",
+    "duckduckgo-search>=4.1.1",
     "edge-tts>=7.0.0",
     "fastapi>=0.115.6",
     "faster-whisper>=1.1.0",

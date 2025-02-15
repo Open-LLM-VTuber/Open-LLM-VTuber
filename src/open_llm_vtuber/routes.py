@@ -4,6 +4,7 @@ import numpy as np
 from fastapi import APIRouter, WebSocket
 from starlette.websockets import WebSocketDisconnect
 from loguru import logger
+from typing import Callable
 from .conversation import conversation_chain
 from .service_context import ServiceContext
 from .config_manager.utils import (
@@ -20,7 +21,7 @@ from .chat_history_manager import (
 )
 
 
-def create_routes(default_context_cache: ServiceContext):
+def create_routes(default_context_cache: ServiceContext, command_handler: Callable = None):
     router = APIRouter()
     connected_clients = []
 
@@ -57,6 +58,8 @@ def create_routes(default_context_cache: ServiceContext):
                 }
             )
         )
+        # Variable to hold the current history UID for conversation management.
+        current_history_uid = None
         received_data_buffer = np.array([])
         # start mic
         await websocket.send_text(json.dumps({"type": "control", "text": "start-mic"}))
@@ -67,6 +70,19 @@ def create_routes(default_context_cache: ServiceContext):
             while True:
                 message = await websocket.receive_text()
                 data = json.loads(message)
+
+                # Handle web search command if present.
+                if command_handler and data.get("type") == "web_search":
+                    query = data.get("query", "")
+                    logger.info("Web search command received with query: '{}'", query)
+                    result = command_handler("web_search " + query)
+                    logger.info("Web search result: {}", result)
+                    await websocket.send_text(json.dumps({
+                        "type": "web_search_result",
+                        "result": result
+                    }))
+                    # Skip further processing for this message.
+                    continue
 
                 # ==== chat history related ====
 
@@ -234,6 +250,7 @@ def create_routes(default_context_cache: ServiceContext):
                             conf_uid=session_service_context.character_config.conf_uid,
                             history_uid=current_history_uid,
                             images=images,
+                            command_handler=command_handler  # pass in the command_handler!
                         )
                     )
 

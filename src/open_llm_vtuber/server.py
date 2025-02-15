@@ -19,7 +19,8 @@ class CustomStaticFiles(StaticFiles):
 
 
 class WebSocketServer:
-    def __init__(self, config: Config):
+    def __init__(self, config: Config, command_handler=None):
+        self.command_handler = command_handler
         self.app = FastAPI()
 
         # Add CORS
@@ -35,9 +36,9 @@ class WebSocketServer:
         default_context_cache = ServiceContext()
         default_context_cache.load_from_config(config)
 
-        # Include routes
+        # Include routes and pass the command handler to the router
         self.app.include_router(
-            create_routes(default_context_cache=default_context_cache)
+            create_routes(default_context_cache=default_context_cache, command_handler=self.command_handler)
         )
 
         # Mount static files
