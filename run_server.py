@@ -8,10 +8,26 @@ import uvicorn
 from loguru import logger
 from src.open_llm_vtuber.server import WebSocketServer
 from src.open_llm_vtuber.config_manager import Config, read_yaml, validate_config
+from tools.web_search import search_web
 
 os.environ["HF_HOME"] = str(Path(__file__).parent / "models")
 os.environ["MODELSCOPE_CACHE"] = str(Path(__file__).parent / "models")
 
+def handle_command(command: str):
+    """
+    Process incoming commands. If the command indicates a web search,
+    extract the query and respond with search results.
+    """
+    if command.startswith("web_search"):
+        # Extract query after the keyword "web_search":
+        query = command[len("web_search"):].strip()
+        results = search_web(query)
+        logger.info(f"Web search results: {results}")
+        # Example: print search results to the output (or send to the client)
+        print("Web Search Results:", results)
+        return results
+    # Process other commands...
+    return None
 
 def get_version() -> str:
     with open("pyproject.toml", "rb") as f:
@@ -63,7 +79,8 @@ def run(console_log_level: str):
     # config["LIVE2D"] = True  # make sure the live2d is enabled
 
     # Initialize and run the WebSocket server
-    server = WebSocketServer(config=config)
+    # Pass handle_command to WebSocketServer (we'll use it in message processing)
+    server = WebSocketServer(config=config, command_handler=handle_command)
     uvicorn.run(
         app=server.app,
         host=server_config.host,

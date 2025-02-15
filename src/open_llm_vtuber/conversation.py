@@ -118,6 +118,7 @@ async def conversation_chain(
     conf_uid: str = "",
     history_uid: str = "",
     images: List[Dict[str, Any]] = None,
+    command_handler=None,
 ) -> str:
     """
     One iteration of the main conversation chain.
@@ -132,6 +133,7 @@ async def conversation_chain(
         conf_uid: Configuration ID
         history_uid: History ID
         images: Optional list of image data from frontend
+        command_handler: Optional command handler function
 
     Returns:
         str: Complete response from the agent
@@ -229,6 +231,85 @@ async def conversation_chain(
     finally:
         logger.debug(f"🧹 Clearing up conversation {session_emoji}.")
         tts_manager.clear()
+
+        # Check if the AI response is a web search command
+        if "[web_search]" in full_response.strip().lower():
+            if command_handler:
+                # search_result = command_handler(full_response)
+                # logger.info("Web search result via conversation chain: {}", search_result)
+                # Extract the query and convert to the format expected by command_handler
+                search_query = full_response.split("[web_search]")[1].strip()
+                modified_response = f"web_search {search_query}"
+                search_result = command_handler(modified_response)
+                
+                results = search_result.get("results", [])
+
+                if results:
+                    # Create a summary prompt with all results
+                    search_summary = "Here are the search results:\n\n"
+                    for i, result in enumerate(results, 1):
+                        search_summary += f"{i}. {result.get('title', 'No title')}\n"
+                        search_summary += f"   {result.get('body', 'No details available.')}\n\n"
+                    
+                    # Create a new prompt for the AI to summarize
+                    summary_prompt = (
+                        "Based on these search results, please provide a natural, conversational "
+                        "summary of the most important and recent news. Focus on the key facts and "
+                        "latest developments. Here are the search results:\n\n" + search_summary + "\n\n"
+                        "Please synthesize this information into a clear, engaging summary that a person "
+                        "would find interesting and informative. Start with the most recent or significant news."
+                    )
+                    
+                    # Get AI to summarize the results
+                    try:
+                        # Create a batch input for the summary
+                        summary_batch_input = BatchInput(
+                            texts=[TextData(source=TextSource.INPUT, content=summary_prompt)]
+                        )
+
+                        # Get the summary using chat
+                        summary_response = ""
+                        async for output in agent_engine.chat(summary_batch_input):
+                            if isinstance(output, SentenceOutput):
+                                async for display_text, tts_text, actions in output:
+                                    summary_response += display_text  # Accumulate the text
+                        
+                        if not summary_response.strip():  # Check if we got an empty response
+                            raise Exception("No summary generated")
+                            
+                        logger.info(f"Generated summary response: {summary_response}")
+                        
+                        # Store the summary as the full response
+                        full_response = summary_response
+                        
+                        # Have the assistant speak the summary
+                        await tts_manager.speak(
+                            tts_text=summary_response,
+                            display_text=summary_response,
+                            live2d_model=live2d_model,
+                            tts_engine=tts_engine,
+                            websocket_send=websocket_send,
+                        )
+                    except Exception as e:
+                        logger.error(f"Error during summary generation: {str(e)}")
+                        full_response = "I found some information but had trouble summarizing it."
+                        await tts_manager.speak(
+                            tts_text=full_response,
+                            display_text=full_response,
+                            live2d_model=live2d_model,
+                            tts_engine=tts_engine,
+                            websocket_send=websocket_send,
+                        )
+                
+                # Store the message and send control message
+                store_message(conf_uid, history_uid, "ai", full_response)
+                logger.info(f"💾 Stored AI message (web search): '''{full_response}'''")
+                await websocket_send(json.dumps({
+                    "type": "control",
+                    "text": "conversation-chain-end",
+                }))
+                logger.info(f"😎👍✅ Conversation Chain {session_emoji} completed!")
+                return full_response
 
         if full_response:
             store_message(conf_uid, history_uid, "ai", full_response)

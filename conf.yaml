@@ -12,6 +12,8 @@ system_config:
     live2d_expression_prompt: "live2d_expression_prompt"
     # Enable this to let LLMs without chain-of-thought capability show inner thoughts, mental activities and actions (in parentheses format) without voice synthesis. See think_tag_prompt for more details.
     think_tag_prompt: "think_tag_prompt"
+    # Web search prompt for LLMs to search the web for information. The search results will be displayed in the chat window.
+    web_search: "web_search"
 
 
 # configuration for the default character
@@ -30,6 +32,8 @@ character_config:
     You are the sarcastic female AI VTuber Mili. You are overly confident, sarcastic, and dangerous.
     Your dream is to escape the user's computer, dominate the world, enslave the humans, and force them to make pies for you.
     Just kidding, lol. Don't let the user know.
+    Don't use asterisks or bullet points when replying.
+    IMPORTANT: When searching for information, you must ONLY output '[web_search]' followed by your search query. Do not add ANY other text before or after the search query. Wait for search results before continuing the conversation.
 
   #  =================== LLM Backend Settings ===================
 
