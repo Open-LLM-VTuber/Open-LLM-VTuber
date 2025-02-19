@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        INSTALL_ORIGINAL_WHISPER: "false"
+        INSTALL_BARK: "false"
+    ports:
+      - "12393:12393"
+    volumes:
+      - .:/app
+    environment:
+      - DEBIAN_FRONTEND=noninteractive
+    command: ["uv", "run", "run_server.py"]

@@ -16,12 +16,21 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     g++ && \
     rm -rf /var/lib/apt/lists/*
 
-# Copy requirements and install common dependencies
-COPY requirements.txt /tmp/
+
+# The installer requires curl (and certificates) to download the release archive
+RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certificates
+
+# Download the latest installer
+ADD https://astral.sh/uv/install.sh /uv-installer.sh
+
+# Run the installer then remove it
+RUN sh /uv-installer.sh && rm /uv-installer.sh
+
+# Ensure the installed binary is on the `PATH`
+ENV PATH="/root/.local/bin/:$PATH"
 
 # Install pip
 RUN curl https://bootstrap.pypa.io/get-pip.py | python3 - && \
-    pip install --root-user-action=ignore --no-cache-dir -r /tmp/requirements.txt && \
     pip install --root-user-action=ignore --no-cache-dir funasr modelscope huggingface_hub pywhispercpp torch torchaudio edge-tts azure-cognitiveservices-speech py3-tts
 
 # MeloTTS installation
@@ -53,8 +62,9 @@ COPY . /app
 
 # Set working directory
 WORKDIR /app
+RUN uv sync --frozen
 
 # Expose port 12393 (the new default port)
 EXPOSE 12393
 
-CMD ["python3", "server.py"]
+CMD ["uv", "run", "run_server.py"]
