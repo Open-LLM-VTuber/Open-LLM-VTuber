@@ -24,6 +24,7 @@ async def process_single_conversation(
     websocket_send: WebSocketSend,
     client_uid: str,
     user_input: Union[str, np.ndarray],
+    broadcast_websockets,
     images: Optional[List[Dict[str, Any]]] = None,
     session_emoji: str = np.random.choice(EMOJI_LIST),
 ) -> str:
@@ -90,6 +91,7 @@ async def process_single_conversation(
             tts_manager=tts_manager,
             websocket_send=websocket_send,
             client_uid=client_uid,
+            broadcast_websockets=broadcast_websockets
         )
 
         if context.history_uid and full_response:

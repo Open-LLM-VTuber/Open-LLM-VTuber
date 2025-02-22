@@ -2,3 +2,6 @@
 	path = frontend
 	url = https://github.com/Open-LLM-VTuber/Open-LLM-VTuber-Web
 	branch = build
+[submodule "blivedm"]
+	path = blivedm
+	url = https://github.com/xfgryujk/blivedm.git
