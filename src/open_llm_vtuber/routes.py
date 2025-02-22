@@ -1,4 +1,6 @@
+import asyncio
 import json
+from typing import Set
 from uuid import uuid4
 import numpy as np
 from datetime import datetime
@@ -9,7 +11,7 @@ from .service_context import ServiceContext
 from .websocket_handler import WebSocketHandler
 
 
-def create_routes(default_context_cache: ServiceContext) -> APIRouter:
+def create_routes(default_context_cache: ServiceContext, message_queue: asyncio.Queue) -> APIRouter:
     """
     Create and return API routes for handling WebSocket connections.
 
@@ -21,7 +23,20 @@ def create_routes(default_context_cache: ServiceContext) -> APIRouter:
     """
 
     router = APIRouter()
-    ws_handler = WebSocketHandler(default_context_cache)
+    broadcast_websockets: Set[WebSocket] = set()
+    ws_handler = WebSocketHandler(default_context_cache,broadcast_websockets)
+
+
+    async def process_queue(websocket: WebSocket):
+        try:
+            while True:
+                message = await websocket.receive_json()
+                # data = json.loads(message)
+                logger.debug(f"✨Received data from web: {message}")
+                await message_queue.put(message)
+
+        except Exception as e:
+            logger.error(f"Error : {e}")
 
     @router.websocket("/client-ws")
     async def websocket_endpoint(websocket: WebSocket):
@@ -29,15 +44,50 @@ def create_routes(default_context_cache: ServiceContext) -> APIRouter:
         await websocket.accept()
         client_uid = str(uuid4())
 
+        logger.debug(f"client_uid: {client_uid}")
+
         try:
+            queue_processor = asyncio.create_task(process_queue(websocket))
             await ws_handler.handle_new_connection(websocket, client_uid)
-            await ws_handler.handle_websocket_communication(websocket, client_uid)
+            await ws_handler.handle_websocket_communication(websocket, client_uid, message_queue)
+
         except WebSocketDisconnect:
             await ws_handler.handle_disconnect(client_uid)
         except Exception as e:
             logger.error(f"Error in WebSocket connection: {e}")
             await ws_handler.handle_disconnect(client_uid)
-            raise
+
+    @router.websocket("/add_msg-ws")
+    async def add_msg_websocket(websocket: WebSocket):
+        """WebSocket interface for broadcasting messages"""
+        await websocket.accept()
+        logger.info("Broadcast WebSocket connection established")
+
+        broadcast_websockets.add(websocket)
+
+        try:
+            while True:
+                message = await websocket.receive_json()
+                data = message
+
+                status = {
+                    "queue_size": message_queue.qsize(),
+                    "message": "Message queued for broadcast",
+                    "status": "success",
+                    "timestamp": datetime.now().isoformat()
+                }
+                await websocket.send_json(status)
+
+                await message_queue.put(data)
+                logger.info(f"Message added to queue: {message}")
+
+        except WebSocketDisconnect:
+            logger.info("Broadcast WebSocket disconnected")
+        except Exception as e:
+            logger.error(f"Error in broadcast websocket: {e}")
+        finally:
+            broadcast_websockets.discard(websocket)
+            await websocket.close()
 
     @router.get("/web-tool")
     async def web_tool_redirect():

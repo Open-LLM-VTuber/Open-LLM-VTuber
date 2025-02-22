@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional, Callable, TypedDict
+from typing import Dict, List, Optional, Callable, Set, TypedDict
 from fastapi import WebSocket, WebSocketDisconnect
 import asyncio
 import json
@@ -61,7 +61,7 @@ class WSMessage(TypedDict, total=False):
 class WebSocketHandler:
     """Handles WebSocket connections and message routing"""
 
-    def __init__(self, default_context_cache: ServiceContext):
+    def __init__(self, default_context_cache: ServiceContext,WebsocketSet: Set[WebSocket]):
         """Initialize the WebSocket handler with default context"""
         self.client_connections: Dict[str, WebSocket] = {}
         self.client_contexts: Dict[str, ServiceContext] = {}
@@ -72,6 +72,7 @@ class WebSocketHandler:
 
         # Message handlers mapping
         self._message_handlers = self._init_message_handlers()
+        self.broadcast_websockets=WebsocketSet
 
     def _init_message_handlers(self) -> Dict[str, Callable]:
         """Initialize message type to handler mapping"""
@@ -192,7 +193,7 @@ class WebSocketHandler:
         return session_service_context
 
     async def handle_websocket_communication(
-        self, websocket: WebSocket, client_uid: str
+        self, websocket: WebSocket, client_uid: str, message_queue: asyncio.Queue
     ) -> None:
         """
         Handle ongoing WebSocket communication
@@ -204,7 +205,9 @@ class WebSocketHandler:
         try:
             while True:
                 try:
-                    data = await websocket.receive_json()
+                    # data = await websocket.receive_json()
+                    data = await message_queue.get()
+                    logger.debug(f"data : {data}")
                     message_handler.handle_message(client_uid, data)
                     await self._route_message(websocket, client_uid, data)
                 except WebSocketDisconnect:
@@ -225,6 +228,24 @@ class WebSocketHandler:
         except Exception as e:
             logger.error(f"Fatal error in WebSocket communication: {e}")
             raise
+
+    async def broadcast_message(self, message: str):
+        """
+        Broadcast messages to all connected clients
+        向所有连接的客户端广播消息
+        """
+        disconnected = set()
+        for ws in self.broadcast_websockets:
+            try:
+                logger.debug(f"Broadcasting message to client: {message}")
+                await ws.send_text(message)
+            except WebSocketDisconnect:
+                disconnected.add(ws)
+            except Exception as e:
+                logger.error(f"Error broadcasting to client: {e}")
+                disconnected.add(ws)
+
+        self.broadcast_websockets.difference_update(disconnected)
 
     async def _route_message(
         self, websocket: WebSocket, client_uid: str, data: WSMessage
@@ -367,9 +388,9 @@ class WebSocketHandler:
         """Handle request for chat history list"""
         context = self.client_contexts[client_uid]
         histories = get_history_list(context.character_config.conf_uid)
-        await websocket.send_text(
-            json.dumps({"type": "history-list", "histories": histories})
-        )
+        message = json.dumps({"type": "history-list", "histories": histories})
+        await websocket.send_text(message)
+        await self.broadcast_message(message)
 
     async def _handle_fetch_history(
         self, websocket: WebSocket, client_uid: str, data: dict
@@ -395,9 +416,11 @@ class WebSocketHandler:
             )
             if msg["role"] != "system"
         ]
+
         await websocket.send_text(
             json.dumps({"type": "history-data", "messages": messages})
         )
+        await self.broadcast_message(json.dumps({"type": "history-data", "messages": messages}))
 
     async def _handle_create_history(
         self, websocket: WebSocket, client_uid: str, data: WSMessage
@@ -496,6 +519,7 @@ class WebSocketHandler:
             received_data_buffers=self.received_data_buffers,
             current_conversation_tasks=self.current_conversation_tasks,
             broadcast_to_group=self.broadcast_to_group,
+            broadcast_websockets=self.broadcast_websockets
         )
 
     async def _handle_fetch_configs(

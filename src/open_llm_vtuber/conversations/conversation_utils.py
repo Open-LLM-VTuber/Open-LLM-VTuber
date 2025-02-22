@@ -161,6 +161,7 @@ async def finalize_conversation_turn(
     tts_manager: TTSTaskManager,
     websocket_send: WebSocketSend,
     client_uid: str,
+    broadcast_websockets,
     broadcast_ctx: Optional[BroadcastContext] = None,
 ) -> None:
     """Finalize a conversation turn"""
@@ -185,12 +186,13 @@ async def finalize_conversation_turn(
             broadcast_ctx.current_client_uid,
         )
 
-    await send_conversation_end_signal(websocket_send, broadcast_ctx)
+    await send_conversation_end_signal(websocket_send, broadcast_ctx,broadcast_websockets)
 
 
 async def send_conversation_end_signal(
     websocket_send: WebSocketSend,
     broadcast_ctx: Optional[BroadcastContext],
+    broadcast_websockets,
     session_emoji: str = "😊",
 ) -> None:
     """Send conversation chain end signal"""
@@ -200,6 +202,7 @@ async def send_conversation_end_signal(
     }
 
     await websocket_send(json.dumps(chain_end_msg))
+    await broadcast_message(broadcast_websockets,json.dumps(chain_end_msg))
 
     if broadcast_ctx and broadcast_ctx.broadcast_func and broadcast_ctx.group_members:
         await broadcast_ctx.broadcast_func(
@@ -208,6 +211,20 @@ async def send_conversation_end_signal(
         )
 
     logger.info(f"😎👍✅ Conversation Chain {session_emoji} completed!")
+
+
+async def broadcast_message(broadcast_websockets, message: str):
+    disconnected = set()
+    for ws in broadcast_websockets:
+        try:
+            logger.debug(f"Broadcasting message to client: {message}")
+            await ws.send_text(message)
+
+        except Exception as e:
+            logger.error(f"Error broadcasting to client: {e}")
+            disconnected.add(ws)
+
+    broadcast_websockets.difference_update(disconnected)
 
 
 def cleanup_conversation(tts_manager: TTSTaskManager, session_emoji: str) -> None:

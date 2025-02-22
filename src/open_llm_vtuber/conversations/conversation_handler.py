@@ -1,6 +1,6 @@
 import asyncio
 import json
-from typing import Dict, Optional, Callable
+from typing import Dict, Optional, Callable, Set
 
 import numpy as np
 from fastapi import WebSocket
@@ -27,6 +27,7 @@ async def handle_conversation_trigger(
     received_data_buffers: Dict[str, np.ndarray],
     current_conversation_tasks: Dict[str, Optional[asyncio.Task]],
     broadcast_to_group: Callable,
+    broadcast_websockets: Set[WebSocket]
 ) -> None:
     """Handle triggers that start a conversation"""
     if msg_type == "ai-speak-signal":
@@ -80,6 +81,7 @@ async def handle_conversation_trigger(
                 user_input=user_input,
                 images=images,
                 session_emoji=session_emoji,
+                broadcast_websockets=broadcast_websockets
             )
         )
 

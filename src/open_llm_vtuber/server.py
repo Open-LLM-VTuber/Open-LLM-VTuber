@@ -1,3 +1,4 @@
+import asyncio
 import os
 import shutil
 
@@ -44,9 +45,10 @@ class WebSocketServer:
         default_context_cache = ServiceContext()
         default_context_cache.load_from_config(config)
 
+        message_queue = asyncio.Queue()
         # Include routes
         self.app.include_router(
-            create_routes(default_context_cache=default_context_cache)
+            create_routes(default_context_cache=default_context_cache,message_queue=message_queue)
         )
 
         # Mount cache directory first (to ensure audio file access)
