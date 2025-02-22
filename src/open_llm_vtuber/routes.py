@@ -47,7 +47,8 @@ def create_routes(default_context_cache: ServiceContext, message_queue: asyncio.
         logger.debug(f"client_uid: {client_uid}")
 
         try:
-            queue_processor = asyncio.create_task(process_queue(websocket))
+            asyncio.create_task(process_queue(websocket))
+
             await ws_handler.handle_new_connection(websocket, client_uid)
             await ws_handler.handle_websocket_communication(websocket, client_uid, message_queue)
 
