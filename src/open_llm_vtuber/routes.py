@@ -11,9 +11,11 @@ from .service_context import ServiceContext
 from .websocket_handler import WebSocketHandler
 
 
-def create_routes(default_context_cache: ServiceContext, message_queue: asyncio.Queue) -> APIRouter:
+def init_client_ws_route(
+    default_context_cache: ServiceContext, message_queue: asyncio.Queue
+) -> APIRouter:
     """
-    Create and return API routes for handling WebSocket connections.
+    Create and return API routes for handling the `/client-ws` WebSocket connections.
 
     Args:
         default_context_cache: Default service context cache for new sessions.
@@ -24,8 +26,7 @@ def create_routes(default_context_cache: ServiceContext, message_queue: asyncio.
 
     router = APIRouter()
     broadcast_websockets: Set[WebSocket] = set()
-    ws_handler = WebSocketHandler(default_context_cache,broadcast_websockets)
-
+    ws_handler = WebSocketHandler(default_context_cache, broadcast_websockets)
 
     async def process_queue(websocket: WebSocket):
         try:
@@ -50,7 +51,9 @@ def create_routes(default_context_cache: ServiceContext, message_queue: asyncio.
             asyncio.create_task(process_queue(websocket))
 
             await ws_handler.handle_new_connection(websocket, client_uid)
-            await ws_handler.handle_websocket_communication(websocket, client_uid, message_queue)
+            await ws_handler.handle_websocket_communication(
+                websocket, client_uid, message_queue
+            )
 
         except WebSocketDisconnect:
             await ws_handler.handle_disconnect(client_uid)
@@ -75,7 +78,7 @@ def create_routes(default_context_cache: ServiceContext, message_queue: asyncio.
                     "queue_size": message_queue.qsize(),
                     "message": "Message queued for broadcast",
                     "status": "success",
-                    "timestamp": datetime.now().isoformat()
+                    "timestamp": datetime.now().isoformat(),
                 }
                 await websocket.send_json(status)
 
@@ -89,6 +92,22 @@ def create_routes(default_context_cache: ServiceContext, message_queue: asyncio.
         finally:
             broadcast_websockets.discard(websocket)
             await websocket.close()
+
+    return router
+
+
+def init_webtool_routes(default_context_cache: ServiceContext) -> APIRouter:
+    """
+    Create and return API routes for handling web tool interactions.
+
+    Args:
+        default_context_cache: Default service context cache for new sessions.
+
+    Returns:
+        APIRouter: Configured router with WebSocket endpoint.
+    """
+
+    router = APIRouter()
 
     @router.get("/web-tool")
     async def web_tool_redirect():

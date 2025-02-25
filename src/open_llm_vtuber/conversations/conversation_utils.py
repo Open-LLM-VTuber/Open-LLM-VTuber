@@ -186,7 +186,9 @@ async def finalize_conversation_turn(
             broadcast_ctx.current_client_uid,
         )
 
-    await send_conversation_end_signal(websocket_send, broadcast_ctx,broadcast_websockets)
+    await send_conversation_end_signal(
+        websocket_send, broadcast_ctx, broadcast_websockets
+    )
 
 
 async def send_conversation_end_signal(
@@ -202,7 +204,7 @@ async def send_conversation_end_signal(
     }
 
     await websocket_send(json.dumps(chain_end_msg))
-    await broadcast_message(broadcast_websockets,json.dumps(chain_end_msg))
+    await broadcast_message(broadcast_websockets, json.dumps(chain_end_msg))
 
     if broadcast_ctx and broadcast_ctx.broadcast_func and broadcast_ctx.group_members:
         await broadcast_ctx.broadcast_func(

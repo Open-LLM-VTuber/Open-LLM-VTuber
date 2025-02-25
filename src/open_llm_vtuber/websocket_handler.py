@@ -61,7 +61,9 @@ class WSMessage(TypedDict, total=False):
 class WebSocketHandler:
     """Handles WebSocket connections and message routing"""
 
-    def __init__(self, default_context_cache: ServiceContext,WebsocketSet: Set[WebSocket]):
+    def __init__(
+        self, default_context_cache: ServiceContext, WebsocketSet: Set[WebSocket]
+    ):
         """Initialize the WebSocket handler with default context"""
         self.client_connections: Dict[str, WebSocket] = {}
         self.client_contexts: Dict[str, ServiceContext] = {}
@@ -72,7 +74,7 @@ class WebSocketHandler:
 
         # Message handlers mapping
         self._message_handlers = self._init_message_handlers()
-        self.broadcast_websockets=WebsocketSet
+        self.broadcast_websockets = WebsocketSet
 
     def _init_message_handlers(self) -> Dict[str, Callable]:
         """Initialize message type to handler mapping"""
@@ -420,7 +422,9 @@ class WebSocketHandler:
         await websocket.send_text(
             json.dumps({"type": "history-data", "messages": messages})
         )
-        await self.broadcast_message(json.dumps({"type": "history-data", "messages": messages}))
+        await self.broadcast_message(
+            json.dumps({"type": "history-data", "messages": messages})
+        )
 
     async def _handle_create_history(
         self, websocket: WebSocket, client_uid: str, data: WSMessage
@@ -519,7 +523,7 @@ class WebSocketHandler:
             received_data_buffers=self.received_data_buffers,
             current_conversation_tasks=self.current_conversation_tasks,
             broadcast_to_group=self.broadcast_to_group,
-            broadcast_websockets=self.broadcast_websockets
+            broadcast_websockets=self.broadcast_websockets,
         )
 
     async def _handle_fetch_configs(

@@ -9,13 +9,18 @@ class AzureASRConfig(I18nMixin):
 
     api_key: str = Field(..., alias="api_key")
     region: str = Field(..., alias="region")
+    languages: list[str] = Field(["en-US", "zh-CN"], alias="languages")
 
     DESCRIPTIONS: ClassVar[Dict[str, Description]] = {
         "api_key": Description(
             en="API key for Azure ASR service", zh="Azure ASR 服务的 API 密钥"
         ),
         "region": Description(
-            en="Azure region (e.g., eastus)", zh="Azure 区域（如 eastus）"
+            en="Azure region (e.g., eastus)", zh="Azure 区域（如 eastus)"
+        ),
+        "languages": Description(
+            en="List of languages to detect (e.g., ['en-US', 'zh-CN'])",
+            zh="要检测的语言列表（如 ['en-US', 'zh-CN'])",
         ),
     }
 

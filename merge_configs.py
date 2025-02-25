@@ -86,11 +86,13 @@ def merge_configs(user_path: str, default_path: str, lang: str = "en"):
 def collect_all_subkeys(d, base_path):
     """Collect all keys in the dictionary d, recursively, with base_path as the prefix."""
     keys = []
-    for key, value in d.items():
-        current_path = f"{base_path}.{key}" if base_path else key
-        keys.append(current_path)
-        if isinstance(value, dict):
-            keys.extend(collect_all_subkeys(value, current_path))
+    # Only process if d is a dictionary
+    if isinstance(d, dict):
+        for key, value in d.items():
+            current_path = f"{base_path}.{key}" if base_path else key
+            keys.append(current_path)
+            if isinstance(value, dict):
+                keys.extend(collect_all_subkeys(value, current_path))
     return keys
 
 
@@ -120,9 +122,11 @@ def get_extra_keys(user, default, path=""):
     for key, user_val in user.items():
         current_path = f"{path}.{key}" if path else key
         if key not in default:
-            subtree_extra = collect_all_subkeys(user_val, current_path)
+            # Only collect subkeys if the value is a dictionary
+            if isinstance(user_val, dict):
+                subtree_extra = collect_all_subkeys(user_val, current_path)
+                extra.extend(subtree_extra)
             extra.append(current_path)
-            extra.extend(subtree_extra)
         else:
             default_val = default[key]
             if isinstance(user_val, dict) and isinstance(default_val, dict):
@@ -135,7 +139,7 @@ def get_extra_keys(user, default, path=""):
 
 def compare_configs(user_path: str, default_path: str, lang: str = "en") -> bool:
     """Compare user and default configs, log discrepancies, and return status."""
-    yaml = YAML()
+    yaml = YAML(typ="safe")
     yaml.preserve_quotes = True
 
     user_config = yaml.load(load_text_file_with_guess_encoding(user_path))

@@ -38,6 +38,39 @@ class AsyncLLM(StatelessLLMInterface):
         logger.info(f"Initialized Claude AsyncLLM with model: {self.model}")
         logger.debug(f"Base URL: {base_url}")
 
+    def _convert_message_format(self, message: Dict[str, Any]) -> Dict[str, Any]:
+        """Convert message format to Claude's expected format."""
+        if "content" not in message or not isinstance(message["content"], list):
+            return message
+
+        print("message", message)
+
+        new_content = []
+        for content_item in message["content"]:
+            if content_item.get("type") == "image_url":
+                # Extract media type and base64 data from data URL
+                data_url = content_item["image_url"]["url"]
+                # Split 'data:image/jpeg;base64,/9j/4AAQ...' into parts
+                header, base64_data = data_url.split(",", 1)
+                # Extract media type from 'data:image/jpeg;base64'
+                media_type = header.split(":")[1].split(";")[0]
+
+                new_content.append(
+                    {
+                        "type": "image",
+                        "source": {
+                            "type": "base64",
+                            "media_type": media_type,
+                            "data": base64_data,
+                        },
+                    }
+                )
+            else:
+                new_content.append(content_item)
+
+        print("new_content", new_content)
+        return {"role": message["role"], "content": new_content}
+
     async def chat_completion(
         self, messages: List[Dict[str, Any]], system: str = None
     ) -> AsyncIterator[str]:
@@ -52,8 +85,12 @@ class AsyncLLM(StatelessLLMInterface):
         - str: The content of each chunk from the API response.
         """
         try:
-            # Filter out system messages from the conversation as Claude doesn't support them in messages
-            filtered_messages = [msg for msg in messages if msg["role"] != "system"]
+            # Filter out system messages and convert message format
+            filtered_messages = [
+                self._convert_message_format(msg)
+                for msg in messages
+                if msg["role"] != "system"
+            ]
 
             logger.debug(f"Sending messages to Claude API: {filtered_messages}")
             stream: AsyncStream = await self.client.messages.create(

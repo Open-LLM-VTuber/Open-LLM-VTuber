@@ -91,7 +91,7 @@ async def process_single_conversation(
             tts_manager=tts_manager,
             websocket_send=websocket_send,
             client_uid=client_uid,
-            broadcast_websockets=broadcast_websockets
+            broadcast_websockets=broadcast_websockets,
         )
 
         if context.history_uid and full_response:

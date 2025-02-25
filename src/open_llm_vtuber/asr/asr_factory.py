@@ -42,6 +42,7 @@ class ASRFactory:
             return AzureASR(
                 subscription_key=kwargs.get("api_key"),
                 region=kwargs.get("region"),
+                languages=kwargs.get("languages", ["en-US", "zh-CN"]),
             )
         elif system_name == "groq_whisper_asr":
             from .groq_whisper_asr import VoiceRecognition as GroqWhisperASR

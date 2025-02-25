@@ -51,16 +51,15 @@ def parse_args():
     return parser.parse_args()
 
 
-def init_config():
-    # If user config does not exist, copy from template based on system language
-    sync_user_config(logger=logger, lang=select_language())
-
-
 @logger.catch
 def run(console_log_level: str):
     init_logger(console_log_level)
     logger.info(f"Open-LLM-VTuber, version v{get_version()}")
-    init_config()
+    # Sync user config with default config
+    try:
+        sync_user_config(logger=logger, lang=select_language())
+    except Exception as e:
+        logger.error(f"Error syncing user config: {e}")
 
     atexit.register(WebSocketServer.clean_cache)
 

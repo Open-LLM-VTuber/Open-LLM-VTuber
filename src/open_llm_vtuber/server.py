@@ -7,7 +7,7 @@ from starlette.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from starlette.responses import Response
 
-from .routes import create_routes
+from .routes import init_client_ws_route, init_webtool_routes
 from .service_context import ServiceContext
 from .config_manager.utils import Config
 
@@ -48,7 +48,12 @@ class WebSocketServer:
         message_queue = asyncio.Queue()
         # Include routes
         self.app.include_router(
-            create_routes(default_context_cache=default_context_cache,message_queue=message_queue)
+            init_client_ws_route(
+                default_context_cache=default_context_cache, message_queue=message_queue
+            ),
+        )
+        self.app.include_router(
+            init_webtool_routes(default_context_cache=default_context_cache),
         )
 
         # Mount cache directory first (to ensure audio file access)
