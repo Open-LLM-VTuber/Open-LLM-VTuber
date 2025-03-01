@@ -61,7 +61,7 @@ def init_client_ws_route(
             logger.error(f"Error in WebSocket connection: {e}")
             await ws_handler.handle_disconnect(client_uid)
 
-    @router.websocket("/add_msg-ws")
+    @router.websocket("/add-msg-ws")
     async def add_msg_websocket(websocket: WebSocket):
         """WebSocket interface for broadcasting messages"""
         await websocket.accept()
