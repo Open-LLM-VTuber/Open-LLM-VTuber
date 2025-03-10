@@ -16,6 +16,8 @@ class AgentFactory:
         system_prompt: str,
         live2d_model=None,
         tts_preprocessor_config=None,
+        faq_handler=None,
+        character_avatar=None,
         **kwargs,
     ) -> Type[AgentInterface]:
         """Create an agent based on the configuration.
@@ -27,6 +29,8 @@ class AgentFactory:
             system_prompt: The system prompt to use
             live2d_model: Live2D model instance for expression extraction
             tts_preprocessor_config: Configuration for TTS preprocessing
+            faq_handler: FAQ处理器实例
+            character_avatar: 角色头像路径
             **kwargs: Additional arguments
         """
         logger.info(f"Initializing agent: {conversation_agent_choice}")
@@ -66,6 +70,8 @@ class AgentFactory:
                 ),
                 segment_method=basic_memory_settings.get("segment_method", "pysbd"),
                 interrupt_method=interrupt_method,
+                faq_handler=faq_handler,
+                character_avatar=character_avatar,
             )
 
         elif conversation_agent_choice == "mem0_agent":
