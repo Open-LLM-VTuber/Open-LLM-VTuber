@@ -11,11 +11,9 @@ class VoiceRecognition(ASRInterface):
         self,
         model_path: str = "distil-medium.en",
         download_root: str = None,
-        language: str = "en",
         device: str = "auto",
     ) -> None:
         self.MODEL_PATH = model_path
-        self.LANG = language
 
         self.model = WhisperModel(
             model_path,
@@ -28,7 +26,6 @@ class VoiceRecognition(ASRInterface):
         segments, info = self.model.transcribe(
             audio,
             beam_size=5 if self.BEAM_SEARCH else 1,
-            language=self.LANG,
             condition_on_previous_text=False,
         )
 
