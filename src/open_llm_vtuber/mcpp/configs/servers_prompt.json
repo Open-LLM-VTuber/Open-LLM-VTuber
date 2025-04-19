@@ -1,0 +1,10 @@
+{
+    "example": {
+        "content": "Server: example\n    Tools:\n        calculate_bmi:\n            Description: Calculate BMI given weight in kg and height in meters\n            Parameters:\n                weight_kg:\n                    Type: number\n                    Description: Weight Kg\n                height_m:\n                    Type: number\n                    Description: Height M\n            Required: weight_kg, height_m\n",
+        "mtime": 1744986664.653399
+    },
+    "time": {
+        "content": "Server: time\n    Tools:\n        get_current_time:\n            Description: Get current time in a specific timezones\n            Parameters:\n                timezone:\n                    Type: string\n                    Description: IANA timezone name (e.g., 'America/New_York', 'Europe/London'). Use 'Asia/Shanghai' as local timezone if no timezone provided by the user.\n            Required: timezone\n        convert_time:\n            Description: Convert time between timezones\n            Parameters:\n                source_timezone:\n                    Type: string\n                    Description: Source IANA timezone name (e.g., 'America/New_York', 'Europe/London'). Use 'Asia/Shanghai' as local timezone if no source timezone provided by the user.\n                time:\n                    Type: string\n                    Description: Time to convert in 24-hour format (HH:MM)\n                target_timezone:\n                    Type: string\n                    Description: Target IANA timezone name (e.g., 'Asia/Tokyo', 'America/San_Francisco'). Use 'Asia/Shanghai' as local timezone if no target timezone provided by the user.\n            Required: source_timezone, time, target_timezone\n",
+        "mtime": -1
+    }
+}

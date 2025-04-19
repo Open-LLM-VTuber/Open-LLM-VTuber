@@ -1,0 +1,9 @@
+{
+    "custom_servers_path": "./servers",
+    "officials":{
+        "time":{
+            "command": "uvx",
+            "args":["mcp-server-time", "--local-timezone=Asia/Shanghai"]
+        }
+    }
+}

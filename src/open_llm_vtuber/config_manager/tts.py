@@ -336,7 +336,7 @@ class OpenAITTSConfig(I18nMixin):
 
 class SparkTTSConfig(I18nMixin):
     """Configuration for Spark TTS."""
-    
+
     api_url: str = Field(..., alias="api_url")
     prompt_wav_upload: str = Field(..., alias="prompt_wav_upload")
     api_name: str = Field(..., alias="api_name")

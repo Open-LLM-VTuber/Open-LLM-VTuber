@@ -51,6 +51,8 @@ class ServiceContext:
 
         # the system prompt is a combination of the persona prompt and live2d expression prompt
         self.system_prompt: str = None
+        
+        self.mcp_prompt = ""  # Placeholder for MCP prompt
 
         self.history_uid: str = ""  # Add history_uid field
 
@@ -106,7 +108,7 @@ class ServiceContext:
 
         logger.debug(f"Loaded service context with cache: {character_config}")
 
-    def load_from_config(self, config: Config) -> None:
+    async def load_from_config(self, config: Config) -> None:
         """
         Load the ServiceContext with the config.
         Reinitialize the instances if the config is different.
@@ -138,7 +140,7 @@ class ServiceContext:
         self.init_vad(config.character_config.vad_config)
 
         # init agent from character config
-        self.init_agent(
+        await self.init_agent(
             config.character_config.agent_config,
             config.character_config.persona_prompt,
         )
@@ -197,7 +199,7 @@ class ServiceContext:
         else:
             logger.info("VAD already initialized with the same config.")
 
-    def init_agent(self, agent_config: AgentConfig, persona_prompt: str) -> None:
+    async def init_agent(self, agent_config: AgentConfig, persona_prompt: str) -> None:
         """Initialize or update the LLM engine based on agent configuration."""
         logger.info(f"Initializing Agent: {agent_config.conversation_agent_choice}")
 
@@ -209,7 +211,7 @@ class ServiceContext:
             logger.debug("Agent already initialized with the same config.")
             return
 
-        system_prompt = self.construct_system_prompt(persona_prompt)
+        system_prompt = await self.construct_system_prompt(persona_prompt)
 
         # Pass avatar to agent factory
         avatar = self.character_config.avatar or ""  # Get avatar from config
@@ -220,6 +222,7 @@ class ServiceContext:
                 agent_settings=agent_config.agent_settings.model_dump(),
                 llm_configs=agent_config.llm_configs.model_dump(),
                 system_prompt=system_prompt,
+                mcp_prompt=self.mcp_prompt,
                 live2d_model=self.live2d_model,
                 tts_preprocessor_config=self.character_config.tts_preprocessor_config,
                 character_avatar=avatar,
@@ -266,7 +269,7 @@ class ServiceContext:
 
     # ==== utils
 
-    def construct_system_prompt(self, persona_prompt: str) -> str:
+    async def construct_system_prompt(self, persona_prompt: str) -> str:
         """
         Append tool prompts to persona prompt.
 
@@ -289,6 +292,28 @@ class ServiceContext:
                     "[<insert_emomap_keys>]", self.live2d_model.emo_str
                 )
 
+            # Note: Now wether to use MCP prompt or not is up to the agent
+            # Here we just construct it and ready to pass it to the agent
+            if prompt_name == "mcp_prompt":
+                
+                use_mcpp = self.character_config.agent_config.agent_settings.basic_memory_agent.use_mcpp
+                if not use_mcpp:
+                    logger.debug("MCP prompt is not constructed because use_mcpp is False")
+                    self.mcp_prompt = None
+                    continue
+                
+                from .mcpp.mixed_constructor import MixedConstructor
+        
+                mc = MixedConstructor()
+                await mc.run()
+                prompt = ""
+                for server_prompt in mc.prompts.values():
+                    prompt += server_prompt["content"]
+                self.mcp_prompt = prompt_content.replace(
+                    "[<insert_mcp_servers_with_tools>]", prompt
+                )
+                continue
+            
             persona_prompt += prompt_content
 
         logger.debug("\n === System Prompt ===")
@@ -339,7 +364,7 @@ class ServiceContext:
                     "character_config": new_character_config_data,
                 }
                 new_config = validate_config(new_config)
-                self.load_from_config(new_config)
+                await self.load_from_config(new_config)  # Await the async load
                 logger.debug(f"New config: {self}")
                 logger.debug(
                     f"New character config: {self.character_config.model_dump()}"

@@ -56,6 +56,9 @@ character_config:
         faster_first_response: True
         # 句子分割方法：'regex' 或 'pysbd'
         segment_method: 'pysbd'
+        # 是否使用 MCP（Model Context Protocol） Plus 以使 LLM 获得使用工具的能力（默认：False）
+        # 'Plus' 意味着它包含了通过 OpenAI API 调用工具的能力。
+        use_mcpp: False
 
       mem0_agent:
         vector_store:

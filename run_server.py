@@ -1,6 +1,7 @@
 import os
 import sys
 import atexit
+import asyncio
 import argparse
 from pathlib import Path
 import tomli
@@ -70,8 +71,20 @@ def run(console_log_level: str):
     if server_config.enable_proxy:
         logger.info("Proxy mode enabled - /proxy-ws endpoint will be available")
 
-    # Initialize and run the WebSocket server
+    # Initialize the WebSocket server (synchronous part)
     server = WebSocketServer(config=config)
+
+    # Perform asynchronous initialization (loading context, etc.)
+    logger.info("Initializing server context...")
+    try:
+        asyncio.run(server.initialize())
+        logger.info("Server context initialized successfully.")
+    except Exception as e:
+        logger.error(f"Failed to initialize server context: {e}")
+        sys.exit(1)  # Exit if initialization fails
+
+    # Run the Uvicorn server
+    logger.info(f"Starting server on {server_config.host}:{server_config.port}")
     uvicorn.run(
         app=server.app,
         host=server_config.host,

@@ -1,0 +1,135 @@
+{
+    "calculate_bmi": {
+        "input_schema": {
+            "properties": {
+                "weight_kg": {
+                    "title": "Weight Kg",
+                    "type": "number"
+                },
+                "height_m": {
+                    "title": "Height M",
+                    "type": "number"
+                }
+            },
+            "required": [
+                "weight_kg",
+                "height_m"
+            ],
+            "title": "calculate_bmiArguments",
+            "type": "object"
+        },
+        "related_server": "example",
+        "generic_schema": {
+            "type": "function",
+            "function": {
+                "name": "calculate_bmi",
+                "description": "No description provided.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "weight_kg": {
+                            "type": "number",
+                            "description": "Weight Kg"
+                        },
+                        "height_m": {
+                            "type": "number",
+                            "description": "Height M"
+                        }
+                    },
+                    "required": [
+                        "weight_kg",
+                        "height_m"
+                    ]
+                }
+            }
+        }
+    },
+    "get_current_time": {
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "timezone": {
+                    "type": "string",
+                    "description": "IANA timezone name (e.g., 'America/New_York', 'Europe/London'). Use 'Asia/Shanghai' as local timezone if no timezone provided by the user."
+                }
+            },
+            "required": [
+                "timezone"
+            ]
+        },
+        "related_server": "time",
+        "generic_schema": {
+            "type": "function",
+            "function": {
+                "name": "get_current_time",
+                "description": "No description provided.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "timezone": {
+                            "type": "string",
+                            "description": "IANA timezone name (e.g., 'America/New_York', 'Europe/London'). Use 'Asia/Shanghai' as local timezone if no timezone provided by the user."
+                        }
+                    },
+                    "required": [
+                        "timezone"
+                    ]
+                }
+            }
+        }
+    },
+    "convert_time": {
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "source_timezone": {
+                    "type": "string",
+                    "description": "Source IANA timezone name (e.g., 'America/New_York', 'Europe/London'). Use 'Asia/Shanghai' as local timezone if no source timezone provided by the user."
+                },
+                "time": {
+                    "type": "string",
+                    "description": "Time to convert in 24-hour format (HH:MM)"
+                },
+                "target_timezone": {
+                    "type": "string",
+                    "description": "Target IANA timezone name (e.g., 'Asia/Tokyo', 'America/San_Francisco'). Use 'Asia/Shanghai' as local timezone if no target timezone provided by the user."
+                }
+            },
+            "required": [
+                "source_timezone",
+                "time",
+                "target_timezone"
+            ]
+        },
+        "related_server": "time",
+        "generic_schema": {
+            "type": "function",
+            "function": {
+                "name": "convert_time",
+                "description": "No description provided.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "source_timezone": {
+                            "type": "string",
+                            "description": "Source IANA timezone name (e.g., 'America/New_York', 'Europe/London'). Use 'Asia/Shanghai' as local timezone if no source timezone provided by the user."
+                        },
+                        "time": {
+                            "type": "string",
+                            "description": "Time to convert in 24-hour format (HH:MM)"
+                        },
+                        "target_timezone": {
+                            "type": "string",
+                            "description": "Target IANA timezone name (e.g., 'Asia/Tokyo', 'America/San_Francisco'). Use 'Asia/Shanghai' as local timezone if no target timezone provided by the user."
+                        }
+                    },
+                    "required": [
+                        "source_timezone",
+                        "time",
+                        "target_timezone"
+                    ]
+                }
+            }
+        }
+    }
+}

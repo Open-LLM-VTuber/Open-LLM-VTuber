@@ -15,6 +15,7 @@ class AgentFactory:
         agent_settings: dict,
         llm_configs: dict,
         system_prompt: str,
+        mcp_prompt=None,
         live2d_model=None,
         tts_preprocessor_config=None,
         **kwargs,
@@ -68,6 +69,8 @@ class AgentFactory:
                     "faster_first_response", True
                 ),
                 segment_method=basic_memory_settings.get("segment_method", "pysbd"),
+                use_mcpp=basic_memory_settings.get("use_mcpp", False),
+                mcp_prompt=mcp_prompt,
                 interrupt_method=interrupt_method,
                 tool_prompts=tool_prompts,
             )
