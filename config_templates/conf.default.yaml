@@ -170,7 +170,6 @@ character_config:
       model_path: 'distil-medium.en' # distil-medium.en is an English-only model
       #                               use distil-large-v3 if you have a good GPU
       download_root: 'models/whisper'
-      language: 'en' # en, zh, or something else. put nothing for auto-detect.
       device: 'auto' # cpu, cuda, or auto. faster-whisper doesn't support mps
 
     whisper_cpp:

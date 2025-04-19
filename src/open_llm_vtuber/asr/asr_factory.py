@@ -11,7 +11,6 @@ class ASRFactory:
             return FasterWhisperASR(
                 model_path=kwargs.get("model_path"),
                 download_root=kwargs.get("download_root"),
-                language=kwargs.get("language"),
                 device=kwargs.get("device"),
             )
         elif system_name == "whisper_cpp":
