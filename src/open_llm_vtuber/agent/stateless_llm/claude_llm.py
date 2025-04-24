@@ -84,6 +84,7 @@ class AsyncLLM(StatelessLLMInterface):
         Yields:
         - str: The content of each chunk from the API response.
         """
+        stream = None
         try:
             # Filter out system messages and convert message format
             filtered_messages = [
@@ -92,8 +93,13 @@ class AsyncLLM(StatelessLLMInterface):
                 if msg["role"] != "system"
             ]
 
+            # Add default content for empty messages
+            for msg in filtered_messages:
+                if not msg.get("content"):
+                    msg["content"] = "没有说话，保持沉默"
+
             logger.debug(f"Sending messages to Claude API: {filtered_messages}")
-            stream: AsyncStream = await self.client.messages.create(
+            stream = await self.client.messages.create(
                 messages=filtered_messages,
                 system=system if system else (self.system if self.system else ""),
                 model=self.model,
@@ -113,6 +119,7 @@ class AsyncLLM(StatelessLLMInterface):
             raise
 
         finally:
-            logger.debug("Chat completion done.")
-            await stream.close()
-            logger.debug("Closed Claude API client.")
+            if stream:
+                logger.debug("Chat completion done.")
+                await stream.close()
+                logger.debug("Closed Claude API client.")
