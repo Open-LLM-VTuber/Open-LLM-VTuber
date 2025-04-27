@@ -216,7 +216,7 @@ cosyvoiceTTS: # Cosy Voice TTS connects to the gradio webui
 meloTTS:
   speaker: "ZH" # ZH EN-Default
   language: "ZH" # ZH EN
-  device: "cuda" # You can set it manually to 'cpu' or 'cuda' or 'cuda:0' or 'mps'
+  device: "auto" # You can set it manually to 'cpu' or 'cuda' or 'cuda:0' or 'mps'
   speed: 0.8
 
 piperTTS:
