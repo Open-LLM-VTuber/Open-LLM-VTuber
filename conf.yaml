@@ -158,7 +158,7 @@ FunASR:
   model_name: "iic/SenseVoiceSmall" # or "paraformer-zh"
   vad_model: "fsmn-vad" # this is only used to make it works if audio is longer than 30s
   punc_model: "ct-punc" # punctuation model.
-  device: "cpu"
+  device: "cuda"
   disable_update: True # should we check FunASR updates everytime on launch
   ncpu: 4 # number of threads for CPU internal operations.
   hub: "ms" # ms (default) to download models from ModelScope. Use hf to download models from Hugging Face.
@@ -216,7 +216,7 @@ cosyvoiceTTS: # Cosy Voice TTS connects to the gradio webui
 meloTTS:
   speaker: "ZH" # ZH EN-Default
   language: "ZH" # ZH EN
-  device: "auto" # You can set it manually to 'cpu' or 'cuda' or 'cuda:0' or 'mps'
+  device: "cuda" # You can set it manually to 'cpu' or 'cuda' or 'cuda:0' or 'mps'
   speed: 0.8
 
 piperTTS:
