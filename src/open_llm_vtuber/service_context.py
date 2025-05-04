@@ -3,7 +3,8 @@ import json
 
 from loguru import logger
 from fastapi import WebSocket
-
+from .utils.es_search import ESSearch
+from .utils.faq_handler import FAQHandler
 from prompts import prompt_loader
 from .live2d_model import Live2dModel
 from .asr.asr_interface import ASRInterface
@@ -17,6 +18,7 @@ from .tts.tts_factory import TTSFactory
 from .vad.vad_factory import VADFactory
 from .agent.agent_factory import AgentFactory
 from .translate.translate_factory import TranslateFactory
+
 
 from .config_manager import (
     Config,
@@ -40,6 +42,8 @@ class ServiceContext:
         self.config: Config = None
         self.system_config: SystemConfig = None
         self.character_config: CharacterConfig = None
+        self.es_search = None
+        self.faq_handler = None
 
         self.live2d_model: Live2dModel = None
         self.asr_engine: ASRInterface = None
@@ -114,6 +118,7 @@ class ServiceContext:
         Parameters:
         - config (Dict): The configuration dictionary.
         """
+
         if not self.config:
             self.config = config
 
@@ -136,6 +141,22 @@ class ServiceContext:
 
         # init vad from character config
         self.init_vad(config.character_config.vad_config)
+
+        # 初始化Elasticsearch（在初始化agent之前）
+        if hasattr(config.system_config, 'es_config') and config.system_config.es_config.enabled:
+            try:
+                self.es_search = ESSearch(
+                    host=config.system_config.es_config.host,
+                    user=config.system_config.es_config.user,
+                    password=config.system_config.es_config.password,
+                    index=config.system_config.es_config.index
+                )
+                self.faq_handler = FAQHandler(self.es_search)
+                logger.info("Elasticsearch FAQ处理器初始化成功")
+            except Exception as e:
+                logger.error(f"初始化Elasticsearch失败: {e}")
+                self.es_search = None
+                self.faq_handler = None
 
         # init agent from character config
         self.init_agent(
@@ -222,7 +243,8 @@ class ServiceContext:
                 system_prompt=system_prompt,
                 live2d_model=self.live2d_model,
                 tts_preprocessor_config=self.character_config.tts_preprocessor_config,
-                character_avatar=avatar,  # Add avatar parameter
+                faq_handler=self.faq_handler,
+                character_avatar=avatar,
             )
 
             logger.debug(f"Agent choice: {agent_config.conversation_agent_choice}")
