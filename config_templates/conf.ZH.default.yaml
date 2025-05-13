@@ -253,6 +253,17 @@ character_config:
     #   'cosyvoice_tts', 'melo_tts', 'coqui_tts',
     #   'fish_api_tts', 'x_tts', 'gpt_sovits_tts', 'sherpa_onnx_tts'
 
+    siliconflow_tts:
+      api_url: "https://api.siliconflow.cn/v1/audio/speech"
+      api_key: "your key"
+      default_model: "FunAudioLLM/CosyVoice2-0.5B"
+      default_voice: "speech:Dreamflowers:5bdstvc39i:xkqldnpasqmoqbakubom your voice name"
+      sample_rate: 32000
+      response_format: "mp3"
+      stream: true
+      speed: 1
+      gain: 0
+
     azure_tts:
       api_key: 'azure-api-key' # Azure API 密钥
       region: 'eastus' # 区域
