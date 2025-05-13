@@ -358,6 +358,13 @@ character_config:
       num_threads: 1 # 计算线程数
       speed: 1.0 # 语速（1.0 为正常）
       debug: false # 启用调试模式（True/False）
+    spark_tts:
+      api_url: 'http://127.0.0.1:6006/' # 初始API地址，使用gradio自带的前端API。地址：https://github.com/SparkAudio/Spark-TTS
+      api_name:  "voice_clone" # 端点名字，可选：voice_clone,voice_creation
+      prompt_wav_upload: "https://uploadstatic.mihoyo.com/ys-obc/2022/11/02/16576950/4d9feb71760c5e8eb5f6c700df12fa0c_6824265537002152805.mp3" # 参考音频地址,api_name: = "voice_clone"时填写
+      gender:  "female" # 生成声线，api_name: = "voice_creation"时填写
+      pitch:  3 # 音高，api_name: = "voice_creation"时填写
+      speed:  3 # 语速，api_name: = "voice_creation"时填写
 
 
   # =================== Voice Activity Detection ===================
