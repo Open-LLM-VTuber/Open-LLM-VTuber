@@ -2,7 +2,7 @@ from typing import AsyncIterator, List, Dict, Any, Callable, Literal
 from loguru import logger
 
 from .agent_interface import AgentInterface
-from ..output_types import SentenceOutput, DisplayText
+from ..output_types import SentenceOutput, DisplayText, Actions
 from ..stateless_llm.stateless_llm_interface import StatelessLLMInterface
 from ...chat_history_manager import get_history
 from ..transformers import (
@@ -29,14 +29,16 @@ class BasicMemoryAgent(AgentInterface):
         """
 
     def __init__(
-        self,
-        llm: StatelessLLMInterface,
-        system: str,
-        live2d_model,
-        tts_preprocessor_config: TTSPreprocessorConfig = None,
-        faster_first_response: bool = True,
-        segment_method: str = "pysbd",
-        interrupt_method: Literal["system", "user"] = "user",
+            self,
+            llm: StatelessLLMInterface,
+            system: str,
+            live2d_model,
+            tts_preprocessor_config: TTSPreprocessorConfig = None,
+            faster_first_response: bool = True,
+            segment_method: str = "pysbd",
+            interrupt_method: Literal["system", "user"] = "user",
+            faq_handler=None,
+            character_avatar: str = None,
     ):
         """
         Initialize the agent with LLM, system prompt and configuration
@@ -50,7 +52,8 @@ class BasicMemoryAgent(AgentInterface):
             segment_method: `str` - Method for sentence segmentation
             interrupt_method: `Literal["system", "user"]` -
                 Methods for writing interruptions signal in chat history.
-
+            faq_handler: FAQ处理器实例
+            character_avatar: 角色头像路径
         """
         super().__init__()
         self._memory = []
@@ -61,6 +64,8 @@ class BasicMemoryAgent(AgentInterface):
         self.interrupt_method = interrupt_method
         # Flag to ensure a single interrupt handling per conversation
         self._interrupt_handled = False
+        self._faq_handler = faq_handler
+        self._character_avatar = character_avatar
         self._set_llm(llm)
         self.set_system(system)
         logger.info("BasicMemoryAgent initialized.")
@@ -91,10 +96,10 @@ class BasicMemoryAgent(AgentInterface):
         self._system = system
 
     def _add_message(
-        self,
-        message: str | List[Dict[str, Any]],
-        role: str,
-        display_text: DisplayText | None = None,
+            self,
+            message: str | List[Dict[str, Any]],
+            role: str,
+            display_text: DisplayText | None = None,
     ):
         """
         Add a message to the memory
@@ -236,7 +241,7 @@ class BasicMemoryAgent(AgentInterface):
         return messages
 
     def _chat_function_factory(
-        self, chat_func: Callable[[List[Dict[str, Any]], str], AsyncIterator[str]]
+            self, chat_func: Callable[[List[Dict[str, Any]], str], AsyncIterator[str]]
     ) -> Callable[..., AsyncIterator[SentenceOutput]]:
         """
         Create the chat pipeline with transformers
@@ -263,18 +268,58 @@ class BasicMemoryAgent(AgentInterface):
             Returns:
                 AsyncIterator[str] - Token stream from LLM
             """
+            # 从输入中获取用户查询文本
+            user_query = ""
+            for text_data in input_data.texts:
+                if text_data.source == TextSource.INPUT:
+                    user_query += text_data.content + " "
+            user_query = user_query.strip()
 
-            messages = self._to_messages(input_data)
+            # 处理FAQ匹配（如果启用）
+            direct_answer = None
+            enhanced_prompt = None
+            similarity = 0.0
 
-            # Get token stream from LLM
-            token_stream = chat_func(messages, self._system)
+            if self._faq_handler and user_query:
+                try:
+                    direct_answer, enhanced_prompt, similarity = await self._faq_handler.process_query(user_query)
+                    logger.info(
+                        f"FAQ匹配结果: 直接回答={bool(direct_answer)}, 增强提示={bool(enhanced_prompt)}, 相似度={similarity:.2f}")
+                except Exception as e:
+                    logger.error(f"处理FAQ匹配时出错: {e}")
+
+            # 高匹配度：直接返回FAQ答案
+            if direct_answer:
+                logger.info(f"从FAQ直接返回答案 (匹配度: {similarity:.2f})")
+                # 将答案作为完整响应添加到记忆中
+                self._add_message(direct_answer, "assistant")
+                # 直接产生答案的token流
+                for char in direct_answer:
+                    yield char
+                return
+
+            # 中等匹配度：使用增强提示
+            if enhanced_prompt:
+                logger.info(f"使用FAQ增强提示 (匹配度: {similarity:.2f})")
+                # 创建带有增强提示的系统消息
+                enhanced_system = f"{self._system}\n\n{enhanced_prompt}"
+                messages = self._to_messages(input_data)
+
+                # 带增强提示的token流
+                token_stream = chat_func(messages, enhanced_system)
+            else:
+                # 低匹配度或未启用FAQ：正常生成回复
+                logger.info(f"常规LLM回复 (匹配度: {similarity:.2f})")
+                messages = self._to_messages(input_data)
+                token_stream = chat_func(messages, self._system)
+
+            # 处理LLM生成的token流
             complete_response = ""
-
             async for token in token_stream:
                 yield token
                 complete_response += token
 
-            # Store complete response
+            # 存储完整响应
             self._add_message(complete_response, "assistant")
 
         return chat_with_memory
@@ -290,7 +335,7 @@ class BasicMemoryAgent(AgentInterface):
         self._interrupt_handled = False
 
     def start_group_conversation(
-        self, human_name: str, ai_participants: List[str]
+            self, human_name: str, ai_participants: List[str]
     ) -> None:
         """
         Start a group conversation by adding a system message that informs the AI about
