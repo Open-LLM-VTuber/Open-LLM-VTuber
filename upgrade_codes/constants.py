@@ -7,6 +7,9 @@ CURRENT_SCRIPT_VERSION = "0.2.0"
 USER_CONF = "conf.yaml"
 BACKUP_CONF = "conf.yaml.backup"
 
+ZH_DEFAULT_CONF = "config_templates/conf.ZH.default.yaml"
+EN_DEFAULT_CONF = "config_templates/conf.default.yaml"
+
 # 多语言提示内容
 TEXTS = {
     "zh": {

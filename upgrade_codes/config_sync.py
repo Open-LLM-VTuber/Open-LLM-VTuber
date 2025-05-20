@@ -1,6 +1,6 @@
 import os
 import shutil
-from upgrade_codes.constants import USER_CONF,BACKUP_CONF,TEXTS
+from upgrade_codes.constants import USER_CONF,BACKUP_CONF,TEXTS, ZH_DEFAULT_CONF, EN_DEFAULT_CONF
 import logging
 from ruamel.yaml import YAML
 from src.open_llm_vtuber.config_manager.utils import load_text_file_with_guess_encoding
@@ -12,9 +12,9 @@ class ConfigSynchronizer:
     def sync_user_config(self, logger, lang: str = "en") -> None:
         texts = TEXTS[lang]
         default_template = (
-            "config_templates/conf.ZH.default.yaml"
+            ZH_DEFAULT_CONF
             if lang == "zh"
-            else "config_templates/conf.default.yaml"
+            else EN_DEFAULT_CONF
         )
 
         if os.path.exists(USER_CONF):
