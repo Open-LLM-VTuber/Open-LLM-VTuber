@@ -12,7 +12,7 @@ class UpgradeManager:
         self.upgrade_utils = UpgradeUtility(self.logger, self.lang)
 
     def sync_user_config(self):
-        self.config_sync.sync_user_config(logger=self.logger, lang=self.lang)
+        self.config_sync.sync_user_config(self.logger, self.lang)
 
     def log_system_info(self):
         return self.upgrade_utils.log_system_info()

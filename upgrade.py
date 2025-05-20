@@ -1,15 +1,10 @@
-import os
-import sys
-import platform
-import subprocess
 import time
 from upgrade_codes.manager import UpgradeManager
 from upgrade_codes.constants import TEXTS
 
 upgrade_manager = UpgradeManager()
 
-
-def perform_upgrade(custom_logger=None):
+def general_upgrade(custom_logger=None):
     logger = custom_logger or upgrade_manager.logger
     start_time = time.time()
 
@@ -149,4 +144,4 @@ def perform_upgrade(custom_logger=None):
 
 
 if __name__ == "__main__":
-    perform_upgrade()
+    general_upgrade()
