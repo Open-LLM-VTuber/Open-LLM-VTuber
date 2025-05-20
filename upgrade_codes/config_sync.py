@@ -147,6 +147,38 @@ class ConfigSynchronizer:
                     subtree_extra = self.collect_all_subkeys(user_val, current_path)
                     extra.extend(subtree_extra)
         return extra
+    
+    def delete_extra_keys(self, user_path: str, default_path: str, lang: str = "en"):
+        """Delete extra keys in user config that are not present in default config."""
+        yaml = YAML()
+        yaml.preserve_quotes = True
+
+        user_config = yaml.load(load_text_file_with_guess_encoding(user_path))
+        default_config = yaml.load(load_text_file_with_guess_encoding(default_path))
+        extra_keys = self.get_extra_keys(user_config, default_config)
+
+        def delete_key_by_path(config_dict, key_path):
+            keys = key_path.split(".")
+            sub_dict = config_dict
+            for k in keys[:-1]:
+                if k in sub_dict and isinstance(sub_dict[k], dict):
+                    sub_dict = sub_dict[k]
+                else:
+                    return False
+            return sub_dict.pop(keys[-1], None) is not None
+
+        deleted_keys = []
+        for key_path in extra_keys:
+            if delete_key_by_path(user_config, key_path):
+                deleted_keys.append(key_path)
+
+        with open(user_path, "w", encoding="utf-8") as f:
+            yaml.dump(user_config, f)
+
+        logger.info(f"Deleted {len(deleted_keys)} extra keys:")
+        for key in deleted_keys:
+            logger.info(f"  - {key}")
+
 
     def compare_configs(self, user_path: str, default_path: str, lang: str = "en") -> bool:
         """Compare user and default configs, log discrepancies, and return status."""
@@ -166,6 +198,7 @@ class ConfigSynchronizer:
             return False
         if extra:
             logger.warning(texts["extra_keys"].format(keys=", ".join(extra)))
+            self.delete_extra_keys(USER_CONF, default_template, lang)
         else:
             logger.debug(texts["up_to_date"])
 

@@ -1,16 +1,13 @@
 # upgrade/constants.py
 
-# 脚本版本号
 CURRENT_SCRIPT_VERSION = "0.2.0"
 
-# 配置文件路径
 USER_CONF = "conf.yaml"
 BACKUP_CONF = "conf.yaml.backup"
 
 ZH_DEFAULT_CONF = "config_templates/conf.ZH.default.yaml"
 EN_DEFAULT_CONF = "config_templates/conf.default.yaml"
 
-# 多语言提示内容
 TEXTS = {
     "zh": {
         "welcome_message": f"Auto-Upgrade Script {CURRENT_SCRIPT_VERSION}\nOpen-LLM-VTuber 升级脚本 - 此脚本仍在实验阶段，可能无法按预期工作。",
