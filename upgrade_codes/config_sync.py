@@ -1,7 +1,12 @@
 import os
 import shutil
 from upgrade_codes.constants import USER_CONF,BACKUP_CONF,TEXTS
-from upgrade_codes.merge_configs import compare_configs, merge_configs
+import logging
+from ruamel.yaml import YAML
+from src.open_llm_vtuber.config_manager.utils import load_text_file_with_guess_encoding
+from upgrade_codes.constants import TEXTS_COMPARE, TEXTS_MERGE
+
+logger = logging.getLogger(__name__)
 
 class ConfigSynchronizer:
     def sync_user_config(self, logger, lang: str = "en") -> None:
@@ -13,7 +18,7 @@ class ConfigSynchronizer:
         )
 
         if os.path.exists(USER_CONF):
-            if not compare_configs(USER_CONF, default_template, lang):
+            if not self._compare_configs(USER_CONF, default_template, lang):
                 try:
                     backup_path = os.path.abspath(BACKUP_CONF)
                     logger.info(
@@ -24,7 +29,7 @@ class ConfigSynchronizer:
                     logger.debug(texts["config_backup_path"].format(path=backup_path))
                     shutil.copy2(USER_CONF, BACKUP_CONF)
 
-                    new_keys = merge_configs(USER_CONF, default_template, lang)
+                    new_keys = self._merge_configs(USER_CONF, default_template, lang)
                     if new_keys:
                         logger.info(texts["merged_config_success"])
                         for key in new_keys:
@@ -39,3 +44,131 @@ class ConfigSynchronizer:
             logger.warning(texts["no_config"])
             logger.warning(texts["copy_default_config"])
             shutil.copy2(default_template, USER_CONF)
+
+    def _merge_configs(self, user_path: str, default_path: str, lang: str = "en"):
+        yaml = YAML()
+        yaml.preserve_quotes = True
+
+        user_config = yaml.load(load_text_file_with_guess_encoding(user_path))
+        default_config = yaml.load(load_text_file_with_guess_encoding(default_path))
+
+        new_keys = []
+
+        def merge(d_user, d_default, path=""):
+            for k, v in d_default.items():
+                current_path = f"{path}.{k}" if path else k
+                if k not in d_user:
+                    d_user[k] = v
+                    new_keys.append(current_path)
+                elif isinstance(v, dict) and isinstance(d_user.get(k), dict):
+                    merge(d_user[k], v, current_path)
+            return d_user
+
+        merged = merge(user_config, default_config)
+
+        # Update conf_version from default_config without overriding other user settings
+        version_value = (
+            user_config["system_config"].get("conf_version")
+            if "system_config" in user_config
+            else ""
+        )
+        version_change_string = "conf_version: " + version_value
+
+        if (
+            "system_config" in default_config
+            and "conf_version" in default_config["system_config"]
+        ):
+            merged.setdefault("system_config", {})
+            merged["system_config"]["conf_version"] = default_config["system_config"][
+                "conf_version"
+            ]
+            version_change_string = (
+                version_change_string
+                + " -> "
+                + default_config["system_config"]["conf_version"]
+            )
+
+        with open(user_path, "w", encoding="utf-8") as f:
+            yaml.dump(merged, f)
+
+        # Log upgrade details (replacing manual file writing)
+        texts = TEXTS_MERGE.get(lang, TEXTS_MERGE["en"])
+        logger.info(version_change_string)
+        for key in new_keys:
+            logger.info(texts["new_config_item"].format(key=key))
+        return new_keys
+    
+    def _collect_all_subkeys(self, d, base_path):
+        """Collect all keys in the dictionary d, recursively, with base_path as the prefix."""
+        keys = []
+        # Only process if d is a dictionary
+        if isinstance(d, dict):
+            for key, value in d.items():
+                current_path = f"{base_path}.{key}" if base_path else key
+                keys.append(current_path)
+                if isinstance(value, dict):
+                    keys.extend(self._collect_all_subkeys(value, current_path))
+        return keys
+
+    def _get_missing_keys(self, user, default, path=""):
+        """Recursively find keys in default that are missing in user."""
+        missing = []
+        for key, default_val in default.items():
+            current_path = f"{path}.{key}" if path else key
+            if key not in user:
+                missing.append(current_path)
+            else:
+                user_val = user[key]
+                if isinstance(default_val, dict):
+                    if isinstance(user_val, dict):
+                        missing.extend(
+                            self._get_missing_keys(user_val, default_val, current_path)
+                        )
+                    else:
+                        subtree_missing = self._collect_all_subkeys(default_val, current_path)
+                        missing.extend(subtree_missing)
+        return missing
+    
+    def _get_extra_keys(self, user, default, path=""):
+        """Recursively find keys in user that are not present in default."""
+        extra = []
+        for key, user_val in user.items():
+            current_path = f"{path}.{key}" if path else key
+            if key not in default:
+                # Only collect subkeys if the value is a dictionary
+                if isinstance(user_val, dict):
+                    subtree_extra = self._collect_all_subkeys(user_val, current_path)
+                    extra.extend(subtree_extra)
+                extra.append(current_path)
+            else:
+                default_val = default[key]
+                if isinstance(user_val, dict) and isinstance(default_val, dict):
+                    extra.extend(self._get_extra_keys(user_val, default_val, current_path))
+                elif isinstance(user_val, dict):
+                    subtree_extra = self._collect_all_subkeys(user_val, current_path)
+                    extra.extend(subtree_extra)
+        return extra
+
+    def _compare_configs(self, user_path: str, default_path: str, lang: str = "en") -> bool:
+        """Compare user and default configs, log discrepancies, and return status."""
+        yaml = YAML(typ="safe")
+        yaml.preserve_quotes = True
+
+        user_config = yaml.load(load_text_file_with_guess_encoding(user_path))
+        default_config = yaml.load(load_text_file_with_guess_encoding(default_path))
+
+        missing = self._get_missing_keys(user_config, default_config)
+        extra = self._get_extra_keys(user_config, default_config)
+
+        texts = TEXTS_COMPARE.get(lang, TEXTS_COMPARE["en"])
+
+        if missing:
+            logger.warning(texts["missing_keys"].format(keys=", ".join(missing)))
+            return False
+        if extra:
+            logger.warning(texts["extra_keys"].format(keys=", ".join(extra)))
+        else:
+            logger.debug(texts["up_to_date"])
+
+        return True
+

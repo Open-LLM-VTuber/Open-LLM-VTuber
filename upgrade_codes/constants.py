@@ -120,3 +120,27 @@ Continue? (y/N): """,
         "finish_upgrade": "Upgrade process completed, total time: {time:.2f} seconds",
     },
 }
+
+# Multilingual texts for merge_configs log messages
+TEXTS_MERGE = {
+    "zh": {
+        "new_config_item": "[信息] 新增配置项: {key}",
+    },
+    "en": {
+        "new_config_item": "[INFO] New config item: {key}",
+    },
+}
+
+# Multilingual texts for compare_configs log messages
+TEXTS_COMPARE = {
+    "zh": {
+        "missing_keys": "[警告] 用户配置缺少以下键，可能与默认配置不一致: {keys}",
+        "extra_keys": "[警告] 用户配置包含以下默认配置中不存在的键: {keys}",
+        "up_to_date": "[调试] 用户配置与默认配置一致。",
+    },
+    "en": {
+        "missing_keys": "[WARNING] User config is missing the following keys, which may be out-of-date: {keys}",
+        "extra_keys": "[WARNING] User config contains the following keys not present in default config: {keys}",
+        "up_to_date": "[DEBUG] User config is up-to-date with default config.",
+    },
+}
