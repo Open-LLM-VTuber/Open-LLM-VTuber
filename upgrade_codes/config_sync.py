@@ -18,7 +18,7 @@ class ConfigSynchronizer:
         )
 
         if os.path.exists(USER_CONF):
-            if not self._compare_configs(USER_CONF, default_template, lang):
+            if not self.compare_configs(USER_CONF, default_template, lang):
                 try:
                     backup_path = os.path.abspath(BACKUP_CONF)
                     logger.info(
@@ -29,7 +29,7 @@ class ConfigSynchronizer:
                     logger.debug(texts["config_backup_path"].format(path=backup_path))
                     shutil.copy2(USER_CONF, BACKUP_CONF)
 
-                    new_keys = self._merge_configs(USER_CONF, default_template, lang)
+                    new_keys = self.merge_configs(USER_CONF, default_template, lang)
                     if new_keys:
                         logger.info(texts["merged_config_success"])
                         for key in new_keys:
@@ -45,7 +45,7 @@ class ConfigSynchronizer:
             logger.warning(texts["copy_default_config"])
             shutil.copy2(default_template, USER_CONF)
 
-    def _merge_configs(self, user_path: str, default_path: str, lang: str = "en"):
+    def merge_configs(self, user_path: str, default_path: str, lang: str = "en"):
         yaml = YAML()
         yaml.preserve_quotes = True
 
@@ -98,7 +98,7 @@ class ConfigSynchronizer:
             logger.info(texts["new_config_item"].format(key=key))
         return new_keys
     
-    def _collect_all_subkeys(self, d, base_path):
+    def collect_all_subkeys(self, d, base_path):
         """Collect all keys in the dictionary d, recursively, with base_path as the prefix."""
         keys = []
         # Only process if d is a dictionary
@@ -107,10 +107,10 @@ class ConfigSynchronizer:
                 current_path = f"{base_path}.{key}" if base_path else key
                 keys.append(current_path)
                 if isinstance(value, dict):
-                    keys.extend(self._collect_all_subkeys(value, current_path))
+                    keys.extend(self.collect_all_subkeys(value, current_path))
         return keys
 
-    def _get_missing_keys(self, user, default, path=""):
+    def get_missing_keys(self, user, default, path=""):
         """Recursively find keys in default that are missing in user."""
         missing = []
         for key, default_val in default.items():
@@ -122,14 +122,14 @@ class ConfigSynchronizer:
                 if isinstance(default_val, dict):
                     if isinstance(user_val, dict):
                         missing.extend(
-                            self._get_missing_keys(user_val, default_val, current_path)
+                            self.get_missing_keys(user_val, default_val, current_path)
                         )
                     else:
-                        subtree_missing = self._collect_all_subkeys(default_val, current_path)
+                        subtree_missing = self.collect_all_subkeys(default_val, current_path)
                         missing.extend(subtree_missing)
         return missing
     
-    def _get_extra_keys(self, user, default, path=""):
+    def get_extra_keys(self, user, default, path=""):
         """Recursively find keys in user that are not present in default."""
         extra = []
         for key, user_val in user.items():
@@ -137,19 +137,19 @@ class ConfigSynchronizer:
             if key not in default:
                 # Only collect subkeys if the value is a dictionary
                 if isinstance(user_val, dict):
-                    subtree_extra = self._collect_all_subkeys(user_val, current_path)
+                    subtree_extra = self.collect_all_subkeys(user_val, current_path)
                     extra.extend(subtree_extra)
                 extra.append(current_path)
             else:
                 default_val = default[key]
                 if isinstance(user_val, dict) and isinstance(default_val, dict):
-                    extra.extend(self._get_extra_keys(user_val, default_val, current_path))
+                    extra.extend(self.get_extra_keys(user_val, default_val, current_path))
                 elif isinstance(user_val, dict):
-                    subtree_extra = self._collect_all_subkeys(user_val, current_path)
+                    subtree_extra = self.collect_all_subkeys(user_val, current_path)
                     extra.extend(subtree_extra)
         return extra
 
-    def _compare_configs(self, user_path: str, default_path: str, lang: str = "en") -> bool:
+    def compare_configs(self, user_path: str, default_path: str, lang: str = "en") -> bool:
         """Compare user and default configs, log discrepancies, and return status."""
         yaml = YAML(typ="safe")
         yaml.preserve_quotes = True
@@ -157,8 +157,8 @@ class ConfigSynchronizer:
         user_config = yaml.load(load_text_file_with_guess_encoding(user_path))
         default_config = yaml.load(load_text_file_with_guess_encoding(default_path))
 
-        missing = self._get_missing_keys(user_config, default_config)
-        extra = self._get_extra_keys(user_config, default_config)
+        missing = self.get_missing_keys(user_config, default_config)
+        extra = self.get_extra_keys(user_config, default_config)
 
         texts = TEXTS_COMPARE.get(lang, TEXTS_COMPARE["en"])
 
