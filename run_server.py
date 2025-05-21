@@ -128,7 +128,6 @@ def run(console_log_level: str):
 
     # Sync user config with default config
     try:
-        # TODO:改成manager
         # sync_user_config(logger=logger, lang=lang)
         upgrade_manager.sync_user_config()
     except Exception as e:

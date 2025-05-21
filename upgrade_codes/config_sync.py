@@ -179,7 +179,6 @@ class ConfigSynchronizer:
         for key in deleted_keys:
             logger.info(f"  - {key}")
 
-
     def compare_configs(self, user_path: str, default_path: str, lang: str = "en") -> bool:
         """Compare user and default configs, log discrepancies, and return status."""
         yaml = YAML(typ="safe")
@@ -192,6 +191,12 @@ class ConfigSynchronizer:
         extra = self.get_extra_keys(user_config, default_config)
 
         texts = TEXTS_COMPARE.get(lang, TEXTS_COMPARE["en"])
+
+        default_template = (
+            ZH_DEFAULT_CONF
+            if lang == "zh"
+            else EN_DEFAULT_CONF
+        )
 
         if missing:
             logger.warning(texts["missing_keys"].format(keys=", ".join(missing)))

@@ -382,6 +382,13 @@ character_config:
       pitch:  3 # 音高，api_name: = "voice_creation"时填写
       speed:  3 # 语速，api_name: = "voice_creation"时填写
 
+    openai_tts: # OpenAI 兼容的 TTS（语音合成）接口配置
+      # 如果提供了这些设置，将覆盖 openai_tts.py 文件中的默认值
+      model: 'kokoro' # 服务器预期使用的模型名称（例如 'tts-1'，'kokoro'）
+      voice: 'af_sky+af_bella' # 服务器预期使用的声音名称（例如 'alloy'，'af_sky+af_bella'）
+      api_key: 'not-needed' # 如果服务器需要，可填写 API 密钥
+      base_url: 'http://localhost:8880/v1' # TTS 服务器的基础 URL 地址
+      file_extension: 'mp3' # 音频文件格式（'mp3' 或 'wav'）
 
   # =================== Voice Activity Detection ===================
   vad_config:
@@ -409,6 +416,10 @@ character_config:
       # 比如...你说话并阅读英语字幕，而 TTS 说日语之类的
       translate_audio: False # 警告：请确保翻译引擎配置成功再开启此选项，否则会翻译失败
       translate_provider: 'deeplx' # 翻译提供商, 目前支持 deeplx 或 tencent
+
+      deeplx:
+        deeplx_target_lang: 'JA'
+        deeplx_api_endpoint: 'http://localhost:1188/v2/translate'
 
 
       #  腾讯文本翻译  每月500万字符  记得关闭后付费,需要手动前往 机器翻译控制台 > 系统设置 关闭
