@@ -9,10 +9,10 @@ class UpgradeManager:
         self.lang = select_language()
         self.logger = configure_logging()
         self.upgrade_utils = UpgradeUtility(self.logger, self.lang)
-        self.config_sync = ConfigSynchronizer(self.lang)
+        self.config_sync = ConfigSynchronizer(self.lang, self.logger)
 
     def sync_user_config(self):
-        self.config_sync.sync_user_config(self.logger)
+        self.config_sync.sync_user_config()
 
     def log_system_info(self):
         return self.upgrade_utils.log_system_info()

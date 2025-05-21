@@ -5,10 +5,8 @@ import logging
 from ruamel.yaml import YAML
 from src.open_llm_vtuber.config_manager.utils import load_text_file_with_guess_encoding
 
-logger = logging.getLogger(__name__)
-
 class ConfigSynchronizer:
-    def __init__(self, lang="en"):
+    def __init__(self, lang="en", logger = logging.getLogger(__name__)):
         self.lang = lang
         self.texts = TEXTS[lang]
         self.default_path = ZH_DEFAULT_CONF if lang == "zh" else EN_DEFAULT_CONF
@@ -18,36 +16,43 @@ class ConfigSynchronizer:
         self.backup_path = BACKUP_CONF
         self.texts_merge = TEXTS_MERGE.get(lang, TEXTS_MERGE["en"])
         self.texts_compare = TEXTS_COMPARE.get(lang, TEXTS_COMPARE["en"])
+        self.logger = logger
 
-    def sync_user_config(self, logger) -> None:
-
-        if os.path.exists(self.user_path):
-            if not self.compare_configs():
-                try:
-                    backup_path = os.path.abspath(self.backup_path)
-                    logger.info(
-                        self.texts["backup_user_config"].format(
-                            user_conf=self.user_path, backup_conf=self.backup_path
-                        )
-                    )
-                    logger.debug(self.texts["config_backup_path"].format(path=backup_path))
-                    shutil.copy2(self.user_path, self.backup_path)
-
-                    new_keys = self.merge_configs()
-                    if new_keys:
-                        logger.info(self.texts["merged_config_success"])
-                        for key in new_keys:
-                            logger.info(f"  - {key}")
-                    else:
-                        logger.info(self.texts["merged_config_none"])
-                except Exception as e:
-                    logger.error(self.texts["merge_failed"].format(error=e))
-            else:
-                logger.info(self.texts["configs_up_to_date"])
-        else:
-            logger.warning(self.texts["no_config"])
-            logger.warning(self.texts["copy_default_config"])
+    def sync_user_config(self) -> None:
+        if not os.path.exists(self.user_path):
+            self.logger.warning(self.texts["no_config"])
+            self.logger.warning(self.texts["copy_default_config"])
             shutil.copy2(self.default_path, self.user_path)
+            return
+
+        if self.compare_configs():
+            self.logger.info(self.texts["configs_up_to_date"])
+            return
+
+        self.backup_user_config()
+        self.merge_and_update_user_config()
+
+    def backup_user_config(self):
+        backup_path = os.path.abspath(self.backup_path)
+        self.logger.info(
+            self.texts["backup_user_config"].format(
+                user_conf=self.user_path, backup_conf=self.backup_path
+            )
+        )
+        self.logger.debug(self.texts["config_backup_path"].format(path=backup_path))
+        shutil.copy2(self.user_path, self.backup_path)
+
+    def merge_and_update_user_config(self):
+        try:
+            new_keys = self.merge_configs()
+            if new_keys:
+                self.logger.info(self.texts["merged_config_success"])
+                for key in new_keys:
+                    self.logger.info(f"  - {key}")
+            else:
+                self.logger.info(self.texts["merged_config_none"])
+        except Exception as e:
+            self.logger.error(self.texts["merge_failed"].format(error=e))
 
     def merge_configs(self):
         user_config = self.yaml.load(load_text_file_with_guess_encoding(self.user_path))
@@ -93,9 +98,9 @@ class ConfigSynchronizer:
             self.yaml.dump(merged, f)
 
         # Log upgrade details (replacing manual file writing)
-        logger.info(version_change_string)
+        self.logger.info(version_change_string)
         for key in new_keys:
-            logger.info(self.texts_merge["new_config_item"].format(key=key))
+            self.logger.info(self.texts_merge["new_config_item"].format(key=key))
         return new_keys
     
     def collect_all_subkeys(self, d, base_path):
@@ -174,9 +179,9 @@ class ConfigSynchronizer:
         with open(self.user_path, "w", encoding="utf-8") as f:
             self.yaml.dump(user_config, f)
 
-        logger.info(f"Deleted {len(deleted_keys)} extra keys:")
+        self.logger.info(f"Deleted {len(deleted_keys)} extra keys:")
         for key in deleted_keys:
-            logger.info(f"  - {key}")
+            self.logger.info(f"  - {key}")
 
     def compare_configs(self) -> bool:
         """Compare user and default configs, log discrepancies, and return status."""
@@ -188,13 +193,13 @@ class ConfigSynchronizer:
         extra = self.get_extra_keys(user_config, default_config)
 
         if missing:
-            logger.warning(self.texts_compare["missing_keys"].format(keys=", ".join(missing)))
+            self.logger.warning(self.texts_compare["missing_keys"].format(keys=", ".join(missing)))
             return False
         if extra:
-            logger.warning(self.texts_compare["extra_keys"].format(keys=", ".join(extra)))
+            self.logger.warning(self.texts_compare["extra_keys"].format(keys=", ".join(extra)))
             self.delete_extra_keys()
         else:
-            logger.debug(self.texts_compare["up_to_date"])
+            self.logger.debug(self.texts_compare["up_to_date"])
 
         return True
 

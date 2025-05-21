@@ -4,8 +4,8 @@ from upgrade_codes.constants import TEXTS
 
 upgrade_manager = UpgradeManager()
 
-def general_upgrade(custom_logger=None):
-    logger = custom_logger or upgrade_manager.logger
+def general_upgrade():
+    logger = upgrade_manager.logger
     start_time = time.time()
 
     lang = upgrade_manager.lang
@@ -146,7 +146,6 @@ def general_upgrade(custom_logger=None):
     logger.info(texts["check_config"])
     logger.info(texts["resolve_conflicts"])
     logger.info(texts["check_backup"])
-
 
 if __name__ == "__main__":
     general_upgrade()
