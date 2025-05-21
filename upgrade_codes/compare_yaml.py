@@ -25,8 +25,8 @@ def compare_yaml_keys(path1, path2):
     return only_in_1, only_in_2
 
 if __name__ == "__main__":
-    conf1 = "config_templates/conf.ZH.default.yaml"
-    conf2 = "config_templates/conf.default.yaml"
+    conf1 = "conf.yaml" #"config_templates/conf.ZH.default.yaml"
+    conf2 = "conf.yaml.backup" #"config_templates/conf.default.yaml"
     only_in_1, only_in_2 = compare_yaml_keys(conf1, conf2)
 
     if not only_in_1 and not only_in_2:

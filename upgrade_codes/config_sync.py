@@ -8,48 +8,50 @@ from src.open_llm_vtuber.config_manager.utils import load_text_file_with_guess_e
 logger = logging.getLogger(__name__)
 
 class ConfigSynchronizer:
-    def sync_user_config(self, logger, lang: str = "en") -> None:
-        texts = TEXTS[lang]
-        default_template = (
-            ZH_DEFAULT_CONF
-            if lang == "zh"
-            else EN_DEFAULT_CONF
-        )
+    def __init__(self, lang="en"):
+        self.lang = lang
+        self.texts = TEXTS[lang]
+        self.default_path = ZH_DEFAULT_CONF if lang == "zh" else EN_DEFAULT_CONF
+        self.yaml = YAML()
+        self.yaml.preserve_quotes = True
+        self.user_path = USER_CONF
+        self.backup_path = BACKUP_CONF
+        self.texts_merge = TEXTS_MERGE.get(lang, TEXTS_MERGE["en"])
+        self.texts_compare = TEXTS_COMPARE.get(lang, TEXTS_COMPARE["en"])
 
-        if os.path.exists(USER_CONF):
-            if not self.compare_configs(USER_CONF, default_template, lang):
+    def sync_user_config(self, logger) -> None:
+
+        if os.path.exists(self.user_path):
+            if not self.compare_configs():
                 try:
-                    backup_path = os.path.abspath(BACKUP_CONF)
+                    backup_path = os.path.abspath(self.backup_path)
                     logger.info(
-                        texts["backup_user_config"].format(
-                            user_conf=USER_CONF, backup_conf=BACKUP_CONF
+                        self.texts["backup_user_config"].format(
+                            user_conf=self.user_path, backup_conf=self.backup_path
                         )
                     )
-                    logger.debug(texts["config_backup_path"].format(path=backup_path))
-                    shutil.copy2(USER_CONF, BACKUP_CONF)
+                    logger.debug(self.texts["config_backup_path"].format(path=backup_path))
+                    shutil.copy2(self.user_path, self.backup_path)
 
-                    new_keys = self.merge_configs(USER_CONF, default_template, lang)
+                    new_keys = self.merge_configs()
                     if new_keys:
-                        logger.info(texts["merged_config_success"])
+                        logger.info(self.texts["merged_config_success"])
                         for key in new_keys:
                             logger.info(f"  - {key}")
                     else:
-                        logger.info(texts["merged_config_none"])
+                        logger.info(self.texts["merged_config_none"])
                 except Exception as e:
-                    logger.error(texts["merge_failed"].format(error=e))
+                    logger.error(self.texts["merge_failed"].format(error=e))
             else:
-                logger.info(texts["configs_up_to_date"])
+                logger.info(self.texts["configs_up_to_date"])
         else:
-            logger.warning(texts["no_config"])
-            logger.warning(texts["copy_default_config"])
-            shutil.copy2(default_template, USER_CONF)
+            logger.warning(self.texts["no_config"])
+            logger.warning(self.texts["copy_default_config"])
+            shutil.copy2(self.default_path, self.user_path)
 
-    def merge_configs(self, user_path: str, default_path: str, lang: str = "en"):
-        yaml = YAML()
-        yaml.preserve_quotes = True
-
-        user_config = yaml.load(load_text_file_with_guess_encoding(user_path))
-        default_config = yaml.load(load_text_file_with_guess_encoding(default_path))
+    def merge_configs(self):
+        user_config = self.yaml.load(load_text_file_with_guess_encoding(self.user_path))
+        default_config = self.yaml.load(load_text_file_with_guess_encoding(self.default_path))
 
         new_keys = []
 
@@ -87,14 +89,13 @@ class ConfigSynchronizer:
                 + default_config["system_config"]["conf_version"]
             )
 
-        with open(user_path, "w", encoding="utf-8") as f:
-            yaml.dump(merged, f)
+        with open(self.user_path, "w", encoding="utf-8") as f:
+            self.yaml.dump(merged, f)
 
         # Log upgrade details (replacing manual file writing)
-        texts = TEXTS_MERGE.get(lang, TEXTS_MERGE["en"])
         logger.info(version_change_string)
         for key in new_keys:
-            logger.info(texts["new_config_item"].format(key=key))
+            logger.info(self.texts_merge["new_config_item"].format(key=key))
         return new_keys
     
     def collect_all_subkeys(self, d, base_path):
@@ -148,13 +149,11 @@ class ConfigSynchronizer:
                     extra.extend(subtree_extra)
         return extra
     
-    def delete_extra_keys(self, user_path: str, default_path: str, lang: str = "en"):
+    def delete_extra_keys(self):
         """Delete extra keys in user config that are not present in default config."""
-        yaml = YAML()
-        yaml.preserve_quotes = True
 
-        user_config = yaml.load(load_text_file_with_guess_encoding(user_path))
-        default_config = yaml.load(load_text_file_with_guess_encoding(default_path))
+        user_config = self.yaml.load(load_text_file_with_guess_encoding(self.user_path))
+        default_config = self.yaml.load(load_text_file_with_guess_encoding(self.default_path))
         extra_keys = self.get_extra_keys(user_config, default_config)
 
         def delete_key_by_path(config_dict, key_path):
@@ -172,40 +171,30 @@ class ConfigSynchronizer:
             if delete_key_by_path(user_config, key_path):
                 deleted_keys.append(key_path)
 
-        with open(user_path, "w", encoding="utf-8") as f:
-            yaml.dump(user_config, f)
+        with open(self.user_path, "w", encoding="utf-8") as f:
+            self.yaml.dump(user_config, f)
 
         logger.info(f"Deleted {len(deleted_keys)} extra keys:")
         for key in deleted_keys:
             logger.info(f"  - {key}")
 
-    def compare_configs(self, user_path: str, default_path: str, lang: str = "en") -> bool:
+    def compare_configs(self) -> bool:
         """Compare user and default configs, log discrepancies, and return status."""
-        yaml = YAML(typ="safe")
-        yaml.preserve_quotes = True
 
-        user_config = yaml.load(load_text_file_with_guess_encoding(user_path))
-        default_config = yaml.load(load_text_file_with_guess_encoding(default_path))
+        user_config = self.yaml.load(load_text_file_with_guess_encoding(self.user_path))
+        default_config = self.yaml.load(load_text_file_with_guess_encoding(self.default_path))
 
         missing = self.get_missing_keys(user_config, default_config)
         extra = self.get_extra_keys(user_config, default_config)
 
-        texts = TEXTS_COMPARE.get(lang, TEXTS_COMPARE["en"])
-
-        default_template = (
-            ZH_DEFAULT_CONF
-            if lang == "zh"
-            else EN_DEFAULT_CONF
-        )
-
         if missing:
-            logger.warning(texts["missing_keys"].format(keys=", ".join(missing)))
+            logger.warning(self.texts_compare["missing_keys"].format(keys=", ".join(missing)))
             return False
         if extra:
-            logger.warning(texts["extra_keys"].format(keys=", ".join(extra)))
-            self.delete_extra_keys(USER_CONF, default_template, lang)
+            logger.warning(self.texts_compare["extra_keys"].format(keys=", ".join(extra)))
+            self.delete_extra_keys()
         else:
-            logger.debug(texts["up_to_date"])
+            logger.debug(self.texts_compare["up_to_date"])
 
         return True
 
