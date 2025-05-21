@@ -1,6 +1,7 @@
 # upgrade/constants.py
-
-CURRENT_SCRIPT_VERSION = "0.2.0"
+# CURRENT_SCRIPT_VERSION = "0.2.0"
+from ruamel.yaml import YAML
+from src.open_llm_vtuber.config_manager.utils import load_text_file_with_guess_encoding
 
 USER_CONF = "conf.yaml"
 BACKUP_CONF = "conf.yaml.backup"
@@ -8,11 +9,15 @@ BACKUP_CONF = "conf.yaml.backup"
 ZH_DEFAULT_CONF = "config_templates/conf.ZH.default.yaml"
 EN_DEFAULT_CONF = "config_templates/conf.default.yaml"
 
+yaml = YAML()
+user_config = yaml.load(load_text_file_with_guess_encoding(EN_DEFAULT_CONF ))
+CURRENT_SCRIPT_VERSION = user_config.get("system_config", {}).get("conf_version")
+
 TEXTS = {
     "zh": {
-        "welcome_message": f"Auto-Upgrade Script {CURRENT_SCRIPT_VERSION}\nOpen-LLM-VTuber 升级脚本 - 此脚本仍在实验阶段，可能无法按预期工作。",
-        "lang_select": "请选择语言/Please select language (zh/en):",
-        "invalid_lang": "无效的语言选择，使用英文作为默认语言",
+        "welcome_message": f"正在从 {CURRENT_SCRIPT_VERSION} 自动升级...\nOpen-LLM-VTuber 升级脚本 - 此脚本仍在实验阶段，可能无法按预期工作。",
+        # "lang_select": "请选择语言/Please select language (zh/en):",
+        # "invalid_lang": "无效的语言选择，使用英文作为默认语言",
         "not_git_repo": "错误：当前目录不是git仓库。请进入 Open-LLM-VTuber 目录后再运行此脚本。\n当然，更有可能的是你下载的Open-LLM-VTuber不包含.git文件夹 (如果你是透过下载压缩包而非使用 git clone 命令下载的话可能会造成这种情况)，这种情况下目前无法用脚本升级。",
         "backup_user_config": "正在备份 {user_conf} 到 {backup_conf}",
         "configs_up_to_date": "[DEBUG] 用户配置已是最新。",
@@ -65,9 +70,9 @@ TEXTS = {
         "finish_upgrade": "升级流程结束, 总耗时: {time:.2f} 秒",
     },
     "en": {
-        "welcome_message": f"Auto-Upgrade Script {CURRENT_SCRIPT_VERSION}\nOpen-LLM-VTuber upgrade script - This script is highly experimental and may not work as expected.",
-        "lang_select": "请选择语言/Please select language (zh/en):",
-        "invalid_lang": "Invalid language selection, using English as default",
+        "welcome_message": f"Starting auto upgrade from {CURRENT_SCRIPT_VERSION}...\nOpen-LLM-VTuber upgrade script - This script is highly experimental and may not work as expected.",
+        # "lang_select": "请选择语言/Please select language (zh/en):",
+        # "invalid_lang": "Invalid language selection, using English as default",
         "not_git_repo": "Error: Current directory is not a git repository. Please run this script inside the Open-LLM-VTuber directory.\nAlternatively, it is likely that the Open-LLM-VTuber you downloaded does not contain the .git folder (this can happen if you downloaded a zip archive instead of using git clone), in which case you cannot upgrade using this script.",
         "backup_user_config": "Backing up {user_conf} to {backup_conf}",
         "configs_up_to_date": "[DEBUG] User configuration is up-to-date.",

@@ -8,8 +8,8 @@ def general_upgrade(custom_logger=None):
     logger = custom_logger or upgrade_manager.logger
     start_time = time.time()
 
-    logger.info(TEXTS["en"]["welcome_message"])
     lang = upgrade_manager.lang
+    logger.info(TEXTS[lang]["welcome_message"])
     texts = TEXTS[lang]
 
     logger.info(texts["start_upgrade"])
