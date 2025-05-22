@@ -97,6 +97,15 @@ Check out the GitHub Release for updated notes.
 
 - Talk to LLM with voice. Offline.
 - ~~RAG on chat history~~ *(temporarily removed)*
+- **Externalized Persona Prompts**: Customize your VTuber's personality easily by editing `prompts/persona/persona_prompt.md` (or any file specified in `conf.yaml`).
+- **Email Sending via SMTP**: Configure the application to send emails (e.g., notifications, chat logs) using your own SMTP server.
+- **Enhanced Conversation Recording**:
+    - Text transcripts of conversations are saved in `CHAT_HISTORY_DIR/session_id/transcript.txt`.
+    - User voice input can be recorded and saved (default: WAV format).
+    - AI TTS output audio can also be recorded and saved.
+- **Internet Access Module**:
+    - Fetch content from web pages.
+    - Perform web searches (currently using DuckDuckGo).
 
 Currently supported LLM backend
 - Any OpenAI-API-compatible backend, such as Ollama, Groq, LM Studio, OpenAI, and more.
@@ -192,10 +201,30 @@ Run the following in the terminal to install the basic dependencies.
 ~~~shell
 pip install -r requirements.txt # Run this in the project directory 
 # Install Speech recognition dependencies and text-to-speech dependencies according to the instructions below
+# Ensure new dependencies for recently added features are also installed:
+# pip install beautifulsoup4 duckduckgo-search
+# scipy is used for audio saving and should be covered by requirements.txt
 ~~~
 
 
 Edit the `conf.yaml` for configurations. You can follow the configuration used in the demo video.
+Key configuration sections to review include:
+- `LLM_PROVIDER`, `ASR_MODEL`, `TTS_MODEL` for core functionality.
+- `PERSONA_PROMPT_FILE`: Specifies the Markdown file for the persona prompt, located in the `prompts/persona/` directory (default: `persona_prompt.md`).
+- `RECORDING`:
+    - `RECORD_CONVERSATIONS`: Master switch to enable/disable saving of text transcripts, user audio, and AI TTS audio.
+    - `AUDIO_RECORDING_FORMAT`: Format for saved audio (e.g., "wav"). Recordings are stored under `CHAT_HISTORY_DIR/session_id/`.
+- `SMTP` (for Email Sending):
+    - Configure `HOST`, `PORT`, `USE_TLS`, `USE_SSL`, `USERNAME`, `PASSWORD`, and `SENDER_EMAIL`. **Important**: Replace placeholder credentials with your actual SMTP server details.
+- `INTERNET_ACCESS`:
+    - `ENABLED`: Master switch for web fetching and search.
+    - `USER_AGENT`: User-Agent for web requests.
+    - `SEARCH_ENGINE_API`: Currently supports "duckduckgo".
+    - `MAX_SEARCH_RESULTS`: Default number of search results.
+    - `MAX_PAGE_CONTENT_LENGTH`: Max characters of text to extract from a webpage.
+Refer to the detailed comments within `conf.yaml` for each setting.
+
+Once the live2D model appears on the screen, it's ready to talk to you.
 
 Once the live2D model appears on the screen, it's ready to talk to you.
 

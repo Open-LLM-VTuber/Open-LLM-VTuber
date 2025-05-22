@@ -64,6 +64,9 @@ class VoiceRecognitionVAD:
         asr_transcribe_func: Callable,
         wake_word: str | None = None,
         function: Callable = print,
+        audio_save_callback: Callable[[np.ndarray, str], None] | None = None,
+        audio_save_format: str = "wav",
+        session_log_dir: str | None = None,
     ) -> None:
         """
         Initializes the VoiceRecognition class, setting up necessary models, streams, and queues.
@@ -98,6 +101,9 @@ class VoiceRecognitionVAD:
         self.recording_started = False
         self.gap_counter = 0
         self.wake_word = wake_word
+        self.audio_save_callback = audio_save_callback
+        self.audio_save_format = audio_save_format
+        self.session_log_dir = session_log_dir
 
     def _setup_audio_stream(self):
         """
@@ -226,7 +232,32 @@ class VoiceRecognitionVAD:
         logger.info("Stopping listening...")
         self.input_stream.stop()
 
-        detected_text = self.asr(self.samples)
+        # Concatenate audio samples for saving and transcription
+        if not self.samples:
+            logger.warning("No audio samples collected to process.")
+            self.reset() # Reset state
+            self.input_stream.start() # Restart listening
+            return None
+
+        audio_to_process = np.concatenate(self.samples)
+
+        # Save audio if callback is provided
+        if self.audio_save_callback and self.session_log_dir:
+            try:
+                timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+                filename = f"user_input_{timestamp}.{self.audio_save_format}"
+                full_path = os.path.join(self.session_log_dir, filename)
+                
+                # The callback is expected to handle the actual saving.
+                # It should accept the audio data (np.ndarray), full_path (str), and SAMPLE_RATE.
+                # For example, audio_utils.save_audio_to_wav
+                self.audio_save_callback(audio_to_process, full_path, SAMPLE_RATE)
+                logger.info(f"User audio saved to {full_path}")
+            except Exception as e:
+                logger.error(f"Error saving user audio: {e}")
+        
+        # Perform ASR
+        detected_text = self.transcribe(audio_to_process) # Use the concatenated audio
 
         if detected_text:
             logger.info(f"Detected: '{detected_text}'")
@@ -237,13 +268,15 @@ class VoiceRecognitionVAD:
         # self.reset()
         # self.input_stream.start()
 
-    def asr(self, samples: List[np.ndarray]) -> str:
+    def asr(self, audio_data: np.ndarray) -> str: # Modified to accept concatenated audio
         """
-        Performs automatic speech recognition on the collected samples.
+        Performs automatic speech recognition on the collected audio data.
         """
-        audio = np.concatenate(samples)
-
-        detected_text = self.transcribe(audio)
+        # This method is now a bit simpler as concatenation is done before calling it.
+        # It directly calls the transcribe function.
+        # The actual self.transcribe (ASR engine's transcribe_np) is called from _process_detected_audio
+        # This method is kept for clarity / if called directly, but _process_detected_audio is the main path.
+        detected_text = self.transcribe(audio_data)
         return detected_text
 
     def reset(self):

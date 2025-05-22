@@ -54,13 +54,20 @@ def _load_file_content(file_path: str) -> str:
 
 def load_persona(persona_name: str) -> str:
     """Load the content of a specific persona prompt file."""
-    persona_file_path = os.path.join(PERSONA_PROMPT_DIR, f'{persona_name}.txt')
+    persona_file_path = os.path.join(PERSONA_PROMPT_DIR, persona_name)
     try:
         return _load_file_content(persona_file_path)
+    except FileNotFoundError:
+        logger.error(f"Persona file not found: {persona_file_path}")
+        logger.warning("Falling back to default persona content.")
+        # Fallback to a very basic default persona if the specified file is not found
+        return """# Fallback Persona
+
+You are a generic AI assistant. The configured persona file was not found."""
     except Exception as e:
-        logger.error(f"Error loading persona {persona_name}: {e}")
+        logger.error(f"Error loading persona {persona_name} from {persona_file_path}: {e}")
         raise
-    
+
 def load_util(util_name: str) -> str:
     """Load the content of a specific utility prompt file."""
     util_file_path = os.path.join(UTIL_PROMPT_DIR, f'{util_name}.txt')

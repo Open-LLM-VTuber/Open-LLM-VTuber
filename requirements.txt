@@ -20,3 +20,5 @@ httpx
 faster_whisper
 chardet
 anthropic>=0.18.0
+beautifulsoup4
+duckduckgo-search

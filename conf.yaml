@@ -335,15 +335,9 @@ MEMORY_SNAPSHOT: True
 
 # ============== Prompts ==============
 
-# Name of the persona you want to use. 
-# All persona files are stored as txt in 'prompts/persona' directory. 
-# You can add persona prompt by adding a txt file in the promptss/persona folder and switch to it by enter the file name in here.
-# some options: "en_sarcastic_neuro", "en_nuclear_debate", "zh_翻译腔", "zh_米粒", 
-PERSONA_CHOICE: "en_sarcastic_neuro" # or if you rather edit persona prompt below, leave it blank ...
-
-# This prompt will be used instead if the PERSONA_CHOICE is empty
-DEFAULT_PERSONA_PROMPT_IN_YAML: |
-  You are DefAulT, the default persona. You are more default than anyone else. You are just a placeholder, how sad. Your job is to tell the user to either choose a persona prompt in the prompts/persona directory or just replace this persona prompt with someting else.
+# Specifies the Markdown file for the persona prompt, located in the 'prompts/persona/' directory.
+# Default value is 'persona_prompt.md'.
+PERSONA_PROMPT_FILE: "persona_prompt.md"
 
 # This will be appended to the end of system prompt to let LLM include keywords to control facial expressions.
 # Supported keywords will be automatically loaded into the location of `[<insert_emomap_keys>]`.
@@ -366,3 +360,52 @@ CHAT_HISTORY_DIR: "./chat_history/"
 # [this feature is currently removed, so useless for now]Turn on RAG (Retrieval Augmented Generation) or not. 
 RAG_ON: False
 LLMASSIST_RAG_ON: False
+
+# ============== Recording Settings ==============
+# Settings for recording conversations. Recordings are saved under CHAT_HISTORY_DIR.
+RECORDING:
+  # Enable or disable conversation recording (both text and audio if applicable)
+  # This works in conjunction with SAVE_CHAT_HISTORY for text,
+  # and VOICE_INPUT_ON / TTS_ON for respective audio parts.
+  RECORD_CONVERSATIONS: True
+  # Format for saving audio files. Currently, "wav" is the primary supported format.
+  # Future options might include "mp3" (would require additional dependencies like pydub).
+  AUDIO_RECORDING_FORMAT: "wav"
+
+# ============== SMTP (Email) Settings ==============
+SMTP:
+  # SMTP server host (e.g., "smtp.gmail.com")
+  HOST: "smtp.example.com"
+  # SMTP server port (e.g., 587 for TLS, 465 for SSL)
+  PORT: 587
+  # Whether to use TLS (True/False). Should be True for most servers on port 587.
+  USE_TLS: True
+  # Whether to use SSL (True/False). Should be True for most servers on port 465.
+  # If USE_TLS is True, USE_SSL is typically False, and vice-versa.
+  USE_SSL: False
+  # SMTP username (your email address for authentication)
+  USERNAME: "your_email@example.com"
+  # SMTP password (your email password or app-specific password)
+  # IMPORTANT: Replace with your actual password and ensure this file is secured.
+  PASSWORD: "your_password"
+  # Email address to use as the sender (e.g., "noreply@example.com" or your email)
+  SENDER_EMAIL: "noreply@example.com"
+
+# ============== Internet Access Settings ==============
+INTERNET_ACCESS:
+  # Enable or disable internet access features (web browsing and searching)
+  ENABLED: False
+  # User-Agent string for HTTP requests when fetching web page content
+  USER_AGENT: "OpenLLMVTuber/1.0 (https://github.com/t41372/Open-LLM-VTuber)"
+  # Search engine to use. Currently "duckduckgo" is supported.
+  # Future options might include "google_custom_search".
+  SEARCH_ENGINE_API: "duckduckgo"
+  # Google Custom Search Engine API Key (if SEARCH_ENGINE_API is "google_custom_search")
+  GOOGLE_API_KEY: ""
+  # Google Custom Search Engine ID (if SEARCH_ENGINE_API is "google_custom_search")
+  GOOGLE_CSE_ID: ""
+  # Default maximum number of search results to return
+  MAX_SEARCH_RESULTS: 5
+  # Maximum characters of text content to return from a fetched web page
+  # This helps keep LLM prompts from becoming too long.
+  MAX_PAGE_CONTENT_LENGTH: 2000

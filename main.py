@@ -8,6 +8,7 @@ import threading
 import queue
 import uuid
 from typing import Callable, Iterator, Optional
+import datetime
 from loguru import logger
 import numpy as np
 import yaml
@@ -25,6 +26,7 @@ from tts.tts_interface import TTSInterface
 from translate.translate_interface import TranslateInterface
 from translate.translate_factory import TranslateFactory
 from utils.audio_preprocessor import audio_filter
+from utils.audio_utils import save_audio_to_wav # For saving user input audio
 
 
 class OpenLLMVTuberMain:
@@ -99,6 +101,25 @@ class OpenLLMVTuberMain:
             self.translator = None
 
         self.llm: LLMInterface = self.init_llm()
+        self._init_chat_history_dir()
+
+
+    def _init_chat_history_dir(self):
+        """Initializes the chat history directory and session directory if recording is enabled."""
+        if self.config.get("SAVE_CHAT_HISTORY", False) and \
+           self.config.get("RECORDING", {}).get("RECORD_CONVERSATIONS", False):
+            chat_history_dir = self.config.get("CHAT_HISTORY_DIR", "./chat_history/")
+            self.session_log_dir = os.path.join(chat_history_dir, self.session_id)
+            if not os.path.exists(self.session_log_dir):
+                try:
+                    os.makedirs(self.session_log_dir)
+                    logger.info(f"Created session log directory: {self.session_log_dir}")
+                except OSError as e:
+                    logger.error(f"Error creating session log directory {self.session_log_dir}: {e}")
+                    # Disable further recording attempts for this session if dir creation fails
+                    self.config["RECORDING"]["RECORD_CONVERSATIONS"] = False 
+        else:
+            self.session_log_dir = None
 
     # Initialization methods
 
@@ -242,6 +263,9 @@ class OpenLLMVTuberMain:
 
         print(f"User input: {user_input}")
 
+        # Log user input to transcript
+        self._log_to_transcript(f"User: {user_input}")
+
         chat_completion: Iterator[str] = self.llm.chat_iter(user_input)
 
         if not self.config.get("TTS_ON", False):
@@ -259,6 +283,11 @@ class OpenLLMVTuberMain:
         if self.verbose:
             print(f"\nComplete response: [\n{full_response}\n]")
 
+        # Log AI response to transcript
+        if full_response: # full_response can be None if interrupted
+            self._log_to_transcript(f"AI: {full_response}")
+            self._log_to_transcript("---") # Separator
+
         print(f"{c[color_code]}Conversation completed.")
         return full_response
 
@@ -275,7 +304,17 @@ class OpenLLMVTuberMain:
         if self.config.get("VOICE_INPUT_ON", False):
             # get audio from the local microphone
             print("Listening from the microphone...")
-            return self.asr.transcribe_with_local_vad()
+            if self.config.get("RECORDING", {}).get("RECORD_CONVERSATIONS", False) and self.session_log_dir and self.asr:
+                # User audio recording is enabled
+                audio_format = self.config.get("RECORDING", {}).get("AUDIO_RECORDING_FORMAT", "wav")
+                return self.asr.transcribe_with_local_vad(
+                    audio_save_callback=save_audio_to_wav, # The actual function from audio_utils
+                    audio_save_format=audio_format,
+                    session_log_dir=self.session_log_dir
+                )
+            else:
+                # Recording not enabled or session_log_dir not set, proceed without saving
+                return self.asr.transcribe_with_local_vad()
         else:
             return input("\n>> ")
 
@@ -326,18 +365,54 @@ class OpenLLMVTuberMain:
         - str or None: The path to the generated audio file or None if the sentence is empty
         """
         if self.verbose:
-            print(f">> generating {file_name_no_ext}...")
+            print(f">> generating TTS audio for: '{sentence[:30]}...'")
 
         if not self.tts:
+            logger.warning("TTS engine not available, cannot generate audio.")
             return None
+
+        original_sentence_for_display = sentence # Keep original for display if live2d removes keywords
 
         if self.live2d:
             sentence = self.live2d.remove_emotion_keywords(sentence)
 
         if sentence.strip() == "":
+            logger.info("Sentence is empty after potential keyword removal, no audio to generate.")
+            return None
+        
+        # Let TTS generate audio to its usual cache location first
+        # The file_name_no_ext is often a UUID or "temp" for cache management
+        original_filepath = self.tts.generate_audio(sentence, file_name_no_ext=file_name_no_ext)
+
+        if not original_filepath or not os.path.exists(original_filepath):
+            logger.error(f"TTS engine failed to generate audio file or file not found at {original_filepath}")
             return None
 
-        return self.tts.generate_audio(sentence, file_name_no_ext=file_name_no_ext)
+        # If recording is enabled, copy the generated audio to the session directory
+        if self.config.get("RECORDING", {}).get("RECORD_CONVERSATIONS", False) and \
+           self.config.get("TTS_ON", False) and self.session_log_dir:
+            try:
+                audio_format = self.config.get("RECORDING", {}).get("AUDIO_RECORDING_FORMAT", "wav")
+                # Ensure the format from TTS matches the recording format, or handle conversion (future)
+                # For now, assume they match or the TTS output is desired as is.
+                
+                # Extract the original extension (e.g., .wav, .mp3) from original_filepath
+                _, original_ext = os.path.splitext(original_filepath)
+                if not original_ext: # Default if something is wrong
+                    original_ext = f".{audio_format}"
+
+                timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+                # Use original_ext for the recorded file to match what TTS produced
+                session_audio_filename = f"ai_tts_output_{timestamp}{original_ext}"
+                session_audio_filepath = os.path.join(self.session_log_dir, session_audio_filename)
+                
+                shutil.copy(original_filepath, session_audio_filepath)
+                logger.info(f"TTS output audio saved to session directory: {session_audio_filepath}")
+            except Exception as e:
+                logger.error(f"Error copying TTS audio to session directory: {e}")
+        
+        # Return the path to the original cached audio file for playback and subsequent removal by _play_audio_file
+        return original_filepath
 
     def _play_audio_file(self, sentence: str | None, filepath: str | None) -> None:
         """
@@ -466,10 +541,12 @@ class OpenLLMVTuberMain:
                     if audio_info is None:
                         break  # End of production
                     if audio_info:
-                        self.heard_sentence += audio_info["sentence"]
+                        current_sentence = audio_info["sentence"]
+                        self.heard_sentence += current_sentence
                         self._play_audio_file(
-                            sentence=audio_info["sentence"],
+                            sentence=current_sentence, # Use current sentence for display
                             filepath=audio_info["audio_filepath"],
+                            # Pass full_response_for_recording if needed, or handle in _generate_audio_file
                         )
                     task_queue.task_done()
                 except queue.Empty:
@@ -511,16 +588,37 @@ class OpenLLMVTuberMain:
             (because apparently the user won't know the rest of the response.)
         """
         self._continue_exec_flag.clear()
+        # Log interruption to transcript
+        interruption_message = f"Interrupted by user. Last heard/displayed sentence: {heard_sentence}"
+        logger.info(interruption_message)
+        self._log_to_transcript(f"SYSTEM: {interruption_message}")
         self.llm.handle_interrupt(heard_sentence)
 
     def _interrupt_post_processing(self) -> None:
         """Perform post-processing tasks (like resetting the continue flag to allow next conversation chain to start) after an interrupt."""
+        self._log_to_transcript("SYSTEM: Resuming normal operation after interruption.")
         self._continue_exec_flag.set()  # Reset the interrupt flag
 
     def _check_interrupt(self):
         """Check if we are in an interrupt state and raise an exception if we are."""
         if not self._continue_exec_flag.is_set():
+            # Log check interrupt failure
+            # self._log_to_transcript("SYSTEM: Interruption check failed, raising InterruptedError.")
             raise InterruptedError("Conversation chain interrupted: checked")
+
+    def _log_to_transcript(self, message: str):
+        """Appends a message to the transcript.txt file in the session log directory."""
+        if self.config.get("SAVE_CHAT_HISTORY", False) and \
+           self.config.get("RECORDING", {}).get("RECORD_CONVERSATIONS", False) and \
+           self.session_log_dir:
+            try:
+                transcript_path = os.path.join(self.session_log_dir, "transcript.txt")
+                # Get current timestamp
+                timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                with open(transcript_path, "a", encoding="utf-8") as f:
+                    f.write(f"[{timestamp}] {message}\n")
+            except Exception as e:
+                logger.error(f"Failed to write to transcript file {transcript_path}: {e}")
 
     def is_complete_sentence(self, text: str):
         """
