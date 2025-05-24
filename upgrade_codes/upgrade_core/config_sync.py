@@ -199,7 +199,7 @@ class ConfigSynchronizer:
             compare_fn=field_compare_fn
         )
     
-
+    @staticmethod
     def comment_diff_fn(default_text, user_text):
 
         yaml = YAML()
