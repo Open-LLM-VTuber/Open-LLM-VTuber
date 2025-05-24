@@ -189,8 +189,7 @@ class ConfigSynchronizer:
             name="keys",
             get_a=lambda: self.yaml.load(load_text_file_with_guess_encoding(self.user_path)),
             get_b=lambda: self.yaml.load(load_text_file_with_guess_encoding(self.default_path)),
-            compare_fn=field_compare_fn,
-            logger=self.logger
+            compare_fn=field_compare_fn
         )
     
     def compare_comments(self) -> bool:
@@ -200,7 +199,6 @@ class ConfigSynchronizer:
             get_a=lambda: load_text_file_with_guess_encoding(self.user_path),
             get_b=lambda: load_text_file_with_guess_encoding(self.default_path),
             compare_fn=lambda a, b: a == b,
-            logger=self.logger
         )
     
     def upgrade_version_if_needed(self):
