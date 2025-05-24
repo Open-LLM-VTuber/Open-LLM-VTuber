@@ -4,6 +4,7 @@ from upgrade_codes.constants import USER_CONF,BACKUP_CONF,TEXTS, ZH_DEFAULT_CONF
 import logging
 from ruamel.yaml import YAML
 from src.open_llm_vtuber.config_manager.utils import load_text_file_with_guess_encoding
+from upgrade_codes.comment_sync import CommentSynchronizer
 
 class ConfigSynchronizer:
     def __init__(self, lang="en", logger = logging.getLogger(__name__)):
@@ -27,10 +28,11 @@ class ConfigSynchronizer:
 
         if self.compare_configs():
             self.logger.info(self.texts["configs_up_to_date"])
-            return
-
-        self.backup_user_config()
-        self.merge_and_update_user_config()
+        else:
+            self.backup_user_config()
+            self.merge_and_update_user_config()
+        comment_sync = CommentSynchronizer(self.default_path, self.user_path, self.logger, self.yaml)
+        comment_sync.sync()
 
     def backup_user_config(self):
         backup_path = os.path.abspath(self.backup_path)
