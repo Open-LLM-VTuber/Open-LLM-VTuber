@@ -6,6 +6,7 @@ from ruamel.yaml import YAML
 from src.open_llm_vtuber.config_manager.utils import load_text_file_with_guess_encoding
 from upgrade_codes.upgrade_core.comment_sync import CommentSynchronizer
 from upgrade_codes.version_manager import VersionUpgradeManager
+from upgrade_codes.upgrade_core.upgrade_utils import UpgradeUtility
 
 class ConfigSynchronizer:
     def __init__(self, lang="en", logger = logging.getLogger(__name__)):
@@ -19,6 +20,7 @@ class ConfigSynchronizer:
         self.texts_merge = TEXTS_MERGE.get(lang, TEXTS_MERGE["en"])
         self.texts_compare = TEXTS_COMPARE.get(lang, TEXTS_COMPARE["en"])
         self.logger = logger
+        self.upgrade_utils = UpgradeUtility(self.logger, self.lang)
 
     def sync_user_config(self) -> None:
         if not os.path.exists(self.user_path):
@@ -27,14 +29,20 @@ class ConfigSynchronizer:
             shutil.copy2(self.default_path, self.user_path)
             return
 
-        if self.compare_configs():
-            self.logger.info(self.texts["configs_up_to_date"])
-        else:
+        if not self.compare_field_keys():
             self.backup_user_config()
             self.merge_and_update_user_config()
-        comment_sync = CommentSynchronizer(self.default_path, self.user_path, self.logger, self.yaml)
-        comment_sync.sync()
+        else:
+            self.logger.info(self.texts["configs_up_to_date"])
+
+        if not self.compare_comments():
+            comment_sync = CommentSynchronizer(self.default_path, self.user_path, self.logger, self.yaml)
+            comment_sync.sync()
+        else:
+            self.logger.info("✅ Comments are up to date, skipping comment sync.")
+
         self.upgrade_version_if_needed()
+
 
 
     def backup_user_config(self):
@@ -164,25 +172,36 @@ class ConfigSynchronizer:
         for key in deleted_keys:
             self.logger.info(f"  - {key}")
 
-    def compare_configs(self) -> bool:
-        """Compare user and default configs, log discrepancies, and return status."""
+    def compare_field_keys(self) -> bool:
+        """Compare field structure differences (missing/extra keys)"""
+        def field_compare_fn(user, default):
+            missing = self.get_missing_keys(user, default)
+            extra = self.get_extra_keys(user, default)
 
-        user_config = self.yaml.load(load_text_file_with_guess_encoding(self.user_path))
-        default_config = self.yaml.load(load_text_file_with_guess_encoding(self.default_path))
+            if missing:
+                self.logger.warning(self.texts_compare["missing_keys"].format(keys=", ".join(missing)))
+            if extra:
+                self.logger.warning(self.texts_compare["extra_keys"].format(keys=", ".join(extra)))
+                self.delete_extra_keys()
+            return not missing
 
-        missing = self.get_missing_keys(user_config, default_config)
-        extra = self.get_extra_keys(user_config, default_config)
-
-        if missing:
-            self.logger.warning(self.texts_compare["missing_keys"].format(keys=", ".join(missing)))
-            return False
-        if extra:
-            self.logger.warning(self.texts_compare["extra_keys"].format(keys=", ".join(extra)))
-            self.delete_extra_keys()
-        else:
-            self.logger.debug(self.texts_compare["up_to_date"])
-
-        return True
+        return self.upgrade_utils.compare_dicts(
+            name="keys",
+            get_a=lambda: self.yaml.load(load_text_file_with_guess_encoding(self.user_path)),
+            get_b=lambda: self.yaml.load(load_text_file_with_guess_encoding(self.default_path)),
+            compare_fn=field_compare_fn,
+            logger=self.logger
+        )
+    
+    def compare_comments(self) -> bool:
+        """Compare the annotation contents to see if they are consistent"""
+        return self.upgrade_utils.compare_dicts(
+            name="comments",
+            get_a=lambda: load_text_file_with_guess_encoding(self.user_path),
+            get_b=lambda: load_text_file_with_guess_encoding(self.default_path),
+            compare_fn=lambda a, b: a == b,
+            logger=self.logger
+        )
     
     def upgrade_version_if_needed(self):
         try:

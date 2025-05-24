@@ -99,3 +99,23 @@ class UpgradeUtility:
     def has_submodules(self):
         """Check if the repository has submodules by looking for .gitmodules file"""
         return os.path.exists(".gitmodules")
+    
+    def compare_dicts(self, name: str, get_a: callable, get_b: callable, compare_fn: callable) -> bool:
+        """
+        General comparison logic: for fields, comments, values, and any other structures.
+        - name: "keys" or "comments"
+        - get_a, get_b: load two data sources (usually yaml.load)
+        - compare_fn: return a comparison function that determines whether the comparison is consistent
+        """
+        try:
+            a = get_a()
+            b = get_b()
+            if compare_fn(a, b):
+                self.logger.debug(f"{name} comparison passed: configs are up to date.")
+                return True
+            else:
+                self.logger.warning(f"{name} comparison failed: configs differ.")
+                return False
+        except Exception as e:
+            self.logger.error(f"{name} comparison error: {e}")
+            return False
