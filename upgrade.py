@@ -1,5 +1,5 @@
 import time
-from upgrade_codes.manager import UpgradeManager
+from upgrade_codes.upgrade_manager import UpgradeManager
 from upgrade_codes.constants import TEXTS
 
 upgrade_manager = UpgradeManager()
