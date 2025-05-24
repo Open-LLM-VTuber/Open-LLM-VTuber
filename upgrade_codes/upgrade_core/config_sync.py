@@ -77,13 +77,6 @@ class ConfigSynchronizer:
 
         merged = merge(user_config, default_config)
 
-        # Update conf_version from default_config without overriding other user settings
-        version_value = (
-            user_config["system_config"].get("conf_version")
-            if "system_config" in user_config
-            else ""
-        )
-
         with open(self.user_path, "w", encoding="utf-8") as f:
             self.yaml.dump(merged, f)
 

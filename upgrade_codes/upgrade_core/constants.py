@@ -10,7 +10,7 @@ ZH_DEFAULT_CONF = "config_templates/conf.ZH.default.yaml"
 EN_DEFAULT_CONF = "config_templates/conf.default.yaml"
 
 yaml = YAML()
-user_config = yaml.load(load_text_file_with_guess_encoding(EN_DEFAULT_CONF ))
+user_config = yaml.load(load_text_file_with_guess_encoding(USER_CONF))
 CURRENT_SCRIPT_VERSION = user_config.get("system_config", {}).get("conf_version")
 
 TEXTS = {
