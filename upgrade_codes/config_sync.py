@@ -5,7 +5,7 @@ import logging
 from ruamel.yaml import YAML
 from src.open_llm_vtuber.config_manager.utils import load_text_file_with_guess_encoding
 from upgrade_codes.comment_sync import CommentSynchronizer
-from upgrade_codes.from_version.manager import VersionUpgradeManager
+from upgrade_codes.from_version.version_manager import VersionUpgradeManager
 
 class ConfigSynchronizer:
     def __init__(self, lang="en", logger = logging.getLogger(__name__)):
