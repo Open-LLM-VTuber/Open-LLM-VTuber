@@ -3,13 +3,14 @@ import platform
 import subprocess
 import sys
 import time
-from upgrade_codes.upgrade_core.constants import TEXTS
+from upgrade_codes.upgrade_core.constants import TEXTS,TEXTS_COMPARE
 
 class UpgradeUtility:
     def __init__(self, logger, lang):
         self.logger = logger
         self.lang = lang
         self.texts = TEXTS[lang]
+        self.texts_compare = TEXTS_COMPARE[lang]
 
     def run_command(self, command):
         """Run shell command and return result"""
@@ -101,21 +102,19 @@ class UpgradeUtility:
         return os.path.exists(".gitmodules")
     
     def compare_dicts(self, name: str, get_a: callable, get_b: callable, compare_fn: callable) -> bool:
-        """
-        General comparison logic: for fields, comments, values, and any other structures.
-        - name: "keys" or "comments"
-        - get_a, get_b: load two data sources (usually yaml.load)
-        - compare_fn: return a comparison function that determines whether the comparison is consistent
-        """
         try:
             a = get_a()
             b = get_b()
             if compare_fn(a, b):
-                self.logger.debug(f"{name} comparison passed: configs are up to date.")
+                msg = self.texts_compare.get("compare_passed", f"[DEBUG] {name} comparison passed.")
+                self.logger.debug(msg.format(name=name))
                 return True
             else:
-                self.logger.warning(f"{name} comparison failed: configs differ.")
+                msg = self.texts_compare.get("compare_failed", f"[WARNING] {name} comparison failed: configs differ.")
+                self.logger.warning(msg.format(name=name))
                 return False
         except Exception as e:
-            self.logger.error(f"{name} comparison error: {e}")
+            msg = self.texts_compare.get("compare_error", f"[ERROR] {name} comparison error: {e}")
+            self.logger.error(msg.format(name=name, error=e))
             return False
+

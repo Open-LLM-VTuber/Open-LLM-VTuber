@@ -39,6 +39,7 @@ TEXTS = {
         "resolve_conflicts": "2. 如果有配置文件冲突，请手动解决",
         "check_backup": "3. 检查备份的配置文件以确保没有丢失重要设置",
         "git_not_found": "错误：未检测到 Git。请先安装 Git:\nWindows: https://git-scm.com/download/win\nmacOS: brew install git\nLinux: sudo apt install git",
+
         "operation_preview": """
 此脚本将执行以下操作：
 1. 备份当前的 conf.yaml 配置文件
@@ -150,10 +151,28 @@ TEXTS_COMPARE = {
         "missing_keys": "[警告] 用户配置缺少以下键，可能与默认配置不一致: {keys}",
         "extra_keys": "[警告] 用户配置包含以下默认配置中不存在的键: {keys}",
         "up_to_date": "[调试] 用户配置与默认配置一致。",
+        "compare_passed": "[调试] {name} 对比通过。",
+        "compare_failed": "[警告] {name} 配置不一致。",
+        "compare_error": "[错误] {name} 对比失败: {error}",
+        "comments_up_to_date": "[信息] 注释一致，跳过注释同步。",
+        "extra_keys_deleted_count": "[信息] 已删除 {count} 个额外键:",
+        "extra_keys_deleted_item": "  - {key}",
+        "comment_sync_success": "[信息] 注释同步成功。",
+        "comment_sync_error": "[错误] 注释同步失败: {error}",
+        "comment_sync_key": "[调试] 同步注释: {key}",
     },
     "en": {
         "missing_keys": "[WARNING] User config is missing the following keys, which may be out-of-date: {keys}",
         "extra_keys": "[WARNING] User config contains the following keys not present in default config: {keys}",
         "up_to_date": "[DEBUG] User config is up-to-date with default config.",
+        "compare_passed": "[DEBUG] {name} comparison passed.",
+        "compare_failed": "[WARNING] {name} comparison failed: configs differ.",
+        "compare_error": "[ERROR] {name} comparison error: {error}",
+        "comments_up_to_date": "[INFO] Comments are up to date, skipping comment sync.",
+        "extra_keys_deleted_count": "[INFO] Deleted {count} extra keys:",
+        "extra_keys_deleted_item": "  - {key}",
+        "comment_sync_success": "[INFO] All comments synchronized successfully.",
+        "comment_sync_error": "[ERROR] Failed to synchronize comments: {error}",
+        "comment_sync_key": "[DEBUG] Synced comment for key: {key}",
     },
 }

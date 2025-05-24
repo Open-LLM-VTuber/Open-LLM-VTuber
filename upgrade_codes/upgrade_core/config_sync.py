@@ -36,10 +36,16 @@ class ConfigSynchronizer:
             self.logger.info(self.texts["configs_up_to_date"])
 
         if not self.compare_comments():
-            comment_sync = CommentSynchronizer(self.default_path, self.user_path, self.logger, self.yaml)
+            comment_sync = CommentSynchronizer(
+                self.default_path,
+                self.user_path,
+                self.logger,
+                self.yaml,
+                self.texts_compare
+            )
             comment_sync.sync()
         else:
-            self.logger.info("✅ Comments are up to date, skipping comment sync.")
+            self.logger.info(self.texts_compare["comments_up_to_date"])
 
         self.upgrade_version_if_needed()
 
@@ -168,9 +174,9 @@ class ConfigSynchronizer:
         with open(self.user_path, "w", encoding="utf-8") as f:
             self.yaml.dump(user_config, f)
 
-        self.logger.info(f"Deleted {len(deleted_keys)} extra keys:")
+        self.logger.info(self.texts_compare["extra_keys_deleted_count"].format(count=len(deleted_keys)))
         for key in deleted_keys:
-            self.logger.info(f"  - {key}")
+            self.logger.info(self.texts_compare["extra_keys_deleted_item"].format(key=key))
 
     def compare_field_keys(self) -> bool:
         """Compare field structure differences (missing/extra keys)"""
