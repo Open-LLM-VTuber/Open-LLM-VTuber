@@ -105,16 +105,27 @@ class UpgradeUtility:
         try:
             a = get_a()
             b = get_b()
-            if compare_fn(a, b):
-                msg = self.texts_compare.get("compare_passed", f"[DEBUG] {name} comparison passed.")
+            comparison_result = compare_fn(a, b)
+
+            if isinstance(comparison_result, tuple):
+                is_equal, differences = comparison_result
+            else:
+                is_equal, differences = comparison_result, []
+
+            if is_equal:
+                msg = self.texts_compare.get("compare_passed", "[DEBUG] {name} comparison passed.")
                 self.logger.debug(msg.format(name=name))
                 return True
             else:
-                msg = self.texts_compare.get("compare_failed", f"[WARNING] {name} comparison failed: configs differ.")
+                msg = self.texts_compare.get("compare_failed", "[WARNING] {name} comparison failed: configs differ.")
                 self.logger.warning(msg.format(name=name))
+                if differences:
+                    for item in differences:
+                        self.logger.warning(self.texts_compare.get("compare_diff_item", "- {item}").format(item=item))
                 return False
         except Exception as e:
-            msg = self.texts_compare.get("compare_error", f"[ERROR] {name} comparison error: {e}")
+            msg = self.texts_compare.get("compare_error", "[ERROR] {name} comparison error: {error}")
             self.logger.error(msg.format(name=name, error=e))
             return False
+
 
