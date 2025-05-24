@@ -1,7 +1,7 @@
 # upgrade/manager.py
-from upgrade_codes.language import select_language
-from upgrade_codes.config_sync import ConfigSynchronizer
-from upgrade_codes.logger import configure_logging
+from upgrade_codes.upgrade_core.language import select_language
+from upgrade_codes.upgrade_core.config_sync import ConfigSynchronizer
+from upgrade_codes.upgrade_core.logger import configure_logging
 from upgrade_codes.upgrade_utils import UpgradeUtility
 
 class UpgradeManager:

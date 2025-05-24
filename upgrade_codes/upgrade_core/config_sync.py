@@ -1,11 +1,11 @@
 import os
 import shutil
-from upgrade_codes.constants import USER_CONF,BACKUP_CONF,TEXTS, ZH_DEFAULT_CONF, EN_DEFAULT_CONF, TEXTS_COMPARE, TEXTS_MERGE
+from upgrade_codes.upgrade_core.constants import USER_CONF,BACKUP_CONF,TEXTS, ZH_DEFAULT_CONF, EN_DEFAULT_CONF, TEXTS_COMPARE, TEXTS_MERGE
 import logging
 from ruamel.yaml import YAML
 from src.open_llm_vtuber.config_manager.utils import load_text_file_with_guess_encoding
-from upgrade_codes.comment_sync import CommentSynchronizer
-from upgrade_codes.from_version.version_manager import VersionUpgradeManager
+from upgrade_codes.upgrade_core.comment_sync import CommentSynchronizer
+from upgrade_codes.version_manager import VersionUpgradeManager
 
 class ConfigSynchronizer:
     def __init__(self, lang="en", logger = logging.getLogger(__name__)):

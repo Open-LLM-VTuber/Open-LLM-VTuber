@@ -3,7 +3,7 @@ import platform
 import subprocess
 import sys
 import time
-from upgrade_codes.constants import TEXTS
+from upgrade_codes.upgrade_core.constants import TEXTS
 
 class UpgradeUtility:
     def __init__(self, logger, lang):

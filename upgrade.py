@@ -1,6 +1,6 @@
 import time
 from upgrade_codes.upgrade_manager import UpgradeManager
-from upgrade_codes.constants import TEXTS
+from upgrade_codes.upgrade_core.constants import TEXTS
 
 upgrade_manager = UpgradeManager()
 

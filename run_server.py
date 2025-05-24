@@ -8,7 +8,7 @@ from pathlib import Path
 import tomli
 import uvicorn
 from loguru import logger
-from upgrade_codes.manager import UpgradeManager
+from upgrade_codes.upgrade_manager import UpgradeManager
 
 from src.open_llm_vtuber.server import WebSocketServer
 from src.open_llm_vtuber.config_manager import Config, read_yaml, validate_config
