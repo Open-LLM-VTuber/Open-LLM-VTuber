@@ -24,9 +24,6 @@ class CommentSynchronizer:
                         if hasattr(default_node, 'ca') and hasattr(user_node, 'ca'):
                             if key in default_node.ca.items:
                                 user_node.ca.items[key] = default_node.ca.items[key]
-                                self.logger.debug(
-                                    self.texts_compare["comment_sync_key"].format(key=current_path)
-                                )
                         sync_comments(default_node[key], user_node[key], current_path)
                         
             sync_comments(default_tree, user_tree)
