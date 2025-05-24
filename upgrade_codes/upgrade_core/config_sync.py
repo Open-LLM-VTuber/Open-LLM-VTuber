@@ -8,6 +8,7 @@ from src.open_llm_vtuber.config_manager.utils import load_text_file_with_guess_e
 from upgrade_codes.upgrade_core.comment_sync import CommentSynchronizer
 from upgrade_codes.version_manager import VersionUpgradeManager
 from upgrade_codes.upgrade_core.upgrade_utils import UpgradeUtility
+from upgrade_codes.upgrade_core.comment_diff_fn import comment_diff_fn
 
 class ConfigSynchronizer:
     def __init__(self, lang="en", logger = logging.getLogger(__name__)):
@@ -232,13 +233,15 @@ class ConfigSynchronizer:
         compare_comments_recursive(default_tree, user_tree)
         return (len(diff_keys) == 0), diff_keys
 
+
     def compare_comments(self) -> bool:
         return self.upgrade_utils.compare_dicts(
             name="comments",
             get_a=lambda: load_text_file_with_guess_encoding(self.user_path),
             get_b=lambda: load_text_file_with_guess_encoding(self.default_path),
-            compare_fn=self.comment_diff_fn
+            compare_fn=comment_diff_fn
         )
+
 
     
     def upgrade_version_if_needed(self):
