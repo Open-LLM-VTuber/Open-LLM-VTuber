@@ -4,7 +4,7 @@ from upgrade_codes.constants import TEXTS
 
 upgrade_manager = UpgradeManager()
 
-def general_upgrade():
+def run_upgrade():
     logger = upgrade_manager.logger
     start_time = time.time()
 
@@ -148,4 +148,4 @@ def general_upgrade():
     logger.info(texts["check_backup"])
 
 if __name__ == "__main__":
-    general_upgrade()
+    run_upgrade()

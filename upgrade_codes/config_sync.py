@@ -5,6 +5,7 @@ import logging
 from ruamel.yaml import YAML
 from src.open_llm_vtuber.config_manager.utils import load_text_file_with_guess_encoding
 from upgrade_codes.comment_sync import CommentSynchronizer
+from upgrade_codes.from_version.manager import VersionUpgradeManager
 
 class ConfigSynchronizer:
     def __init__(self, lang="en", logger = logging.getLogger(__name__)):
@@ -33,6 +34,8 @@ class ConfigSynchronizer:
             self.merge_and_update_user_config()
         comment_sync = CommentSynchronizer(self.default_path, self.user_path, self.logger, self.yaml)
         comment_sync.sync()
+        self.upgrade_version_if_needed()
+
 
     def backup_user_config(self):
         backup_path = os.path.abspath(self.backup_path)
@@ -80,27 +83,10 @@ class ConfigSynchronizer:
             if "system_config" in user_config
             else ""
         )
-        version_change_string = "conf_version: " + version_value
-
-        if (
-            "system_config" in default_config
-            and "conf_version" in default_config["system_config"]
-        ):
-            merged.setdefault("system_config", {})
-            merged["system_config"]["conf_version"] = default_config["system_config"][
-                "conf_version"
-            ]
-            version_change_string = (
-                version_change_string
-                + " -> "
-                + default_config["system_config"]["conf_version"]
-            )
 
         with open(self.user_path, "w", encoding="utf-8") as f:
             self.yaml.dump(merged, f)
 
-        # Log upgrade details (replacing manual file writing)
-        self.logger.info(version_change_string)
         for key in new_keys:
             self.logger.info(self.texts_merge["new_config_item"].format(key=key))
         return new_keys
@@ -204,4 +190,26 @@ class ConfigSynchronizer:
             self.logger.debug(self.texts_compare["up_to_date"])
 
         return True
+    
+    def upgrade_version_if_needed(self):
+        try:
+            with open(self.user_path, "r", encoding="utf-8") as f:
+                user_config = self.yaml.load(f)
+
+            version = user_config.get("system_config", {}).get("conf_version", "")
+            upgrader = VersionUpgradeManager()
+            upgraded_config = upgrader.upgrade(version, user_config)
+
+            with open(self.user_path, "w", encoding="utf-8") as f:
+                self.yaml.dump(upgraded_config, f)
+
+            new_version = upgraded_config.get("system_config", {}).get("conf_version", "")
+            if new_version != version:
+                self.logger.info(self.texts["version_upgrade_success"].format(old=version, new=new_version))
+            else:
+                self.logger.info(self.texts["version_upgrade_none"].format(version=version))
+
+        except Exception as e:
+            self.logger.error(self.texts["version_upgrade_failed"].format(error=e))
+
 
