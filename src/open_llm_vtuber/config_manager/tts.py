@@ -301,6 +301,26 @@ class SherpaOnnxTTSConfig(I18nMixin):
     }
 
 
+class MinimaxTTSConfig(I18nMixin):
+    """Configuration for Minimax TTS."""
+
+    group_id: str = Field(..., alias="group_id")
+    api_key: str = Field(..., alias="api_key")
+    model: str = Field("speech-02-turbo", alias="model")
+    voice_id: str = Field("male-qn-qingse", alias="voice_id")
+    pronunciation_dict: str = Field("", alias="pronunciation_dict")
+
+    DESCRIPTIONS: ClassVar[Dict[str, Description]] = {
+        "group_id": Description(en="Minimax group_id", zh="Minimax 的 group_id"),
+        "api_key": Description(en="Minimax API key", zh="Minimax 的 API key"),
+        "model": Description(en="Minimax model name", zh="Minimax 模型名称"),
+        "voice_id": Description(en="Minimax voice id", zh="Minimax 语音 id"),
+        "pronunciation_dict": Description(
+            en="Custom pronunciation dictionary (string)", zh="自定义发音字典（字符串）"
+        ),
+    }
+
+
 class TTSConfig(I18nMixin):
     """Configuration for Text-to-Speech."""
 
@@ -316,6 +336,7 @@ class TTSConfig(I18nMixin):
         "gpt_sovits_tts",
         "fish_api_tts",
         "sherpa_onnx_tts",
+        "minimax_tts",
     ] = Field(..., alias="tts_model")
 
     azure_tts: Optional[AzureTTSConfig] = Field(None, alias="azure_tts")
@@ -331,6 +352,7 @@ class TTSConfig(I18nMixin):
     sherpa_onnx_tts: Optional[SherpaOnnxTTSConfig] = Field(
         None, alias="sherpa_onnx_tts"
     )
+    minimax_tts: Optional[MinimaxTTSConfig] = Field(None, alias="minimax_tts")
 
     DESCRIPTIONS: ClassVar[Dict[str, Description]] = {
         "tts_model": Description(
@@ -356,6 +378,9 @@ class TTSConfig(I18nMixin):
         ),
         "sherpa_onnx_tts": Description(
             en="Configuration for Sherpa Onnx TTS", zh="Sherpa Onnx TTS 配置"
+        ),
+        "minimax_tts": Description(
+            en="Configuration for Minimax TTS", zh="Minimax TTS 配置"
         ),
     }
 
@@ -386,5 +411,7 @@ class TTSConfig(I18nMixin):
             values.fish_api_tts.model_validate(values.fish_api_tts.model_dump())
         elif tts_model == "sherpa_onnx_tts" and values.sherpa_onnx_tts is not None:
             values.sherpa_onnx_tts.model_validate(values.sherpa_onnx_tts.model_dump())
+        elif tts_model == "minimax_tts" and values.minimax_tts is not None:
+            values.minimax_tts.model_validate(values.minimax_tts.model_dump())
 
         return values
