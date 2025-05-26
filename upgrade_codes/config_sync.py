@@ -243,26 +243,38 @@ class ConfigSynchronizer:
         )
 
 
-    
+        
     def upgrade_version_if_needed(self):
         try:
             with open(self.user_path, "r", encoding="utf-8") as f:
                 user_config = self.yaml.load(f)
+            
 
-            version = user_config.get("system_config", {}).get("conf_version", "")
-            upgrader = VersionUpgradeManager()
-            upgraded_config = upgrader.upgrade(version, user_config)
+            current_version = user_config.get("system_config", {}).get("conf_version", "")
+            
+            with open(self.default_path, "r", encoding="utf-8") as f:
+                default_config = self.yaml.load(f)
+            latest_version = default_config.get("system_config", {}).get("conf_version", "")
+
+            if current_version == latest_version:
+                self.logger.info(self.texts["version_upgrade_none"].format(version=current_version))
+                return
+
+            # 仅当版本不一致时，调用升级
+            upgrader = VersionUpgradeManager(self.logger)
+            upgraded_config = upgrader.upgrade(current_version, user_config)
+
+            # 升级后设置为最新版本
+            upgraded_config.setdefault("system_config", {})
+            upgraded_config["system_config"]["conf_version"] = latest_version
 
             with open(self.user_path, "w", encoding="utf-8") as f:
                 self.yaml.dump(upgraded_config, f)
 
-            new_version = upgraded_config.get("system_config", {}).get("conf_version", "")
-            if new_version != version:
-                self.logger.info(self.texts["version_upgrade_success"].format(old=version, new=new_version))
-            else:
-                self.logger.info(self.texts["version_upgrade_none"].format(version=version))
+            self.logger.info(self.texts["version_upgrade_success"].format(old=current_version, new=latest_version))
 
         except Exception as e:
             self.logger.error(self.texts["version_upgrade_failed"].format(error=e))
+
 
 
