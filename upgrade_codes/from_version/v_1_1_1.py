@@ -34,6 +34,7 @@ class to_v_1_2_0:
             if name in upgrades:
                 if name.startswith("shizuku"):
                     upgraded["url"] = "/live2d-models/shizuku/runtime/shizuku.model3.json"
+                    upgraded["idleMotionGroupName"] = "idle"
                 elif name == "mao_pro":
                     upgraded["url"] = "/live2d-models/mao_pro/runtime/mao_pro.model3.json"
                     upgraded["kScale"] = 0.5
