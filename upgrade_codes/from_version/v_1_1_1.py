@@ -18,8 +18,7 @@ class to_v_1_2_0:
         upgraded_models = self._upgrade_models(self.old_models)
         self._upgrade_conf_yaml()
         return {
-            "models": upgraded_models,
-            "conf_version": "1.2.0"
+            upgraded_models
         }
 
     def _upgrade_models(self, old_model_list: list) -> list:
