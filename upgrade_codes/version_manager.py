@@ -10,6 +10,7 @@ class VersionUpgradeManager:
             "v1.1.1": self._upgrade_1_1_1_to_1_2_0,
         }
         self.user_config = USER_CONF
+        self.indent_spaces = 4
 
     def upgrade(self, version: str) -> None:
         upgrade_fn = self.routes.get(version)
@@ -43,7 +44,7 @@ class VersionUpgradeManager:
             if isinstance(model_dict, list):
                 new_data = to_v_1_2_0(model_dict, self.user_config).upgrade()
                 with open(model_path, "w", encoding="utf-8") as f:
-                    json.dump(new_data, f, indent=2, ensure_ascii=False)
+                    json.dump(new_data, f, indent=self.indent_spaces, ensure_ascii=False)
                 if self.logger:
                     self.logger.info("✅ model_dict.json upgraded to v1.2.0 format.")
             else:
