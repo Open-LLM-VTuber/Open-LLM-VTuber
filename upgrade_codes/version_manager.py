@@ -20,7 +20,7 @@ class VersionUpgradeManager:
                 self.logger.info(f"No upgrade routine for version {version}")
 
     def _upgrade_1_1_1_to_1_2_0(self):
-        def _load_model_dict(self, path: Path):
+        def _load_model_dict(path: Path):
             if not path.exists():
                 if self.logger:
                     self.logger.warning("⚠️ model_dict.json not found. Skipping upgrade.")
