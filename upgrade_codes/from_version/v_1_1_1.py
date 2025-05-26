@@ -17,9 +17,7 @@ class to_v_1_2_0:
         """
         upgraded_models = self._upgrade_models(self.old_models)
         self._upgrade_conf_yaml()
-        return {
-            upgraded_models
-        }
+        return upgraded_models
 
     def _upgrade_models(self, old_model_list: list) -> list:
         deprecated = {"other_unit_90001", "player_unit_00003", "mashiro"}
