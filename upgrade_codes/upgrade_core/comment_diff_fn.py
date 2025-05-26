@@ -1,6 +1,19 @@
-# upgrade_codes/upgrade_core/comment_diff_fn.py
 from ruamel.yaml import YAML
 from io import StringIO
+from ruamel.yaml.comments import CommentedMap
+
+def get_comment_text(comment_list):
+    if not comment_list:
+        return ""
+    flattened = []
+    for c in comment_list:
+        if isinstance(c, list):
+            for sub in c:
+                if hasattr(sub, "value"):
+                    flattened.append(str(sub.value).strip())
+        elif hasattr(c, "value"):
+            flattened.append(str(c.value).strip())
+    return "\n".join(flattened).strip()
 
 def extract_comments(yaml_text: str) -> dict:
     yaml = YAML()
@@ -9,15 +22,10 @@ def extract_comments(yaml_text: str) -> dict:
 
     comment_map = {}
 
-    def get_comment_text(comment_list):
-        if not comment_list:
-            return ""
-        return "\n".join(str(c.value).strip() for c in comment_list if c).strip()
-
     def recurse(node, path=""):
-        if not isinstance(node, dict):
+        if not isinstance(node, CommentedMap):
             return
-        if hasattr(node, 'ca') and node.ca.items:
+        if hasattr(node, 'ca') and isinstance(node.ca.items, dict):
             for key in node:
                 full_path = f"{path}.{key}" if path else str(key)
                 if key in node.ca.items:
@@ -27,15 +35,17 @@ def extract_comments(yaml_text: str) -> dict:
     recurse(data)
     return comment_map
 
-def comment_diff_fn(user_text: str, default_text: str):
-    user_comments = extract_comments(user_text)
+def comment_diff_fn(default_text: str, user_text: str):
     default_comments = extract_comments(default_text)
+    user_comments = extract_comments(user_text)
 
     diff_keys = []
-    for key in default_comments:
-        if key not in user_comments:
-            diff_keys.append(key)
-        elif default_comments[key] != user_comments[key]:
+
+    all_keys = set(default_comments.keys()) | set(user_comments.keys())
+    for key in all_keys:
+        d = default_comments.get(key, "")
+        u = user_comments.get(key, "")
+        if d != u:
             diff_keys.append(key)
 
     return (len(diff_keys) == 0), diff_keys

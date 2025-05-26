@@ -199,40 +199,6 @@ class ConfigSynchronizer:
             get_b=lambda: self.yaml.load(load_text_file_with_guess_encoding(self.default_path)),
             compare_fn=field_compare_fn
         )
-    
-    @staticmethod
-    def comment_diff_fn(default_text, user_text):
-
-        yaml = YAML()
-        yaml.preserve_quotes = True
-
-        default_tree = yaml.load(StringIO(default_text))
-        user_tree = yaml.load(StringIO(user_text))
-
-        diff_keys = []
-
-        def compare_comments_recursive(default_node, user_node, path=""):
-            if not isinstance(default_node, dict) or not isinstance(user_node, dict):
-                return
-
-            for key in default_node:
-                current_path = f"{path}.{key}" if path else str(key)
-                if key in user_node:
-                    # Checking for annotation existence is not consistent
-                    if hasattr(default_node, 'ca') and hasattr(user_node, 'ca'):
-                        ca_d = default_node.ca.items.get(key)
-                        ca_u = user_node.ca.items.get(key)
-                        if ca_d and ca_u and str(ca_d) != str(ca_u):
-                            diff_keys.append(current_path)
-                        elif ca_d and not ca_u:
-                            diff_keys.append(current_path)
-                        elif ca_u and not ca_d:
-                            diff_keys.append(current_path)
-                    compare_comments_recursive(default_node[key], user_node[key], current_path)
-
-        compare_comments_recursive(default_tree, user_tree)
-        return (len(diff_keys) == 0), diff_keys
-
 
     def compare_comments(self) -> bool:
         return self.upgrade_utils.compare_dicts(
