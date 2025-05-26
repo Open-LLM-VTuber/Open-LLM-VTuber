@@ -6,7 +6,7 @@ class VersionUpgradeManager:
     def __init__(self, logger=None):
         self.logger = logger
         self.routes = {
-            "1.1.1": self._upgrade_1_1_1_to_1_2_0,
+            "v1.1.1": self._upgrade_1_1_1_to_1_2_0,
         }
 
     def upgrade(self, version: str) -> None:
