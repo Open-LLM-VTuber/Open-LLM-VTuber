@@ -3,7 +3,6 @@ import shutil
 from upgrade_codes.upgrade_core.constants import USER_CONF,BACKUP_CONF,TEXTS, ZH_DEFAULT_CONF, EN_DEFAULT_CONF, TEXTS_COMPARE, TEXTS_MERGE
 import logging
 from ruamel.yaml import YAML
-from io import StringIO
 from src.open_llm_vtuber.config_manager.utils import load_text_file_with_guess_encoding
 from upgrade_codes.upgrade_core.comment_sync import CommentSynchronizer
 from upgrade_codes.version_manager import VersionUpgradeManager
