@@ -191,7 +191,7 @@ class WebSocketHandler:
             agent_engine=self.default_context_cache.agent_engine,
             translate_engine=self.default_context_cache.translate_engine,
             mcp_server_registery=self.default_context_cache.mcp_server_registery,
-            prompt_constructor=self.default_context_cache.prompt_constructor,
+            tool_adapter=self.default_context_cache.tool_adapter,
             send_text=send_text,
             client_uid=client_uid,
         )

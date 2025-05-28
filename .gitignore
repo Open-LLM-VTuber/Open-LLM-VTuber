@@ -70,5 +70,5 @@ conf.yaml.backup
 *.exe
 
 tmp/
-mcp-server-browserbase/
+private/
 mcp_servers.json

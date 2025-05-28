@@ -7,9 +7,7 @@ from .stateless_llm_factory import LLMFactory as StatelessLLMFactory
 from .agents.hume_ai import HumeAIAgent
 from .agents.letta_agent import LettaAgent
 
-from ..mcpp.server_registry import ServerRegistry
 from ..mcpp.tool_manager import ToolManager
-from ..mcpp.mcp_client import MCPClient
 from ..mcpp.tool_executor import ToolExecutor
 from typing import Optional
 
@@ -66,7 +64,6 @@ class AgentFactory:
 
             # Extract MCP components/data needed by BasicMemoryAgent from kwargs
             tool_manager: Optional[ToolManager] = kwargs.get("tool_manager")
-            mcp_client: Optional[MCPClient] = kwargs.get("mcp_client")
             tool_executor: Optional[ToolExecutor] = kwargs.get("tool_executor")
             mcp_prompt_string: str = kwargs.get("mcp_prompt_string", "")
 
@@ -84,7 +81,6 @@ class AgentFactory:
                 interrupt_method=interrupt_method,
                 tool_prompts=tool_prompts,
                 tool_manager=tool_manager,
-                mcp_client=mcp_client,
                 tool_executor=tool_executor,
                 mcp_prompt_string=mcp_prompt_string,
             )

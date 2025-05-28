@@ -301,7 +301,7 @@ class ToolExecutor:
         is_error = False
         text_content = ""
         metadata = {}
-        content_items = [] # Initialize content_items
+        content_items = []
 
         if tool_input is None:
             tool_input = {}
@@ -309,48 +309,53 @@ class ToolExecutor:
         if not tool_info:
             logger.error(f"Tool '{tool_name}' not found in ToolManager.")
             text_content = f"Error: Tool '{tool_name}' is not available."
+            content_items = [{"type": "error", "text": text_content}]
             is_error = True
         elif not tool_info.related_server:
             logger.error(f"Tool '{tool_name}' does not have a related server defined.")
             text_content = f"Error: Configuration error for tool '{tool_name}'. No server specified."
+            content_items = [{"type": "error", "text": text_content}]
             is_error = True
         else:
             try:
-                # Call MCPClient which returns a dict including 'content', 'metadata', 'content_items'
                 result_dict = await self._mcp_client.call_tool(
                     server_name=tool_info.related_server,
                     tool_name=tool_name,
                     tool_args=tool_input,
                 )
 
-                # Extract information from the result dictionary
-                text_content = result_dict.get("content", "") # Default text content
                 metadata = result_dict.get("metadata", {})
-                content_items = result_dict.get("content_items", []) # Get content items
+                content_items = result_dict.get("content_items", [])
 
-                # Log details if content items are present
-                if content_items:
-                    logger.info(f"Content items from tool '{tool_name}':")
-                    for item in content_items:
-                        item_type = item.get('type', 'unknown')
-                        logger.info(f"  Type: {item_type}")
-                        # Log keys, but maybe not large data like base64 image
-                        for key, value in item.items():
-                             if key != 'type':
-                                 log_value = f"(length: {len(value)})" if isinstance(value, str) and len(value) > 100 else value
-                                 logger.info(f"    {key}: {log_value}")
+                # Check if the first content item is an error reported by MCPClient
+                if content_items and content_items[0].get("type") == "error":
+                    is_error = True
+                    text_content = content_items[0].get("text", "Unknown error from tool execution.")
+                elif content_items and content_items[0].get("type") == "text":
+                    text_content = content_items[0].get("text", "")
+                # If no text item is first, text_content remains ""
 
-                logger.info(f"Tool '{tool_name}' executed successfully.")
+                if not is_error:
+                    logger.info(f"Tool '{tool_name}' executed successfully.")
+                    if content_items:
+                        logger.info(f"Content items from tool '{tool_name}':")
+                        for item in content_items:
+                            item_type = item.get('type', 'unknown')
+                            logger.info(f"  Type: {item_type}")
+                            for key, value in item.items():
+                                 if key != 'type' and key != 'data': # Avoid logging large data
+                                     log_value = f"(length: {len(value)})" if isinstance(value, str) and len(value) > 100 else value
+                                     logger.info(f"    {key}: {log_value}")
 
             except (ValueError, RuntimeError, ConnectionError) as e:
                 logger.exception(f"Error executing tool '{tool_name}': {e}")
                 text_content = f"Error executing tool '{tool_name}': {e}"
+                content_items = [{"type": "error", "text": text_content}]
                 is_error = True
-                content_items = [] # Ensure content_items is empty on error
             except Exception as e:
                 logger.exception(f"Unexpected error executing tool '{tool_name}': {e}")
-                text_content = f"Error executing tool '{tool_name}': {e}"
+                text_content = f"Unexpected error executing tool '{tool_name}': {e}"
+                content_items = [{"type": "error", "text": text_content}]
                 is_error = True
-                content_items = [] # Ensure content_items is empty on error
 
         return is_error, text_content, metadata, content_items

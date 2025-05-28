@@ -100,58 +100,42 @@ class MCPClient:
         """Call a tool on the specified server.
 
         Returns:
-            Dict containing the result text and any metadata from the tool response.
+            Dict containing the metadata and content_items from the tool response.
         """
-        
-        if server_name.startswith("remote:"):
-            # Make sure send_text is not None
-            self._send_text(json.dumps({"type": "operation", "operation_text": ""}))
-            # TODO: Implement remote server call
-        else:
-            session = await self._ensure_server_running_and_get_session(server_name)
-            logger.info(f"MCPC: Calling tool '{tool_name}' on server '{server_name}'...")
-            response = await session.call_tool(tool_name, tool_args)
+        session = await self._ensure_server_running_and_get_session(server_name)
+        logger.info(f"MCPC: Calling tool '{tool_name}' on server '{server_name}'...")
+        response = await session.call_tool(tool_name, tool_args)
 
         if response.isError:
             error_text = (
-                response.content[0].text if response.content else "Unknown server error"
+                response.content[0].text if response.content and hasattr(response.content[0], "text") else "Unknown server error"
             )
             logger.error(f"MCPC: Error calling tool '{tool_name}': {error_text}")
-            raise ValueError(
-                f"MCPC: Error from server '{server_name}' executing tool '{tool_name}': {error_text}"
-            )
+            # Return error information within the standard structure
+            return {
+                "metadata": getattr(response, "metadata", {}),
+                "content_items": [{"type": "error", "text": error_text}]
+            }
 
-        result_text = (
-            response.content[0].text
-            if response.content and hasattr(response.content[0], "text")
-            else ""
-        )
-        if not result_text and response.content:
-            logger.warning(
-                f"MCPC: Tool '{tool_name}' returned non-text content. Returning empty string."
-            )
-        elif not response.content:
-            logger.warning(
-                f"MCPC: Tool '{tool_name}' returned no content. Returning empty string."
-            )
-
-        # Create result object with content and metadata
-        result = {"content": result_text, "metadata": getattr(response, "metadata", {})}
-
-        # Add content items to result if available
-        if response.content and len(response.content) > 0:
-            result["content_items"] = []
+        content_items = []
+        if response.content:
             for item in response.content:
                 item_dict = {"type": getattr(item, "type", "text")}
                 # Extract available attributes from content item
-                for attr in ["text", "data", "mimeType"]:
-                    if hasattr(item, attr):
+                for attr in ["text", "data", "mimeType", "url", "altText"]: # Added url and altText
+                    if hasattr(item, attr) and getattr(item, attr) is not None: # Check for None
                         item_dict[attr] = getattr(item, attr)
-                result["content_items"].append(item_dict)
+                content_items.append(item_dict)
+        else:
+            logger.warning(
+                f"MCPC: Tool '{tool_name}' returned no content. Returning empty content_items."
+            )
+            content_items.append({"type": "text", "text": ""}) # Ensure content_items is not empty
 
-        # For backwards compatibility, make the result string-castable
-        result["__str__"] = result_text
-
+        result = {
+            "metadata": getattr(response, "metadata", {}),
+            "content_items": content_items,
+        }
         return result
 
     async def aclose(self) -> None:

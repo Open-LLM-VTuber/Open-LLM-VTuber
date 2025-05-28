@@ -8,7 +8,7 @@ from .mcp_client import MCPClient
 from .server_registry import ServerRegistry
 
 
-class PromptConstructor:
+class ToolAdapter:
     """Dynamically fetches tool information from enabled MCP servers and formats it."""
 
     def __init__(self, server_registery: Optional[ServerRegistry] = None) -> None:
@@ -215,7 +215,7 @@ class PromptConstructor:
         )
         return openai_tools, claude_tools
 
-    async def run(
+    async def get_tools(
         self, enabled_servers: List[str]
     ) -> Tuple[str, List[Dict[str, Any]], List[Dict[str, Any]]]:
         """Run the dynamic fetching and formatting process."""

@@ -24,7 +24,6 @@ from ..transformers import (
 from ...config_manager import TTSPreprocessorConfig
 from ..input_types import BatchInput, TextSource
 from prompts import prompt_loader
-from ...mcpp.mcp_client import MCPClient
 from ...mcpp.tool_manager import ToolManager
 from ...mcpp.json_detector import StreamJSONDetector
 from ...mcpp.types import ToolCallObject
@@ -48,7 +47,6 @@ class BasicMemoryAgent(AgentInterface):
         interrupt_method: Literal["system", "user"] = "user",
         tool_prompts: Dict[str, str] = None,
         tool_manager: Optional[ToolManager] = None,
-        mcp_client: Optional[MCPClient] = None,
         tool_executor: Optional[ToolExecutor] = None,
         mcp_prompt_string: str = "",
     ):
@@ -66,7 +64,6 @@ class BasicMemoryAgent(AgentInterface):
         self.prompt_mode_flag = False
 
         self._tool_manager = tool_manager
-        self._mcp_client = mcp_client
         self._tool_executor = tool_executor
         self._mcp_prompt_string = mcp_prompt_string
         self._json_detector = StreamJSONDetector()
@@ -94,7 +91,6 @@ class BasicMemoryAgent(AgentInterface):
         if self._use_mcpp and not all(
             [
                 self._tool_manager,
-                self._mcp_client,
                 self._tool_executor,
                 self._json_detector,
             ]
@@ -105,7 +101,6 @@ class BasicMemoryAgent(AgentInterface):
         elif not self._use_mcpp and any(
             [
                 self._tool_manager,
-                self._mcp_client,
                 self._tool_executor,
                 self._json_detector,
             ]
@@ -415,7 +410,6 @@ class BasicMemoryAgent(AgentInterface):
         current_turn_text = ""
         pending_tool_calls: Union[List[ToolCallObject], List[Dict[str, Any]]] = []
         current_system_prompt = self._system
-        tool_executor_available = self._tool_executor and self._mcp_client
 
         while True:
             if self.prompt_mode_flag:
@@ -510,7 +504,7 @@ class BasicMemoryAgent(AgentInterface):
                 )
                 if parsed_tools:
                     tool_results_for_llm = []
-                    if not tool_executor_available:
+                    if not self._tool_executor:
                         logger.error(
                             "Prompt Tool interaction requested but ToolExecutor/MCPClient is not available."
                         )
@@ -551,7 +545,7 @@ class BasicMemoryAgent(AgentInterface):
                     self._add_message(current_turn_text, "assistant")
 
                 tool_results_for_llm = []
-                if not tool_executor_available:
+                if not self._tool_executor:
                     logger.error(
                         "OpenAI Tool interaction requested but ToolExecutor/MCPClient is not available."
                     )
