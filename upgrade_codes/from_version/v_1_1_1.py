@@ -15,13 +15,13 @@ class to_v_1_2_0:
         Return upgraded model_dict structure including 'models' list and new version
         And perform in-place upgrade of conf.yaml
         """
-        upgraded_models = self._upgrade_models(self.old_models)
+        upgraded_models = self._upgrade_live2d_models(self.old_models)
         self._upgrade_conf_yaml()
         return upgraded_models
 
-    def _upgrade_models(self, old_model_list: list) -> list:
-        deprecated = {"other_unit_90001", "player_unit_00003", "mashiro"}
-        upgrades = {"shizuku-local", "shizuku", "mao_pro"}
+    def _upgrade_live2d_models(self, old_model_list: list) -> list:
+        deprecated = {"other_unit_90001", "player_unit_00003", "mashiro", "shizuku-local", "shizuku"}
+        upgrades = {"mao_pro"}
         new_models = []
 
         for model in old_model_list:
@@ -32,22 +32,14 @@ class to_v_1_2_0:
             upgraded = copy.deepcopy(model)
 
             if name in upgrades:
-                if name.startswith("shizuku"):
-                    upgraded["url"] = "/live2d-models/shizuku/runtime/shizuku.model3.json"
-                    upgraded["idleMotionGroupName"] = "idle"
-                elif name == "mao_pro":
+                if name == "mao_pro":
                     upgraded["url"] = "/live2d-models/mao_pro/runtime/mao_pro.model3.json"
                     upgraded["kScale"] = 0.5
-
-                if "idleMotionGroupName" in upgraded:
-                    upgraded["idleMotionGroupName"] = upgraded["idleMotionGroupName"].capitalize()
-
-                if name == "shizuku":
-                    upgraded["description"] = "Orange-Haired Girl. Same as shizuku-local. Kept for compatibility."
 
             new_models.append(upgraded)
 
         return new_models
+
 
     def _upgrade_conf_yaml(self):
         try:
