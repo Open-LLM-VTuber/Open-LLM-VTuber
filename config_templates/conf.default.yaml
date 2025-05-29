@@ -362,6 +362,14 @@ character_config:
       num_threads: 1 # Number of computation threads
       speed: 1.0 # Speech speed (1.0 is normal)
       debug: false # Enable debug mode (True/False)
+    
+    spark_tts:
+      api_url: 'http://127.0.0.1:6006/' # API URL. Uses Gradio's built-in front-end API. Repository: https://github.com/SparkAudio/Spark-TTS
+      api_name:  "voice_clone" # Endpoint name. Options: voice_clone, voice_creation
+      prompt_wav_upload: "https://uploadstatic.mihoyo.com/ys-obc/2022/11/02/16576950/4d9feb71760c5e8eb5f6c700df12fa0c_6824265537002152805.mp3" # Reference audio URL. Provide if api_name equals "voice_clone"
+      gender:  "female" # Voice type (gender). Provide if api_name equals "voice_creation"
+      pitch:  3 # Pitch shift (in semitones) default 3,range 1-5. Valid only if api_name equals "voice_creation"
+      speed:  3 # Speed of the voice (in percent) default 3,range 1-5. Valid only if api_name equals "voice_creation"
 
 
   # =================== Voice Activity Detection ===================
