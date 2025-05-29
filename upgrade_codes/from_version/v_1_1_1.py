@@ -53,7 +53,7 @@ class to_v_1_2_0:
             # Step 2: set vad_config.silero_vad = None if vad_model is silero_vad
             vad_config = data.get("character_config", {}).get("vad_config", {})
             if vad_config.get("vad_model") == "silero_vad":
-                vad_config["silero_vad"] = None
+                vad_config["vad_model"] = None
 
             with open(self.conf_yaml_path, "w", encoding="utf-8") as f:
                 yaml.safe_dump(data, f, allow_unicode=True, sort_keys=False)
