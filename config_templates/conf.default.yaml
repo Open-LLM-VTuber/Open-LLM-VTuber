@@ -256,6 +256,7 @@ character_config:
     #   'azure_tts', 'pyttsx3_tts', 'edge_tts', 'bark_tts',
     #   'cosyvoice_tts', 'melo_tts', 'coqui_tts',
     #   'fish_api_tts', 'x_tts', 'gpt_sovits_tts', 'sherpa_onnx_tts'
+    #   'minimax_tts'
 
     azure_tts:
       api_key: 'azure-api-key'
@@ -363,6 +364,16 @@ character_config:
       speed: 1.0 # Speech speed (1.0 is normal)
       debug: false # Enable debug mode (True/False)
 
+    # For more details, see: https://platform.minimaxi.com/document/Announcement
+    minimax_tts:
+      group_id: '' # Your minimax group_id
+      api_key: '' # Your minimax api_key
+      # Supported models: 'speech-02-hd', 'speech-02-turbo' (recommended: 'speech-02-turbo')
+      model: 'speech-02-turbo' # minimax model name
+      voice_id: 'female-shaonv' # minimax voice id, default is 'female-shaonv'
+      # Custom pronunciation dictionary, default empty.
+      # Example: '{"tone": ["测试/(ce4)(shi4)", "危险/dangerous"]}'
+      pronunciation_dict: ''
 
   # =================== Voice Activity Detection ===================
   vad_config:

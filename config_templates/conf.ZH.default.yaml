@@ -252,6 +252,7 @@ character_config:
     #   'azure_tts', 'pyttsx3_tts', 'edge_tts', 'bark_tts',
     #   'cosyvoice_tts', 'melo_tts', 'coqui_tts',
     #   'fish_api_tts', 'x_tts', 'gpt_sovits_tts', 'sherpa_onnx_tts'
+    #   'minimax_tts'
 
     azure_tts:
       api_key: 'azure-api-key' # Azure API 密钥
@@ -359,6 +360,16 @@ character_config:
       speed: 1.0 # 语速（1.0 为正常）
       debug: false # 启用调试模式（True/False）
 
+    # 详细文档见：https://platform.minimaxi.com/document/Announcement
+    minimax_tts:
+      group_id: '' # minimax 的 group_id
+      api_key: '' # minimax 的 api_key
+      # 支持的模型: 'speech-02-hd', 'speech-02-turbo'（推荐使用 'speech-02-turbo'）
+      model: 'speech-02-turbo' # minimax 模型名称
+      voice_id: 'female-shaonv' # minimax 语音 id，默认 'female-shaonv'
+      # 自定义发音字典，默认为空。
+      # 示例: '{"tone": ["测试/(ce4)(shi4)", "危险/dangerous"]}'
+      pronunciation_dict: ''
 
   # =================== Voice Activity Detection ===================
   vad_config:

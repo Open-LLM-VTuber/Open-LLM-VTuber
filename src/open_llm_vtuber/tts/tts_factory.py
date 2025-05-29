@@ -108,6 +108,16 @@ class TTSFactory:
                 latency=kwargs.get("latency"),
                 base_url=kwargs.get("base_url"),
             )
+        elif engine_type == "minimax_tts":
+            from .minimax_tts import TTSEngine as MinimaxTTSEngine
+
+            return MinimaxTTSEngine(
+                group_id=kwargs.get("group_id"),
+                api_key=kwargs.get("api_key"),
+                model=kwargs.get("model", "speech-02-turbo"),
+                voice_id=kwargs.get("voice_id", "male-qn-qingse"),
+                pronunciation_dict=kwargs.get("pronunciation_dict", ""),
+            )
         elif engine_type == "sherpa_onnx_tts":
             from .sherpa_onnx_tts import TTSEngine as SherpaOnnxTTSEngine
 
