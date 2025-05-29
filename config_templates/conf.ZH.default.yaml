@@ -253,6 +253,17 @@ character_config:
     #   'cosyvoice_tts', 'melo_tts', 'coqui_tts',
     #   'fish_api_tts', 'x_tts', 'gpt_sovits_tts', 'sherpa_onnx_tts'
 
+    siliconflow_tts:
+      api_url: "https://api.siliconflow.cn/v1/audio/speech"
+      api_key: "your key"  # 用于身份验证的API密钥
+      default_model: "FunAudioLLM/CosyVoice2-0.5B"  # 默认使用的文本转语音模型
+      default_voice: "speech:Dreamflowers:5bdstvc39i:xkqldnpasqmoqbakubom your voice name"  # 默认语音配置，格式为："speech:模型名称:音色ID:您的语音名称"
+      sample_rate: 32000  # 音频采样率（单位：Hz），不同格式支持的采样率不同：opus支持48000Hz；wav/pcm支持8000、16000、24000、32000、44100Hz（默认44100Hz）；mp3支持32000、44100Hz（默认44100Hz）
+      response_format: "mp3"  # 输出音频格式，支持mp3、opus、wav、pcm
+      stream: true
+      speed: 1
+      gain: 0
+
     azure_tts:
       api_key: 'azure-api-key' # Azure API 密钥
       region: 'eastus' # 区域

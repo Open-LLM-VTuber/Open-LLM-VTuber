@@ -345,6 +345,17 @@ character_config:
       language: 'en'
       device: ''
 
+    siliconflow_tts:
+      api_url: "https://api.siliconflow.cn/v1/audio/speech"
+      api_key: "your key"
+      default_model: "FunAudioLLM/CosyVoice2-0.5B"
+      default_voice: "speech:Dreamflowers:5bdstvc39i:xkqldnpasqmoqbakubom your voice name"  # Default voice configuration in the format: "speech:MODEL_NAME:VOICE_ID:your voice name"
+      sample_rate: 32000  # Control the output sample rate. The default values and differ for different video output types, as follows: opus: Supports 48000 Hz. wav, pcm: Supports 8000, 16000, 24000, 32000, 44100 Hz, with a default of 44100 Hz. mp3: Supports 32000, 44100 Hz, with a default of 44100 Hz.
+      response_format: "mp3" # The format to audio out. Supported formats are mp3, opus, wav, pcm
+      stream: true
+      speed: 1
+      gain: 0
+
     # pip install sherpa-onnx
     # documentation: https://k2-fsa.github.io/sherpa/onnx/index.html
     # TTS models download: https://github.com/k2-fsa/sherpa-onnx/releases/tag/tts-models
@@ -404,3 +415,4 @@ character_config:
         region: 'ap-guangzhou'
         source_lang: 'zh'
         target_lang: 'ja'
+        
