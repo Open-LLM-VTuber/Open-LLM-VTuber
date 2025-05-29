@@ -68,3 +68,5 @@ mem.json
 conf.yaml.backup
 
 *.exe
+uv.lock
+uv.lock

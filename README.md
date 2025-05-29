@@ -73,6 +73,8 @@ This project underwent code refactoring after version `v1.0.0` and is currently 
   - 🎤 Voice interruption without headphones (AI won't hear its own voice)
   - 🫱 Touch feedback, interact with your AI companion through clicks or drags
   - 😊 Live2D expressions, set emotion mapping to control model expressions from the backend
+  - 🕶️ Experimental Three.js front-end showcasing a basic 3D avatar
+  - 🕶️ Experimental Three.js front-end showcasing a basic 3D avatar
   - 🐱 Pet mode, supporting transparent background, global top-most, and mouse click-through - drag your AI companion anywhere on the screen
   - 💭 Display AI's inner thoughts, allowing you to see AI's expressions, thoughts and actions without them being spoken
   - 🗣️ AI proactive speaking feature
@@ -100,6 +102,8 @@ This project underwent code refactoring after version `v1.0.0` and is currently 
 ## 🚀 Quick Start
 
 Please refer to the [Quick Start](https://open-llm-vtuber.github.io/docs/quick-start) section in our documentation for installation.
+
+After starting the server with `uv run run_server.py`, open `http://localhost:12393/threejs-demo/` (or the port specified in `system_config.port`) to try the new Three.js demo interface.
 
 
 

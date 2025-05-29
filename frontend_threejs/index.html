@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Open-LLM-VTuber 3D</title>
+    <style>
+        body, html { margin: 0; height: 100%; overflow: hidden; background: #000; }
+        #renderArea { width: 100%; height: 80%; display: block; }
+        #chat { position: absolute; bottom: 0; width: 100%; padding: 10px; background: rgba(0,0,0,0.5); }
+        #messages { height: 150px; overflow-y: auto; color: #fff; font-family: Arial, sans-serif; margin-bottom: 5px; }
+        #userInput { width: 80%; }
+    </style>
+</head>
+<body>
+    <canvas id="renderArea"></canvas>
+    <div id="chat">
+        <div id="messages"></div>
+        <input type="text" id="userInput" placeholder="Type your message" />
+        <button id="sendBtn">Send</button>
+    </div>
+    <!-- Map the 'three' module specifier to the official CDN build -->
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://unpkg.com/three@0.160.0/build/three.module.js"
+        }
+    }
+    </script>
+    <script type="module" src="main.js"></script>
+</body>
+</html>
