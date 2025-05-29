@@ -73,4 +73,5 @@ tmp/
 private/
 mcp_servers.json
 
-model_dict.json #临时加到ignore
+# 临时加到ignore
+model_dict.json 
