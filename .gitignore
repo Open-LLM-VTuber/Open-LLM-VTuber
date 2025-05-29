@@ -72,6 +72,3 @@ conf.yaml.backup
 tmp/
 private/
 mcp_servers.json
-
-# 临时加到ignore
-model_dict.json 
