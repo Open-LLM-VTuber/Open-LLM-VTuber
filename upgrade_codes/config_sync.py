@@ -24,19 +24,38 @@ class ConfigSynchronizer:
         self.upgrade_utils = UpgradeUtility(self.logger, self.lang)
 
     def sync_user_config(self) -> None:
+        """
+        Ensure the user configuration file exists and create a backup if necessary.
+        If the user config file does not exist, copy the default config.
+        """
+        # Check if the user config file exists
         if not os.path.exists(self.user_path):
             self.logger.warning(self.texts["no_config"])
             self.logger.warning(self.texts["copy_default_config"])
+            # Copy default config to user path
             shutil.copy2(self.default_path, self.user_path)
             return
+        
+        # Create a backup of the user config file
+        self.backup_user_config()
 
+    def update_user_config(self) -> None:
+        """
+        Perform the actual update operations on the user configuration file:
+        1. Compare and update configuration fields
+        2. Synchronize comments
+        3. Upgrade version if needed
+        """
+        # Check if field keys need updating
         if not self.compare_field_keys():
-            self.backup_user_config()
+            # Merge default config with user config and update
             self.merge_and_update_user_config()
         else:
             self.logger.info(self.texts["configs_up_to_date"])
-
+        
+        # Check if comments need synchronization
         if not self.compare_comments():
+            # Initialize comment synchronizer
             comment_sync = CommentSynchronizer(
                 self.default_path,
                 self.user_path,
@@ -44,10 +63,12 @@ class ConfigSynchronizer:
                 self.yaml,
                 self.texts_compare
             )
+            # Perform comment synchronization
             comment_sync.sync()
         else:
             self.logger.info(self.texts_compare["comments_up_to_date"])
-
+        
+        # Check and perform version upgrade if needed
         self.upgrade_version_if_needed()
 
 

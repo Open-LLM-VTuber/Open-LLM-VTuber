@@ -121,6 +121,7 @@ def run_upgrade():
 
     # Update config
     upgrade_manager.sync_user_config()
+    upgrade_manager.update_user_config()
 
     if has_changes:
         logger.warning(texts["restoring"])

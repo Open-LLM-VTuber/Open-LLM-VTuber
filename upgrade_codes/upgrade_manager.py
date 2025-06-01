@@ -14,6 +14,9 @@ class UpgradeManager:
     def sync_user_config(self):
         self.config_sync.sync_user_config()
 
+    def update_user_config(self):
+        self.config_sync.update_user_config()
+
     def log_system_info(self):
         return self.upgrade_utils.log_system_info()
 
