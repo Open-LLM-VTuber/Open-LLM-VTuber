@@ -26,33 +26,5 @@
                 "": 1
             }
         }
-    },
-    {
-        "name": "mao_mao",
-        "description": "",
-        "url": "/live2d-models/mao_mao/mao_mao.model3.json",
-        "kScale": 0.3,
-        "initialXshift": 0,
-        "initialYshift": 0,
-        "kXOffset": 1150,
-        "idleMotionGroupName": "Idle",
-        "emotionMap": {
-            "neutral": 0,
-            "anger": 2,
-            "disgust": 2,
-            "fear": 1,
-            "joy": 3,
-            "smirk": 3,
-            "sadness": 1,
-            "surprise": 3
-        },
-        "tapMotions": {
-            "HitAreaHead": {
-                "": 1
-            },
-            "HitAreaBody": {
-                "": 1
-            }
-        }
     }
 ]
