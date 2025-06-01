@@ -67,11 +67,15 @@ class ConfigSynchronizer:
             comment_sync.sync()
         else:
             self.logger.info(self.texts_compare["comments_up_to_date"])
-        
-        # Check and perform version upgrade if needed
-        self.upgrade_version_if_needed()
 
-
+        old_version = self.get_current_version()
+        new_version = self.get_latest_version()
+        if old_version != new_version:
+            manager = VersionUpgradeManager(self.lang, self.logger)
+            final_version = manager.upgrade(old_version)
+            self.logger.info(self.texts["version_upgrade_success"].format(old=old_version, new=final_version))
+        else:
+            self.logger.info(self.texts["version_upgrade_none"].format(version=old_version))
 
     def backup_user_config(self):
         backup_path = os.path.abspath(self.backup_path)
@@ -227,28 +231,16 @@ class ConfigSynchronizer:
             get_b=lambda: load_text_file_with_guess_encoding(self.default_path),
             compare_fn=comment_diff_fn
         )
-        
-    def upgrade_version_if_needed(self):
-        try:
-            with open(self.user_path, "r", encoding="utf-8") as f:
-                user_config = self.yaml.load(f)
 
-            current_version = user_config.get("system_config", {}).get("conf_version", "")
+    def get_current_version(self):
+        with open(self.user_path, "r", encoding="utf-8") as f:
+            user_config = self.yaml.load(f)
+        return user_config.get("system_config", {}).get("conf_version", "")
 
-            with open(self.default_path, "r", encoding="utf-8") as f:
-                default_config = self.yaml.load(f)
-            latest_version = default_config.get("system_config", {}).get("conf_version", "")
-
-            if current_version == latest_version:
-                self.logger.info(self.texts["version_upgrade_none"].format(version=current_version))
-                return
-
-            VersionUpgradeManager(self.lang, self.logger).upgrade(current_version)
-
-            self.logger.info(self.texts["version_upgrade_success"].format(old=current_version, new=latest_version))
-
-        except Exception as e:
-            self.logger.error(self.texts["version_upgrade_failed"].format(error=e))
+    def get_latest_version(self):
+        with open(self.default_path, "r", encoding="utf-8") as f:
+            default_config = self.yaml.load(f)
+        return default_config.get("system_config", {}).get("conf_version", "")
 
 
 

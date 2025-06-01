@@ -185,6 +185,7 @@ UPGRADE_TEXTS = {
         "already_latest": "model_dict.json 已是最新格式。",
         "upgrade_error": "❌ 升级 model_dict.json 失败: {error}",
         "no_upgrade_routine": "没有适用于版本 {version} 的升级程序",
+        "upgrading_path": "⬆️ 正在升级配置: {from_version} → {to_version}",
     },
     "en": {
         "model_dict_not_found": "⚠️ model_dict.json not found. Skipping upgrade.",
@@ -193,5 +194,6 @@ UPGRADE_TEXTS = {
         "already_latest": "model_dict.json already in latest format.",
         "upgrade_error": "❌ Failed to upgrade model_dict.json: {error}",
         "no_upgrade_routine": "No upgrade routine for version {version}",
+        "upgrading_path": "⬆️ Upgrading config: {from_version} → {to_version}",
     }
 }
