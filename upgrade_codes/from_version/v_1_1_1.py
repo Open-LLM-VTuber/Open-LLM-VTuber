@@ -12,7 +12,7 @@ class to_v_1_2_0:
         self.conf_yaml_path = conf_yaml_path
         self.language = language
         
-        # 配置迁移映射表（按语言区分）
+        # Configuration migration mapping table (language-specific)
         self.migration_map = {
             "zh": {
                 "shizuku.png": "mao.png",
@@ -68,16 +68,16 @@ class to_v_1_2_0:
             with open(self.conf_yaml_path, "r", encoding="utf-8") as f:
                 data = yaml.safe_load(f)
 
-            # 1. 更新系统版本号
+            # Update system version number
             if "system_config" in data and isinstance(data["system_config"], dict):
                 data["system_config"]["conf_version"] = "v1.2.0"
 
-            # 2. 更新VAD配置
+            # Update VAD config
             vad_config = data.get("character_config", {}).get("vad_config", {})
             if vad_config.get("vad_model") == "silero_vad":
                 vad_config["vad_model"] = None
 
-            # 3. 更新角色相关配置
+            # Update role-related configurations
             char_config = data.get("character_config", {})
             self._migrate_field(char_config, "avatar")
             self._migrate_field(char_config, "character_name")
@@ -85,15 +85,13 @@ class to_v_1_2_0:
             self._migrate_field(char_config, "conf_uid")
             self._migrate_field(char_config, "live2d_model_name")
 
-            # 4. 更新ASR配置
+            # Update ASR config
             asr_config = char_config.get("asr_config", {}).get("faster_whisper", {})
             self._migrate_field(asr_config, "model_path")
             
-            # 对于中文配置，还需要更新语言设置
             if self.language == "zh":
                 self._migrate_field(asr_config, "language")
 
-            # 5. 清理LLM配置中的组织/项目ID
             llm_configs = char_config.get("agent_config", {}).get("llm_configs", {})
             openai_config = llm_configs.get("openai_compatible_llm", {})
             if "organization_id" in openai_config:
@@ -108,10 +106,8 @@ class to_v_1_2_0:
             raise RuntimeError(f"Failed to upgrade conf.yaml: {e}")
 
     def _migrate_field(self, config_section: dict, field_name: str):
-        """迁移特定字段的值"""
         if field_name in config_section:
             current_value = config_section[field_name]
-            # 使用迁移映射表进行值替换
             lang_map = self.migration_map.get(self.language, {})
             new_value = lang_map.get(current_value, current_value)
             config_section[field_name] = new_value
