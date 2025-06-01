@@ -222,7 +222,7 @@ class ConfigSynchronizer:
                 self.logger.info(self.texts["version_upgrade_none"].format(version=current_version))
                 return
 
-            VersionUpgradeManager(self.logger).upgrade(current_version)
+            VersionUpgradeManager(self.lang, self.logger).upgrade(current_version)
 
             self.logger.info(self.texts["version_upgrade_success"].format(old=current_version, new=latest_version))
 

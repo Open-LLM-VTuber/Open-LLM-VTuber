@@ -1,16 +1,22 @@
 import json
 from pathlib import Path
+from upgrade_codes.upgrade_core.constants import USER_CONF, UPGRADE_TEXTS
 from upgrade_codes.from_version.v_1_1_1 import to_v_1_2_0
-from upgrade_codes.upgrade_core.constants import USER_CONF
 
 class VersionUpgradeManager:
-    def __init__(self, logger=None):
+    def __init__(self, language: str = "zh", logger=None):
+        """
+        :param language: language of the configuration ("zh" or "en")
+        :param logger: logger instance for logging messages
+        """
         self.logger = logger
         self.routes = {
             "v1.1.1": self._upgrade_1_1_1_to_1_2_0,
         }
         self.user_config = USER_CONF
         self.indent_spaces = 4
+        self.language = language
+        self.log_texts = UPGRADE_TEXTS.get(self.language, UPGRADE_TEXTS["en"])
 
     def upgrade(self, version: str) -> None:
         upgrade_fn = self.routes.get(version)
@@ -18,13 +24,15 @@ class VersionUpgradeManager:
             upgrade_fn()
         else:
             if self.logger:
-                self.logger.info(f"No upgrade routine for version {version}")
+                log_text = self.log_texts["no_upgrade_routine"].format(version=version)
+                self.logger.info(log_text)
 
     def _upgrade_1_1_1_to_1_2_0(self):
         def _load_model_dict(path: Path):
             if not path.exists():
                 if self.logger:
-                    self.logger.warning("⚠️ model_dict.json not found. Skipping upgrade.")
+                    log_text = self.log_texts["model_dict_not_found"]
+                    self.logger.warning(log_text)
                 return None
 
             try:
@@ -32,8 +40,10 @@ class VersionUpgradeManager:
                     return json.load(f)
             except Exception as e:
                 if self.logger:
-                    self.logger.error(f"❌ Failed to read model_dict.json: {e}")
+                    log_text = self.log_texts["model_dict_read_error"].format(error=e)
+                    self.logger.error(log_text)
                 return None
+                
         model_path = Path("model_dict.json")
         model_dict = _load_model_dict(model_path)
 
@@ -42,14 +52,17 @@ class VersionUpgradeManager:
 
         try:
             if isinstance(model_dict, list):
-                new_data = to_v_1_2_0(model_dict, self.user_config).upgrade()
+                new_data = to_v_1_2_0(model_dict, self.user_config, self.language).upgrade()
                 with open(model_path, "w", encoding="utf-8") as f:
                     json.dump(new_data, f, indent=self.indent_spaces, ensure_ascii=False)
                 if self.logger:
-                    self.logger.info("✅ model_dict.json upgraded to v1.2.0 format.")
+                    log_text = self.log_texts["upgrade_success"].format(language=self.language)
+                    self.logger.info(log_text)
             else:
                 if self.logger:
-                    self.logger.info("model_dict.json already in latest format.")
+                    log_text = self.log_texts["already_latest"]
+                    self.logger.info(log_text)
         except Exception as e:
             if self.logger:
-                self.logger.error(f"❌ Failed to upgrade model_dict.json: {e}")
+                log_text = self.log_texts["upgrade_error"].format(error=e)
+                self.logger.error(log_text)

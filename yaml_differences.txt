@@ -1,0 +1,42 @@
+❌ 发现 10 个值不同的字段:
+
+键路径: character_config.agent_config.llm_configs.openai_compatible_llm.organization_id
+  conf.yaml.en.backup中的值: org_eternity
+  config_templates/conf.default.yaml中的值: None
+--------------------------------------------------
+键路径: character_config.agent_config.llm_configs.openai_compatible_llm.project_id
+  conf.yaml.en.backup中的值: project_glass
+  config_templates/conf.default.yaml中的值: None
+--------------------------------------------------
+键路径: character_config.asr_config.faster_whisper.model_path
+  conf.yaml.en.backup中的值: distil-medium.en
+  config_templates/conf.default.yaml中的值: large-v3-turbo
+--------------------------------------------------
+键路径: character_config.avatar
+  conf.yaml.en.backup中的值: shizuku.png
+  config_templates/conf.default.yaml中的值: mao.png
+--------------------------------------------------
+键路径: character_config.character_name
+  conf.yaml.en.backup中的值: Shizuku
+  config_templates/conf.default.yaml中的值: Mao
+--------------------------------------------------
+键路径: character_config.conf_name
+  conf.yaml.en.backup中的值: shizuku-local
+  config_templates/conf.default.yaml中的值: mao_pro
+--------------------------------------------------
+键路径: character_config.conf_uid
+  conf.yaml.en.backup中的值: shizuku-local-001
+  config_templates/conf.default.yaml中的值: mao_pro_001
+--------------------------------------------------
+键路径: character_config.live2d_model_name
+  conf.yaml.en.backup中的值: shizuku-local
+  config_templates/conf.default.yaml中的值: mao_pro
+--------------------------------------------------
+键路径: character_config.vad_config.vad_model
+  conf.yaml.en.backup中的值: silero_vad
+  config_templates/conf.default.yaml中的值: None
+--------------------------------------------------
+键路径: system_config.conf_version
+  conf.yaml.en.backup中的值: v1.1.1
+  config_templates/conf.default.yaml中的值: v1.2.0
+--------------------------------------------------

@@ -2,13 +2,36 @@ import copy
 import yaml
 
 class to_v_1_2_0:
-    def __init__(self, old_model_list: list, conf_yaml_path: str):
+    def __init__(self, old_model_list: list, conf_yaml_path: str, language: str = "zh"):
         """
         :param old_model_list: list of dicts (each representing a Live2D model config)
         :param conf_yaml_path: path to conf.yaml that should be upgraded
+        :param language: language of the configuration ("zh" or "en")
         """
         self.old_models = old_model_list
         self.conf_yaml_path = conf_yaml_path
+        self.language = language
+        
+        # 配置迁移映射表（按语言区分）
+        self.migration_map = {
+            "zh": {
+                "shizuku.png": "mao.png",
+                "Shizuku": "Mao",
+                "shizuku-local": "mao_pro",
+                "shizuku-local-001": "mao_pro_001",
+                "distil-medium.en": "large-v3-turbo",
+                "en": "zh",
+                "v1.1.1": "v1.2.0"
+            },
+            "en": {
+                "shizuku.png": "mao.png",
+                "Shizuku": "Mao",
+                "shizuku-local": "mao_pro",
+                "shizuku-local-001": "mao_pro_001",
+                "distil-medium.en": "large-v3-turbo",
+                "v1.1.1": "v1.2.0"
+            }
+        }
 
     def upgrade(self) -> dict:
         """
@@ -40,20 +63,43 @@ class to_v_1_2_0:
 
         return new_models
 
-
     def _upgrade_conf_yaml(self):
         try:
             with open(self.conf_yaml_path, "r", encoding="utf-8") as f:
                 data = yaml.safe_load(f)
 
-            # Step 1: update version
+            # 1. 更新系统版本号
             if "system_config" in data and isinstance(data["system_config"], dict):
                 data["system_config"]["conf_version"] = "v1.2.0"
 
-            # Step 2: set vad_config.silero_vad = None if vad_model is silero_vad
+            # 2. 更新VAD配置
             vad_config = data.get("character_config", {}).get("vad_config", {})
             if vad_config.get("vad_model") == "silero_vad":
                 vad_config["vad_model"] = None
+
+            # 3. 更新角色相关配置
+            char_config = data.get("character_config", {})
+            self._migrate_field(char_config, "avatar")
+            self._migrate_field(char_config, "character_name")
+            self._migrate_field(char_config, "conf_name")
+            self._migrate_field(char_config, "conf_uid")
+            self._migrate_field(char_config, "live2d_model_name")
+
+            # 4. 更新ASR配置
+            asr_config = char_config.get("asr_config", {}).get("faster_whisper", {})
+            self._migrate_field(asr_config, "model_path")
+            
+            # 对于中文配置，还需要更新语言设置
+            if self.language == "zh":
+                self._migrate_field(asr_config, "language")
+
+            # 5. 清理LLM配置中的组织/项目ID
+            llm_configs = char_config.get("agent_config", {}).get("llm_configs", {})
+            openai_config = llm_configs.get("openai_compatible_llm", {})
+            if "organization_id" in openai_config:
+                openai_config["organization_id"] = None
+            if "project_id" in openai_config:
+                openai_config["project_id"] = None
 
             with open(self.conf_yaml_path, "w", encoding="utf-8") as f:
                 yaml.safe_dump(data, f, allow_unicode=True, sort_keys=False)
@@ -61,3 +107,11 @@ class to_v_1_2_0:
         except Exception as e:
             raise RuntimeError(f"Failed to upgrade conf.yaml: {e}")
 
+    def _migrate_field(self, config_section: dict, field_name: str):
+        """迁移特定字段的值"""
+        if field_name in config_section:
+            current_value = config_section[field_name]
+            # 使用迁移映射表进行值替换
+            lang_map = self.migration_map.get(self.language, {})
+            new_value = lang_map.get(current_value, current_value)
+            config_section[field_name] = new_value
