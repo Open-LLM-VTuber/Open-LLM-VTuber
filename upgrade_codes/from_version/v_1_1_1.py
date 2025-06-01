@@ -100,7 +100,7 @@ class to_v_1_2_0:
                 openai_config["project_id"] = None
 
             with open(self.conf_yaml_path, "w", encoding="utf-8") as f:
-                yaml.safe_dump(data, f, allow_unicode=True, sort_keys=False)
+                yaml.safe_dump(data, f, allow_unicode=True, sort_keys=False, default_style="'" ) # Auto formatting with '
 
         except Exception as e:
             raise RuntimeError(f"Failed to upgrade conf.yaml: {e}")
