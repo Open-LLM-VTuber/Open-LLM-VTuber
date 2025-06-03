@@ -172,6 +172,7 @@ character_config:
       download_root: 'models/whisper'
       language: 'en' # en, zh, or something else. put nothing for auto-detect.
       device: 'auto' # cpu, cuda, or auto. faster-whisper doesn't support mps
+      prompt: '' # You can put a prompt here to help the model understand the context of the audio
 
     whisper_cpp:
       # all available models are listed on https://abdeladim-s.github.io/pywhispercpp/#pywhispercpp.constants.AVAILABLE_MODELS
@@ -180,11 +181,13 @@ character_config:
       print_realtime: False
       print_progress: False
       language: 'auto' # en, zh, auto,
+      prompt: '' # You can put a prompt here to help the model understand the context of the audio
 
     whisper:
       name: 'medium'
       download_root: 'models/whisper'
       device: 'cpu'
+      prompt: '' # You can put a prompt here to help the model understand the context of the audio
 
     # FunASR currently needs internet connection on launch
     # to download / check the models. You can disconnect the internet after initialization.
@@ -256,6 +259,7 @@ character_config:
     #   'azure_tts', 'pyttsx3_tts', 'edge_tts', 'bark_tts',
     #   'cosyvoice_tts', 'melo_tts', 'coqui_tts',
     #   'fish_api_tts', 'x_tts', 'gpt_sovits_tts', 'sherpa_onnx_tts'
+    #   'minimax_tts'
 
     azure_tts:
       api_key: 'azure-api-key'
@@ -363,6 +367,16 @@ character_config:
       speed: 1.0 # Speech speed (1.0 is normal)
       debug: false # Enable debug mode (True/False)
 
+    # For more details, see: https://platform.minimaxi.com/document/Announcement
+    minimax_tts:
+      group_id: '' # Your minimax group_id
+      api_key: '' # Your minimax api_key
+      # Supported models: 'speech-02-hd', 'speech-02-turbo' (recommended: 'speech-02-turbo')
+      model: 'speech-02-turbo' # minimax model name
+      voice_id: 'female-shaonv' # minimax voice id, default is 'female-shaonv'
+      # Custom pronunciation dictionary, default empty.
+      # Example: '{"tone": ["测试/(ce4)(shi4)", "危险/dangerous"]}'
+      pronunciation_dict: ''
 
   # =================== Voice Activity Detection ===================
   vad_config:

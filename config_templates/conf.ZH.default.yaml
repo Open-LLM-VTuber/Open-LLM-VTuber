@@ -170,6 +170,7 @@ character_config:
       download_root: 'models/whisper' # 模型下载根目录
       language: 'en' # 语言，en、zh 或其他。留空表示自动检测。
       device: 'auto' # 设备，cpu、cuda 或 auto。faster-whisper 不支持 mps
+      prompt: '' # 提示词，用于辅助生成正确的文本
 
     whisper_cpp:
       # 所有可用模型都列在 https://abdeladim-s.github.io/pywhispercpp/#pywhispercpp.constants.AVAILABLE_MODELS
@@ -178,11 +179,13 @@ character_config:
       print_realtime: False # 是否实时打印
       print_progress: False # 是否打印进度
       language: 'auto' # 语言，en、zh、auto
+      prompt: '' # 提示词，用于辅助生成正确的文本
 
     whisper:
       name: 'medium' # 模型名称
       download_root: 'models/whisper' # 模型下载根目录
       device: 'cpu' # 设备
+      prompt: '' # 提示词，用于辅助生成正确的文本
 
     # FunASR 目前需要在启动时连接互联网以下载/检查模型。您可以在初始化后断开互联网连接。
     # 或者您可以使用 Faster-Whisper 获得完全离线的体验
@@ -252,6 +255,7 @@ character_config:
     #   'azure_tts', 'pyttsx3_tts', 'edge_tts', 'bark_tts',
     #   'cosyvoice_tts', 'melo_tts', 'coqui_tts',
     #   'fish_api_tts', 'x_tts', 'gpt_sovits_tts', 'sherpa_onnx_tts'
+    #   'minimax_tts'
 
     azure_tts:
       api_key: 'azure-api-key' # Azure API 密钥
@@ -359,6 +363,16 @@ character_config:
       speed: 1.0 # 语速（1.0 为正常）
       debug: false # 启用调试模式（True/False）
 
+    # 详细文档见：https://platform.minimaxi.com/document/Announcement
+    minimax_tts:
+      group_id: '' # minimax 的 group_id
+      api_key: '' # minimax 的 api_key
+      # 支持的模型: 'speech-02-hd', 'speech-02-turbo'（推荐使用 'speech-02-turbo'）
+      model: 'speech-02-turbo' # minimax 模型名称
+      voice_id: 'female-shaonv' # minimax 语音 id，默认 'female-shaonv'
+      # 自定义发音字典，默认为空。
+      # 示例: '{"tone": ["测试/(ce4)(shi4)", "危险/dangerous"]}'
+      pronunciation_dict: ''
 
   # =================== Voice Activity Detection ===================
   vad_config:
