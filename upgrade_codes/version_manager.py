@@ -6,14 +6,14 @@ from upgrade_codes.from_version.v_1_1_1 import to_v_1_2_0
 import datetime
 from typing import Union
 
-def _record_upgrade_history(from_version: str, to_version: str, log_path: Union[str, Path] = "upgrade_log.json") -> None:
+def _record_upgrade_history(from_version: str, to_version: str, log_path: Union[str, Path] = "./upgrade_log.json") -> None:
     """
     Append an upgrade record to the upgrade log JSON file.
 
     Parameters:
         from_version (str): The starting version of the upgrade.
         to_version (str): The version after upgrade.
-        log_path (str or Path): Path to the log file (default: "upgrade_log.json").
+        log_path (str or Path): Path to the log file (default: "./upgrade_log.json").
     """
     log_entry = {
         "from_version": from_version,
