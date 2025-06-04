@@ -8,6 +8,9 @@ from upgrade_codes.upgrade_core.comment_sync import CommentSynchronizer
 from upgrade_codes.version_manager import VersionUpgradeManager
 from upgrade_codes.upgrade_core.upgrade_utils import UpgradeUtility
 from upgrade_codes.upgrade_core.comment_diff_fn import comment_diff_fn
+from pathlib import Path
+import json
+from upgrade_codes.upgrade_core.constants import BACKUP_CONF
 
 class ConfigSynchronizer:
     def __init__(self, lang="en", logger = logging.getLogger(__name__)):
@@ -39,6 +42,7 @@ class ConfigSynchronizer:
         # Create a backup of the user config file
         self.backup_user_config()
 
+
     def update_user_config(self) -> None:
         """
         Perform the actual update operations on the user configuration file:
@@ -46,16 +50,15 @@ class ConfigSynchronizer:
         2. Synchronize comments
         3. Upgrade version if needed
         """
-        # Check if field keys need updating
+
+        # Step 1: Update config fields
         if not self.compare_field_keys():
-            # Merge default config with user config and update
             self.merge_and_update_user_config()
         else:
             self.logger.info(self.texts["configs_up_to_date"])
-        
-        # Check if comments need synchronization
+
+        # Step 2: Sync comments
         if not self.compare_comments():
-            # Initialize comment synchronizer
             comment_sync = CommentSynchronizer(
                 self.default_path,
                 self.user_path,
@@ -63,19 +66,24 @@ class ConfigSynchronizer:
                 self.yaml,
                 self.texts_compare
             )
-            # Perform comment synchronization
             comment_sync.sync()
         else:
             self.logger.info(self.texts_compare["comments_up_to_date"])
 
-        old_version = self.get_current_version()
+        # Step 3: Determine whether upgrade is needed
         new_version = self.get_latest_version()
-        if old_version != new_version:
+        old_version = self.get_old_version()
+        need_upgrade = old_version != new_version
+
+        # Step 4: Run upgrade if needed
+        if need_upgrade:
             manager = VersionUpgradeManager(self.lang, self.logger)
             final_version = manager.upgrade(old_version)
             self.logger.info(self.texts["version_upgrade_success"].format(old=old_version, new=final_version))
         else:
             self.logger.info(self.texts["version_upgrade_none"].format(version=old_version))
+
+
 
     def backup_user_config(self):
         backup_path = os.path.abspath(self.backup_path)
@@ -232,16 +240,27 @@ class ConfigSynchronizer:
             compare_fn=comment_diff_fn
         )
 
-    def get_current_version(self):
-        with open(self.user_path, "r", encoding="utf-8") as f:
-            user_config = self.yaml.load(f)
-        return user_config.get("system_config", {}).get("conf_version", "")
-
     def get_latest_version(self):
         with open(self.default_path, "r", encoding="utf-8") as f:
             default_config = self.yaml.load(f)
         return default_config.get("system_config", {}).get("conf_version", "")
-
+    
+    def get_old_version(self) -> str:
+        """
+        Attempt to extract the old version from backup config.
+        If reading fails, fallback to default version "v1.1.1".
+        """
+        try:
+            yaml = YAML()
+            with open(BACKUP_CONF, "r", encoding="utf-8") as f:
+                backup_conf = yaml.load(f)
+                old_version = backup_conf.get("system_config", {}).get("conf_version", "v1.1.1")
+                self.logger.info(self.texts["backup_used_version"].format(backup_version=old_version))
+                return old_version
+        except Exception as e:
+            fallback_version = "v1.1.1"
+            self.logger.warning(self.texts["backup_read_error"].format(version=fallback_version, error=e))
+            return fallback_version
 
 
 

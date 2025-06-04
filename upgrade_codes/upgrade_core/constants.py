@@ -73,6 +73,8 @@ TEXTS = {
         "version_upgrade_none": "无需升级配置，当前版本为 {version}",
         "version_upgrade_failed": "升级配置时出错: {error}",
         "finish_upgrade": "升级流程结束, 总耗时: {time:.2f} 秒",
+        "backup_used_version": "✅ 从备份文件读取配置版本: {backup_version}",
+        "backup_read_error": "⚠️ 读取备份文件失败，使用默认版本 {version}。错误信息: {error}",
     },
     "en": {
         # "welcome_message": f"Auto-Upgrade Script {CURRENT_SCRIPT_VERSION}\nOpen-LLM-VTuber upgrade script - This script is highly experimental and may not work as expected.",
@@ -132,6 +134,8 @@ Continue? (y/N): """,
         "version_upgrade_none": "No upgrade needed. Current version is {version}",
         "version_upgrade_failed": "Failed to upgrade config version: {error}",
         "finish_upgrade": "Upgrade process completed, total time: {time:.2f} seconds",
+        "backup_used_version": "✅ Loaded config version from backup: {backup_version}",
+        "backup_read_error": "⚠️ Failed to read backup file. Falling back to default version {version}. Error: {error}",
     },
 }
 
