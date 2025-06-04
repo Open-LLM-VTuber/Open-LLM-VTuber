@@ -129,7 +129,7 @@ class StateMachine:
         chunk_bytes = int_chunk_np.astype(np.int16).tobytes()
         db = self.calculate_db(int_chunk_np)
 
-        # 获取平滑后的 prob 和 db
+        # Obtain the smoothed prob and db
         smoothed_prob, smoothed_db = self.get_smoothed_values(prob, db)
 
         if self.state == State.IDLE:
