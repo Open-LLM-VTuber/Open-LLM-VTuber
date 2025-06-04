@@ -72,3 +72,5 @@ conf.yaml.backup
 tmp/
 private/
 mcp_servers.json
+
+upgrade_codes/upgrade_log.json

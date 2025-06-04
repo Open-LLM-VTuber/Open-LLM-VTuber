@@ -3,6 +3,38 @@ from pathlib import Path
 from upgrade_codes.upgrade_core.constants import USER_CONF, UPGRADE_TEXTS
 from upgrade_codes.from_version.v_1_1_1 import to_v_1_2_0
 # from upgrade_codes.from_version.v_1_2_0 import to_v_1_2_1 # Future update
+import datetime
+from typing import Union
+
+def _record_upgrade_history(from_version: str, to_version: str, log_path: Union[str, Path] = "upgrade_log.json") -> None:
+    """
+    Append an upgrade record to the upgrade log JSON file.
+
+    Parameters:
+        from_version (str): The starting version of the upgrade.
+        to_version (str): The version after upgrade.
+        log_path (str or Path): Path to the log file (default: "upgrade_log.json").
+    """
+    log_entry = {
+        "from_version": from_version,
+        "to_version": to_version,
+        "timestamp": datetime.datetime.now().isoformat()
+    }
+
+    log_file = Path(log_path)
+    history = []
+
+    if log_file.exists():
+        try:
+            with open(log_file, "r", encoding="utf-8") as f:
+                history = json.load(f)
+        except json.JSONDecodeError:
+            history = []
+
+    history.append(log_entry)
+
+    with open(log_file, "w", encoding="utf-8") as f:
+        json.dump(history, f, indent=2, ensure_ascii=False)
 
 class VersionUpgradeManager:
     def __init__(self, language: str = "zh", logger=None):
@@ -35,6 +67,7 @@ class VersionUpgradeManager:
 
                         upgraded_version = to_version
                         self.logger.info(self.log_texts["upgrade_success"].format(language=self.language))
+                        _record_upgrade_history(from_version, to_version)
                     else:
                         self.logger.info(self.log_texts["already_latest"])
                         break
