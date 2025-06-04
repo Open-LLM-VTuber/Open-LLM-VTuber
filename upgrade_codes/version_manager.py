@@ -3,9 +3,6 @@ from pathlib import Path
 from upgrade_codes.upgrade_core.constants import USER_CONF, UPGRADE_TEXTS
 from upgrade_codes.from_version.v_1_1_1 import to_v_1_2_0
 # from upgrade_codes.from_version.v_1_2_0 import to_v_1_2_1 # Future update
-import datetime
-from typing import Union
-from upgrade_codes.upgrade_core.constants import UPGRADE_LOG
 
 class VersionUpgradeManager:
     def __init__(self, language: str = "zh", logger=None):
