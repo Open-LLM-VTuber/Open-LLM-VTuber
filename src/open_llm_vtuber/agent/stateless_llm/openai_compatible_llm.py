@@ -168,7 +168,7 @@ class AsyncLLM(StatelessLLMInterface):
                         # Convert accumulated tool calls to the required format and output
                         logger.info(f"Complete tool calls: {accumulated_tool_calls}")
 
-                        # 使用 from_dict 方法从字典创建 ToolCallObject 实例
+                        # Use the from_dict method to create a ToolCallObject instance from a dictionary
                         complete_tool_calls = [
                             ToolCallObject.from_dict(tool_data)
                             for tool_data in accumulated_tool_calls.values()
@@ -189,7 +189,7 @@ class AsyncLLM(StatelessLLMInterface):
             if in_tool_call and accumulated_tool_calls:
                 logger.info(f"Final tool call at stream end: {accumulated_tool_calls}")
 
-                # 使用 from_dict 方法从字典创建 ToolCallObject 实例
+                # Create a ToolCallObject instance from a dictionary using the from_dict method.
                 complete_tool_calls = [
                     ToolCallObject.from_dict(tool_data)
                     for tool_data in accumulated_tool_calls.values()
