@@ -11,6 +11,7 @@ from upgrade_codes.upgrade_core.comment_diff_fn import comment_diff_fn
 from pathlib import Path
 import json
 from upgrade_codes.upgrade_core.constants import BACKUP_CONF
+from packaging import version
 
 class ConfigSynchronizer:
     def __init__(self, lang="en", logger = logging.getLogger(__name__)):
@@ -244,21 +245,28 @@ class ConfigSynchronizer:
         with open(self.default_path, "r", encoding="utf-8") as f:
             default_config = self.yaml.load(f)
         return default_config.get("system_config", {}).get("conf_version", "")
-    
+        
     def get_old_version(self) -> str:
         """
-        Attempt to extract the old version from backup config.
-        If reading fails, fallback to default version "v1.1.1".
+        Extract the old version from backup config.
+        If missing or too old (< v1.1.1), fallback to v1.1.1.
         """
+        fallback_version = "v1.1.1"
         try:
             yaml = YAML()
             with open(BACKUP_CONF, "r", encoding="utf-8") as f:
                 backup_conf = yaml.load(f)
-                old_version = backup_conf.get("system_config", {}).get("conf_version", "v1.1.1")
-                self.logger.info(self.texts["backup_used_version"].format(backup_version=old_version))
-                return old_version
+                raw_version = backup_conf.get("system_config", {}).get("conf_version", fallback_version)
+                
+                if version.parse(raw_version) < version.parse(fallback_version):
+                    self.logger.warning(
+                        self.texts["version_too_old"].format(found=raw_version, adjusted=fallback_version)
+                    )
+                    return fallback_version
+
+                self.logger.info(self.texts["backup_used_version"].format(backup_version=raw_version))
+                return raw_version
         except Exception as e:
-            fallback_version = "v1.1.1"
             self.logger.warning(self.texts["backup_read_error"].format(version=fallback_version, error=e))
             return fallback_version
 
