@@ -1,4 +1,5 @@
 """MCP Client for Open-LLM-Vtuber."""
+
 import json
 from contextlib import AsyncExitStack
 from typing import Dict, Any, List, Callable
@@ -20,7 +21,12 @@ class MCPClient:
     Manages persistent connections to multiple MCP servers.
     """
 
-    def __init__(self, server_registery: ServerRegistry, send_text: Callable = None, client_uid: str = None) -> None:
+    def __init__(
+        self,
+        server_registery: ServerRegistry,
+        send_text: Callable = None,
+        client_uid: str = None,
+    ) -> None:
         """Initialize the MCP Client."""
         self.exit_stack: AsyncExitStack = AsyncExitStack()
         self.active_sessions: Dict[str, ClientSession] = {}
@@ -85,7 +91,9 @@ class MCPClient:
             logger.debug(f"MCPC: Cache hit for list_tools on server '{server_name}'.")
             return self._list_tools_cache[server_name]
 
-        logger.debug(f"MCPC: Cache miss for list_tools on server '{server_name}'. Fetching...")
+        logger.debug(
+            f"MCPC: Cache miss for list_tools on server '{server_name}'. Fetching..."
+        )
         session = await self._ensure_server_running_and_get_session(server_name)
         response = await session.list_tools()
 
@@ -108,13 +116,15 @@ class MCPClient:
 
         if response.isError:
             error_text = (
-                response.content[0].text if response.content and hasattr(response.content[0], "text") else "Unknown server error"
+                response.content[0].text
+                if response.content and hasattr(response.content[0], "text")
+                else "Unknown server error"
             )
             logger.error(f"MCPC: Error calling tool '{tool_name}': {error_text}")
             # Return error information within the standard structure
             return {
                 "metadata": getattr(response, "metadata", {}),
-                "content_items": [{"type": "error", "text": error_text}]
+                "content_items": [{"type": "error", "text": error_text}],
             }
 
         content_items = []
@@ -122,15 +132,25 @@ class MCPClient:
             for item in response.content:
                 item_dict = {"type": getattr(item, "type", "text")}
                 # Extract available attributes from content item
-                for attr in ["text", "data", "mimeType", "url", "altText"]: # Added url and altText
-                    if hasattr(item, attr) and getattr(item, attr) is not None: # Check for None
+                for attr in [
+                    "text",
+                    "data",
+                    "mimeType",
+                    "url",
+                    "altText",
+                ]:  # Added url and altText
+                    if (
+                        hasattr(item, attr) and getattr(item, attr) is not None
+                    ):  # Check for None
                         item_dict[attr] = getattr(item, attr)
                 content_items.append(item_dict)
         else:
             logger.warning(
                 f"MCPC: Tool '{tool_name}' returned no content. Returning empty content_items."
             )
-            content_items.append({"type": "text", "text": ""}) # Ensure content_items is not empty
+            content_items.append(
+                {"type": "text", "text": ""}
+            )  # Ensure content_items is not empty
 
         result = {
             "metadata": getattr(response, "metadata", {}),
@@ -145,7 +165,7 @@ class MCPClient:
         )
         await self.exit_stack.aclose()
         self.active_sessions.clear()
-        self._list_tools_cache.clear() # Clear cache on close
+        self._list_tools_cache.clear()  # Clear cache on close
         self.exit_stack = AsyncExitStack()
         logger.info("MCPC: Client instance closed.")
 
