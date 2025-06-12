@@ -4,7 +4,7 @@ It includes a Translator class that loads translations based on the specified la
 
 Usage:
 ```python
-# 'translator' is the singleton instance of the Translator class.
+# 'translator' is the singleton of the Translator class.
 from src.open_llm_vtuber.utils.i18n import translator
 
 # At the start of your application, you can set the language:
