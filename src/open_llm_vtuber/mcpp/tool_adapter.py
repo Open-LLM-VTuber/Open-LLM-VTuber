@@ -164,7 +164,7 @@ class ToolAdapter:
                 "type": "object",
                 "properties": {},
                 "required": required_params,
-                "additionalProperties": False # Disallow extra properties
+                "additionalProperties": False,  # Disallow extra properties
             }
             for param_name, param_info in properties.items():
                 param_schema = {
@@ -179,11 +179,12 @@ class ToolAdapter:
                 if param_schema["type"] == "array" and "items" in param_info:
                     param_schema["items"] = param_info["items"]
                 elif param_schema["type"] == "array" and "items" not in param_info:
-                     logger.warning(f"MC: Array parameter '{param_name}' in tool '{tool_name}' is missing 'items' definition. Assuming items are strings.")
-                     param_schema["items"] = {"type": "string"} # Default or log warning
+                    logger.warning(
+                        f"MC: Array parameter '{param_name}' in tool '{tool_name}' is missing 'items' definition. Assuming items are strings."
+                    )
+                    param_schema["items"] = {"type": "string"}  # Default or log warning
 
                 openai_function_params["properties"][param_name] = param_schema
-
 
             openai_tools.append(
                 {

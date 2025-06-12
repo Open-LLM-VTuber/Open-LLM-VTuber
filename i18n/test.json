@@ -1,0 +1,4 @@
+{
+    "test-a_message": "This is a test message",
+    "test-formatted_message": "This is a {0} message with {1} placeholders"
+}
