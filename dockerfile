@@ -1,48 +1,53 @@
-# Base image
-FROM nvidia/cuda:12.6.0-cudnn-runtime-ubuntu22.04 AS base
+# Base image. Used CUDA 11 for compatibility with sherpa onnx GPU version
+FROM nvidia/cuda:11.6.1-cudnn8-runtime-ubuntu20.04 AS base
+
+# uv is really good. they even have a distro-less binary
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+
 
 # Set noninteractive mode for apt
 ENV DEBIAN_FRONTEND=noninteractive
 
 # Update and install dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    software-properties-common \
-    build-essential libsndfile1 \
-    git \
-    curl \
-    ffmpeg \
-    libportaudio2 \
-    python3 \
-    g++ && \
-    rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg
 
-# Copy requirements and install common dependencies
-COPY requirements.txt /tmp/
+# Set working directory
+WORKDIR /app
 
-# Install pip
-RUN curl https://bootstrap.pypa.io/get-pip.py | python3 - && \
-    pip install --root-user-action=ignore --no-cache-dir -r /tmp/requirements.txt && \
-    pip install --root-user-action=ignore --no-cache-dir funasr modelscope huggingface_hub pywhispercpp torch torchaudio edge-tts azure-cognitiveservices-speech py3-tts
+# Copy from the cache instead of linking since it's a mounted volume
+ENV UV_LINK_MODE=copy
 
-# MeloTTS installation
-WORKDIR /opt/MeloTTS
-RUN git clone https://github.com/myshell-ai/MeloTTS.git /opt/MeloTTS && \
-    pip install --root-user-action=ignore --no-cache-dir -e . && \
-    python3 -m unidic download && \
-    python3 melo/init_downloads.py
+# Install the project's dependencies using the lockfile and settings
+RUN --mount=type=cache,target=/root/.cache/uv \
+    --mount=type=bind,source=uv.lock,target=uv.lock \
+    --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
+    uv sync --frozen --no-install-project --no-dev \
+    uv pip uninstall onnxruntime sherpa-onnx faster-whisper
 
-# Whisper variant
-FROM base AS whisper
-ARG INSTALL_ORIGINAL_WHISPER=false
-RUN if [ "$INSTALL_WHISPER" = "true" ]; then \
-        pip install --root-user-action=ignore --no-cache-dir openai-whisper; \
-    fi
+# Install the sherpa-onnx GPU version
+RUN uv pip install onnxruntime-gpu sherpa-onnx==1.11.3+cuda -f https://k2-fsa.github.io/sherpa/onnx/cuda.html 
+RUN uv pip install faster-whisper gradio_client
+
+
+# Install FunASR
+RUN uv pip install funasr modelscope huggingface_hub pywhispercpp torch torchaudio edge-tts azure-cognitiveservices-speech
+
+# Install Coqui TTS
+RUN uv pip install transformers "coqui-tts[languages]"
+
+
+# Then, add the rest of the project source code and install it
+# Installing separately from its dependencies allows optimal layer caching
+ADD . /app
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --no-dev --inexact
+
 
 # Bark variant
-FROM whisper AS bark
+FROM base AS bark
 ARG INSTALL_BARK=false
 RUN if [ "$INSTALL_BARK" = "true" ]; then \
-        pip install --root-user-action=ignore --no-cache-dir git+https://github.com/suno-ai/bark.git; \
+        uv pip install git+https://github.com/suno-ai/bark.git; \
     fi
 
 # Final image
@@ -51,10 +56,7 @@ FROM bark AS final
 # Copy application code to the container
 COPY . /app
 
-# Set working directory
-WORKDIR /app
-
 # Expose port 12393 (the new default port)
 EXPOSE 12393
 
-CMD ["python3", "server.py"]
+CMD ["uv", "run", "run_server.py"]
