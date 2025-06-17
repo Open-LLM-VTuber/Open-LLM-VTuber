@@ -4,6 +4,7 @@ import subprocess
 import sys
 import time
 from upgrade_codes.upgrade_core.constants import TEXTS,TEXTS_COMPARE
+from typing import Callable, Any
 
 class UpgradeUtility:
     def __init__(self, logger, lang):
@@ -101,7 +102,13 @@ class UpgradeUtility:
         """Check if the repository has submodules by looking for .gitmodules file"""
         return os.path.exists(".gitmodules")
     
-    def compare_dicts(self, name: str, get_a: callable, get_b: callable, compare_fn: callable) -> bool:
+    def compare_dicts(
+        self,
+        name: str,
+        get_a: Callable[[], Any],
+        get_b: Callable[[], Any],
+        compare_fn: Callable[[Any, Any], Any]
+    ) -> bool:
         try:
             a = get_a()
             b = get_b()

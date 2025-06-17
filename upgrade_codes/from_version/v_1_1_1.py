@@ -33,7 +33,7 @@ class to_v_1_2_0:
             }
         }
 
-    def upgrade(self) -> dict:
+    def upgrade(self):
         """
         Return upgraded model_dict structure including 'models' list and new version
         And perform in-place upgrade of conf.yaml
