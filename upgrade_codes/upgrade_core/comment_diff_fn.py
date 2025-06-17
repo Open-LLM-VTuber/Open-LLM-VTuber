@@ -1,5 +1,5 @@
-from ruamel.yaml import YAML
 from io import StringIO
+from ruamel.yaml import YAML
 from ruamel.yaml.comments import CommentedMap
 
 def get_comment_text(comment_list):
