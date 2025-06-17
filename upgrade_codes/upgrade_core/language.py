@@ -13,7 +13,7 @@ def get_system_language():
     if os_name == "Windows":
         try:
             # Use Windows API to get the UI language
-            windll = ctypes.windll.kernel32
+            windll = ctypes.windll.kernel32 # type: ignore
             ui_lang = windll.GetUserDefaultUILanguage()
             lang_code = locale.windows_locale.get(ui_lang)
             if lang_code:
