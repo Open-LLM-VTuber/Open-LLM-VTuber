@@ -1,5 +1,4 @@
 # upgrade/comment_sync.py
-import re
 
 class CommentSynchronizer:
     def __init__(self, default_path, user_path, logger, yaml, texts_compare):

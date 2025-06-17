@@ -8,9 +8,6 @@ from upgrade_codes.upgrade_core.comment_sync import CommentSynchronizer
 from upgrade_codes.version_manager import VersionUpgradeManager
 from upgrade_codes.upgrade_core.upgrade_utils import UpgradeUtility
 from upgrade_codes.upgrade_core.comment_diff_fn import comment_diff_fn
-from pathlib import Path
-import json
-from upgrade_codes.upgrade_core.constants import BACKUP_CONF
 from packaging import version
 
 class ConfigSynchronizer:
