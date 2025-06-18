@@ -30,6 +30,20 @@ def run_upgrade():
         logger.error(f"Error details: {error_msg}")
         return
 
+    # Check for unpushed commits (ahead of remote)
+    logger.info(texts["checking_ahead_status"])
+    success, ahead_behind = upgrade_manager.run_command(
+        "git rev-list --left-right --count HEAD...@{upstream}"
+    )
+    if success:
+        ahead, behind = map(int, ahead_behind.strip().split())
+        if ahead > 0:
+            logger.error(texts["local_ahead"].format(count=ahead))
+            logger.error(texts["push_blocked"])
+            logger.info(texts["backup_suggestion"])
+            logger.warning(texts["abort_upgrade"])
+            return
+
     # Check for uncommitted changes
     logger.info(texts["checking_stash"])
     success, changes = upgrade_manager.run_command("git status --porcelain")
@@ -92,28 +106,6 @@ def run_upgrade():
     submodules = upgrade_manager.get_submodule_list()
     if submodules:
         logger.info(texts["updating_submodules"])
-
-        # Deprecate since v1.2.0(since we don't need to run "git submodule update --init --recursive" any more).
-        # First update all submodules
-        # operation, elapsed = upgrade_manager.time_operation(
-        #     upgrade_manager.run_command, "git submodule update --init --recursive"
-        # )
-        # success, output = operation
-        # logger.debug(
-        #     texts["operation_time"].format(operation="submodule update", time=elapsed)
-        # )
-
-        # if not success:
-        #     logger.error(texts["submodule_error"])
-        #     logger.error(f"Error details: {output}")
-        # else:
-        #     logger.info(texts["submodules_updated"])
-
-        #     # Log individual submodule details
-        #     for submodule in submodules:
-        #         logger.debug(texts["submodule_updated"].format(submodule=submodule))
-
-        # Log individual submodule details
         for submodule in submodules:
             logger.debug(texts["submodule_updated"].format(submodule=submodule))
     else:

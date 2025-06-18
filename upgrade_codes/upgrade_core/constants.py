@@ -76,6 +76,23 @@ TEXTS = {
         "backup_used_version": "✅ 从备份文件读取配置版本: {backup_version}",
         "backup_read_error": "⚠️ 读取备份文件失败，使用默认版本 {version}。错误信息: {error}",
         "version_too_old": "🔁 检测到旧版本号 {found} 低于最低支持版本，已强制使用 {adjusted}",
+        "checking_ahead_status": "🔍 正在检查是否存在未推送的本地提交...",
+        "local_ahead": "🚨 你在 'main' 分支上有 {count} 个尚未推送到远程的本地 commit。",
+        "push_blocked": (
+            "⛔ 你没有权限推送到 'main' 分支。\n"
+            "这些 commit 只保存在本地，无法同步到 GitHub。\n"
+            "如果继续升级，可能会导致这些提交丢失或与远程版本发生冲突。"
+        ),
+        "backup_suggestion": (
+            "🛟 为了安全保存你的更改，请选择以下方式之一：\n\n"
+            "1️⃣ 导出 patch 文件（适用于终端用户）：\n"
+            "   → 执行：git format-patch origin/main --stdout > backup.patch\n\n"
+            "2️⃣ 创建一个备份分支：\n"
+            "   → 执行：git checkout -b my-backup-before-upgrade\n\n"
+            "📘 GitHub Desktop 用户：\n"
+            "   → 点击菜单栏中的 'Branch → New Branch' 来本地保存你的更改"
+        ),
+        "abort_upgrade": "🛑 为保护本地提交，升级流程已中止。",
     },
     "en": {
         # "welcome_message": f"Auto-Upgrade Script {CURRENT_SCRIPT_VERSION}\nOpen-LLM-VTuber upgrade script - This script is highly experimental and may not work as expected.",
@@ -138,6 +155,24 @@ Continue? (y/N): """,
         "backup_used_version": "✅ Loaded config version from backup: {backup_version}",
         "backup_read_error": "⚠️ Failed to read backup file. Falling back to default version {version}. Error: {error}",
         "version_too_old": "🔁 Detected old version {found} which is lower than the minimum supported version, forced to use {adjusted}",
+        "checking_ahead_status": "🔍 Checking for unpushed local commits...",
+        "local_ahead": "🚨 You have {count} local commit(s) on 'main' that are NOT pushed to remote.",
+        "push_blocked": (
+            "⛔ You do NOT have permission to push to the 'main' branch.\n"
+            "Your commits are local only and will NOT be synced to GitHub.\n"
+            "Continuing the upgrade may cause those commits to be lost or conflict with remote changes."
+        ),
+        "backup_suggestion": (
+            "🛟 To keep your work safe, do one of the following:\n"
+            "1. Export your commits as a patch:\n"
+            "   → Run: git format-patch origin/main --stdout > backup.patch\n"
+            "2. Or create a backup branch:\n"
+            "   → Run: git checkout -b my-backup-before-upgrade\n"
+            "\n"
+            "📘 GitHub Desktop users:\n"
+            "   → Go to 'Branch' → 'New Branch' to preserve your changes locally."
+        ),
+        "abort_upgrade": "🛑 Upgrade aborted to protect your local commits.",
     },
 }
 
