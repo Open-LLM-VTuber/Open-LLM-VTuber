@@ -84,13 +84,15 @@ TEXTS = {
             "如果继续升级，可能会导致这些提交丢失或与远程版本发生冲突。"
         ),
         "backup_suggestion": (
-            "🛟 为了安全保存你的更改，请选择以下方式之一：\n\n"
-            "1️⃣ 导出 patch 文件（适用于终端用户）：\n"
-            "   → 执行：git format-patch origin/main --stdout > backup.patch\n\n"
-            "2️⃣ 创建一个备份分支：\n"
-            "   → 执行：git checkout -b my-backup-before-upgrade\n\n"
-            "📘 GitHub Desktop 用户：\n"
-            "   → 点击菜单栏中的 'Branch → New Branch' 来本地保存你的更改"
+            "🛟 为了安全保存你的本地提交，你可以选择以下任意方式：\n\n"
+            "🔄 1. 撤销最近的提交（推荐）：\n"
+            "   • GitHub Desktop：点击右下角的 “Undo” 按钮\n"
+            "   • 终端命令：git reset --soft HEAD~1\n\n"
+            "📦 2. 导出 patch 文件（保留提交记录）：\n"
+            "   → 终端执行：git format-patch origin/main --stdout > backup.patch\n\n"
+            "🌿 3. 创建一个备份分支（保存当前状态）：\n"
+            "   → 终端执行：git checkout -b my-backup-before-upgrade\n\n"
+            "💡 提示：撤销 commit 后，你可以新建分支或导出补丁以继续操作。"
         ),
         "abort_upgrade": "🛑 为保护本地提交，升级流程已中止。",
     },
@@ -163,14 +165,15 @@ Continue? (y/N): """,
             "Continuing the upgrade may cause those commits to be lost or conflict with remote changes."
         ),
         "backup_suggestion": (
-            "🛟 To keep your work safe, do one of the following:\n"
-            "1. Export your commits as a patch:\n"
-            "   → Run: git format-patch origin/main --stdout > backup.patch\n"
-            "2. Or create a backup branch:\n"
-            "   → Run: git checkout -b my-backup-before-upgrade\n"
-            "\n"
-            "📘 GitHub Desktop users:\n"
-            "   → Go to 'Branch' → 'New Branch' to preserve your changes locally."
+            "🛟 To keep your work safe, you can choose one of the following options:\n\n"
+            "🔄 1. Undo the last commit:\n"
+            "   • GitHub Desktop: Click the 'Undo' button at the bottom right.\n"
+            "   • Terminal: Run: git reset --soft HEAD~1\n\n"
+            "📦 2. Export your commit(s) as a patch file:\n"
+            "   → Run: git format-patch origin/main --stdout > backup.patch\n\n"
+            "🌿 3. Create a backup branch:\n"
+            "   → Run: git checkout -b my-backup-before-upgrade\n\n"
+            "💡 Recommendation: After undoing the commit, you can switch to a new branch or export changes as needed."
         ),
         "abort_upgrade": "🛑 Upgrade aborted to protect your local commits.",
     },
