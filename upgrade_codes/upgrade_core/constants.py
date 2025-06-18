@@ -84,14 +84,14 @@ TEXTS = {
             "如果继续升级，可能会导致这些提交丢失或与远程版本发生冲突。"
         ),
         "backup_suggestion": (
-            "🛟 为了安全保存你的本地提交，你可以选择以下任意方式：\n\n"
+            "🛟 为了安全保存你的本地提交，你可以选择以下任意方式：\n"
             "🔄 1. 撤销最近的提交（推荐）：\n"
             "   • GitHub Desktop：点击右下角的 “Undo” 按钮\n"
-            "   • 终端命令：git reset --soft HEAD~1\n\n"
+            "   • 终端命令：git reset --soft HEAD~1\n"
             "📦 2. 导出 patch 文件（保留提交记录）：\n"
-            "   → 终端执行：git format-patch origin/main --stdout > backup.patch\n\n"
+            "   → 终端执行：git format-patch origin/main --stdout > backup.patch\n"
             "🌿 3. 创建一个备份分支（保存当前状态）：\n"
-            "   → 终端执行：git checkout -b my-backup-before-upgrade\n\n"
+            "   → 终端执行：git checkout -b my-backup-before-upgrade\n"
             "💡 提示：撤销 commit 后，你可以新建分支或导出补丁以继续操作。"
         ),
         "abort_upgrade": "🛑 为保护本地提交，升级流程已中止。",
@@ -165,14 +165,14 @@ Continue? (y/N): """,
             "Continuing the upgrade may cause those commits to be lost or conflict with remote changes."
         ),
         "backup_suggestion": (
-            "🛟 To keep your work safe, you can choose one of the following options:\n\n"
+            "🛟 To keep your work safe, you can choose one of the following options:\n"
             "🔄 1. Undo the last commit:\n"
             "   • GitHub Desktop: Click the 'Undo' button at the bottom right.\n"
-            "   • Terminal: Run: git reset --soft HEAD~1\n\n"
+            "   • Terminal: Run: git reset --soft HEAD~1\n"
             "📦 2. Export your commit(s) as a patch file:\n"
-            "   → Run: git format-patch origin/main --stdout > backup.patch\n\n"
+            "   → Run: git format-patch origin/main --stdout > backup.patch\n"
             "🌿 3. Create a backup branch:\n"
-            "   → Run: git checkout -b my-backup-before-upgrade\n\n"
+            "   → Run: git checkout -b my-backup-before-upgrade\n"
             "💡 Recommendation: After undoing the commit, you can switch to a new branch or export changes as needed."
         ),
         "abort_upgrade": "🛑 Upgrade aborted to protect your local commits.",
