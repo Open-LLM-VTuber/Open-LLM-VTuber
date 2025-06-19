@@ -1,6 +1,8 @@
 # Base image. Used CUDA 11 for compatibility with sherpa onnx GPU version
 FROM nvidia/cuda:11.6.1-cudnn8-runtime-ubuntu20.04 AS base
 
+ENV UBUNTU_MIRROR=https://mirrors.tuna.tsinghua.edu.cn
+
 # uv is really good. they even have a distro-less binary
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
@@ -9,7 +11,10 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 ENV DEBIAN_FRONTEND=noninteractive
 
 # Update and install dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg
+RUN sed -i "s|http://archive.ubuntu.com|$UBUNTU_MIRROR|g" /etc/apt/sources.list && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends ffmpeg && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
 WORKDIR /app
