@@ -1,59 +1,5 @@
 [
     {
-        "name": "shizuku-local",
-        "description": "Orange-Haired Girl, locally available. no internet required.",
-        "url": "/live2d-models/shizuku/runtime/shizuku.model3.json",
-        "kScale": 0.5,
-        "initialXshift": 0,
-        "initialYshift": 0,
-        "kXOffset": 1150,
-        "idleMotionGroupName": "Idle",
-        "emotionMap": {
-            "neutral": 0,
-            "anger": 2,
-            "disgust": 2,
-            "fear": 1,
-            "joy": 3,
-            "smirk": 3,
-            "sadness": 1,
-            "surprise": 3
-        },
-        "tapMotions": {
-            "body": {
-                "tap_body": 30,
-                "shake": 30,
-                "pinch_in": 20,
-                "pinch_out": 20
-            },
-            "head": {
-                "flick_head": 40,
-                "shake": 20,
-                "pinch_in": 20,
-                "pinch_out": 20
-            }
-        }
-    },
-    {
-        "name": "shizuku",
-        "description": "Orange-Haired Girl. Same as shizuku-local. Kept for compatibility.",
-        "url": "/live2d-models/shizuku/runtime/shizuku.model3.json",
-        "kScale": 0.5,
-        "initialXshift": 0,
-        "initialYshift": 0,
-        "kXOffset": 1150,
-        "idleMotionGroupName": "idle",
-        "emotionMap": {
-            "neutral": 0,
-            "anger": 2,
-            "disgust": 2,
-            "fear": 1,
-            "joy": 3,
-            "smirk": 3,
-            "sadness": 1,
-            "surprise": 3
-        }
-    },
-    {
         "name": "mao_pro",
         "description": "",
         "url": "/live2d-models/mao_pro/runtime/mao_pro.model3.json",
