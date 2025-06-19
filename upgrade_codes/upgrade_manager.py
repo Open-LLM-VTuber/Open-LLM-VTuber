@@ -15,6 +15,7 @@ class UpgradeManager:
         self.config_sync = ConfigSynchronizer(self.lang, self.logger)
 
     def _configure_logger(self):
+        logger.remove()
         log_dir = "logs"
         os.makedirs(log_dir, exist_ok=True)
         log_file = os.path.join(log_dir, f"upgrade_{datetime.now().strftime('%Y-%m-%d-%H-%M')}.log")
