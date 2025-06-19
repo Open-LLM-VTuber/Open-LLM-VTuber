@@ -75,8 +75,8 @@ class ConfigSynchronizer:
 
         # Step 4: Run upgrade if needed
         if need_upgrade:
-            manager = VersionUpgradeManager(self.lang, self.logger)
-            final_version = manager.upgrade(old_version)
+            version_upgrade_manager = VersionUpgradeManager(self.lang, self.logger)
+            final_version = version_upgrade_manager.upgrade(old_version)
             self.logger.info(self.texts["version_upgrade_success"].format(old=old_version, new=final_version))
         else:
             self.logger.info(self.texts["version_upgrade_none"].format(version=old_version))
