@@ -5,16 +5,11 @@ FROM nvidia/cuda:12.6.0-cudnn-runtime-ubuntu22.04 AS base
 ENV DEBIAN_FRONTEND=noninteractive
 
 # Update and install dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    software-properties-common \
-    build-essential libsndfile1 \
-    git \
-    curl \
-    ffmpeg \
-    libportaudio2 \
-    python3 \
-    g++ && \
-    rm -rf /var/lib/apt/lists/*
+RUN apt-get -o Acquire::AllowInsecureRepositories=true update && \
+    apt-get install -y libxcb-xfixes0 libxcb-shape0 || true && \
+    apt-get install -y --no-install-recommends ffmpeg || true && \
+    apt --fix-broken install -y && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements and install common dependencies
 COPY requirements.txt /tmp/
