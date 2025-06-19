@@ -105,10 +105,24 @@ def run_upgrade():
     submodules = upgrade_manager.get_submodule_list()
     if submodules:
         logger.info(texts["updating_submodules"])
-        for submodule in submodules:
-            logger.debug(texts["submodule_updated"].format(submodule=submodule))
+        
+        operation, elapsed = upgrade_manager.time_operation(
+            upgrade_manager.run_command, "git submodule update --init --recursive"
+        )
+        success, output = operation
+        logger.debug(
+            texts["operation_time"].format(operation="git submodule update", time=elapsed)
+        )
+        
+        if not success:
+            logger.error(texts["submodule_update_error"])
+            logger.error(f"Error details: {output}")
+        else:
+            for submodule in submodules:
+                logger.debug(texts["submodule_updated"].format(submodule=submodule))
     else:
         logger.info(texts["no_submodules"])
+
 
     # Update config
     upgrade_manager.sync_user_config()
