@@ -1,22 +1,30 @@
 #!/bin/bash
 #SBATCH --job-name=build-docker
-#SBATCH --partition=2080ti
+#SBATCH --partition=debug          # 可选分区名，根据实际情况修改
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=4
-#SBATCH --time=01:00:00
-#SBATCH --output=logs/build.log
-#SBATCH --error=logs/build.err
+#SBATCH --mem=32G
+#SBATCH --time=04:00:00
+#SBATCH --output=logs/build_output.log
+#SBATCH --error=logs/build_error.log
 
-# === 环境准备 ===
+# === 初始化 ===
+set -euo pipefail
+trap 'echo "❌ 任务失败: 行号 $LINENO, 状态码 $?"' ERR
+
 echo "🚀 开始构建 Docker 镜像..."
 echo "📅 时间: $(date)"
 echo "📍 节点: $(hostname)"
 echo "📂 当前目录: $(pwd)"
 
-# === 构建镜像 ===
-docker build -t open-llm-vtuber:latest .
+# === 镜像名称 ===
+IMAGE_NAME="open-llm-vtuber:latest"
 
-# === 镜像构建完成后可选导出为 .tar 文件 ===
-docker save open-llm-vtuber:latest -o open-llm-vtuber.tar
-echo "✅ 镜像构建完成并已保存为 open-llm-vtuber.tar"
+# === 构建镜像 ===
+docker build -t $IMAGE_NAME .
+
+# === 保存镜像为 .tar 以便下载或传输 ===
+docker save $IMAGE_NAME -o open-llm-vtuber.tar
+
+echo "✅ Docker 镜像已构建并保存为 open-llm-vtuber.tar"
