@@ -12,7 +12,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 # Update and install dependencies
 RUN sed -i "s|http://archive.ubuntu.com|$UBUNTU_MIRROR|g" /etc/apt/sources.list && \
-    apt-get update && \
+    apt-get -o Acquire::AllowInsecureRepositories=true update && \
     apt-get install -y --no-install-recommends ffmpeg && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
