@@ -21,7 +21,6 @@ def run_upgrade():
 
     response = input("\033[93m" + texts["operation_preview"] + "\033[0m").lower()
     if response != "y":
-        logger.warning(texts["abort_upgrade"])
         return
 
     success, error_msg = upgrade_manager.run_command("git rev-parse --is-inside-work-tree")
