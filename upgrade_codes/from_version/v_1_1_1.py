@@ -2,7 +2,7 @@ import copy
 import yaml
 
 class to_v_1_2_0:
-    def __init__(self, old_model_list: list, conf_yaml_path: str, language: str = "zh"):
+    def __init__(self, old_model_list, conf_yaml_path, language):
         """
         :param old_model_list: list of dicts (each representing a Live2D model config)
         :param conf_yaml_path: path to conf.yaml that should be upgraded
