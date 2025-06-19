@@ -19,6 +19,7 @@ class VersionUpgradeManager:
 
     def upgrade(self, current_version: str) -> str:
         upgraded_version = current_version
+        upgraded = False
 
         for from_version, to_version, module in self.upgrade_chain:
             if upgraded_version == from_version:
@@ -35,16 +36,15 @@ class VersionUpgradeManager:
 
                         upgraded_version = to_version
                         self.logger.info(self.log_texts["upgrade_success"].format(language=self.language))
+                        upgraded = True
                     else:
                         self.logger.info(self.log_texts["already_latest"])
                         break
                 except Exception as e:
                     self.logger.error(self.log_texts["upgrade_error"].format(error=e))
                     break
-        else:
+
+        if not upgraded:
             self.logger.info(self.log_texts["no_upgrade_routine"].format(version=current_version))
 
         return upgraded_version
-
-
-# The `_upgrade_1_1_1_to_1_2_0` method has been removed as it is redundant and unused.
