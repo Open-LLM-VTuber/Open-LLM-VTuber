@@ -134,7 +134,7 @@ def run_upgrade():
     total_elapsed = end_time - start_time
     logger.info(texts["finish_upgrade"].format(time=total_elapsed))
 
-    logger.info("\n" + texts["upgrade_complete"])
+    logger.info(texts["upgrade_complete"])
     logger.info(texts["check_config"])
     logger.info(texts["resolve_conflicts"])
     logger.info(texts["check_backup"])
