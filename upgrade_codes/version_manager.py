@@ -58,7 +58,7 @@ class VersionUpgradeManager:
             return current_version
 
         from_version, to_version, module = task
-        self.logger.info(self.log_texts["upgrading_path"].format(from_version=from_version, to_version=to_version))
+        self.logger.info(self.log_texts["upgrading_path"].format(from_version=current_version, to_version=to_version))
         upgraded_version = current_version
 
         try:
