@@ -5,7 +5,7 @@ from upgrade_codes.from_version.v_1_1_1 import to_v_1_2_0
 # from upgrade_codes.from_version.v_1_2_0 import to_v_1_2_1 # Future update
 
 class VersionUpgradeManager:
-    def __init__(self, language: str = "zh", logger=None):
+    def __init__(self, language, logger):
         self.logger = logger
         self.language = language
         self.log_texts = UPGRADE_TEXTS.get(language, UPGRADE_TEXTS["en"])
