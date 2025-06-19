@@ -7,8 +7,7 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 # Set noninteractive mode for apt
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Update and install dependencies
-RUN apt-get -o Acquire::AllowInsecureRepositories=true update && \
+RUN apt-get update && \
     apt-get install -y --no-install-recommends ffmpeg && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
