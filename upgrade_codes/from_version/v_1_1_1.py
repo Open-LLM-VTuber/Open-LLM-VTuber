@@ -92,13 +92,6 @@ class to_v_1_2_0:
             if self.language == "zh":
                 self._migrate_field(asr_config, "language")
 
-            llm_configs = char_config.get("agent_config", {}).get("llm_configs", {})
-            openai_config = llm_configs.get("openai_compatible_llm", {})
-            if "organization_id" in openai_config:
-                openai_config["organization_id"] = None
-            if "project_id" in openai_config:
-                openai_config["project_id"] = None
-
             with open(self.conf_yaml_path, "w", encoding="utf-8") as f:
                 yaml.safe_dump(data, f, allow_unicode=True, sort_keys=False, default_style="'" ) # Auto formatting with '
 
