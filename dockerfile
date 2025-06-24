@@ -8,7 +8,7 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends ffmpeg && \
+    apt-get install -y --no-install-recommends ffmpeg git && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
@@ -33,7 +33,7 @@ RUN uv pip install faster-whisper gradio_client
 RUN uv pip install funasr modelscope huggingface_hub pywhispercpp torch torchaudio edge-tts azure-cognitiveservices-speech
 
 # Install Coqui TTS
-RUN uv pip install transformers "coqui-tts[languages]"
+# RUN uv pip install transformers "coqui-tts[languages]"
 
 
 # Then, add the rest of the project source code and install it

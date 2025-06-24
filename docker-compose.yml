@@ -1,5 +1,6 @@
 services:
   vtuber:
+    platform: linux/amd64
     image: open-llm-vtuber:latest
     build:
       context: .              # Build context: current directory containing Dockerfile

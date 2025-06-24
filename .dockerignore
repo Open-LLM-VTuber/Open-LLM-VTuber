@@ -1,0 +1,53 @@
+# Ignore user config and sensitive data
+conf.yaml
+conf.yaml.backup
+.env
+api_keys.py
+src/open_llm_vtuber/llm/user_credentials.json
+
+# Ignore non-default assets
+backgrounds/*
+live2d-models/*
+!live2d-models/mao_pro
+!live2d-models/shizuku
+characters/*
+avatars/*
+
+# Ignore large or cached models and logs
+models/*
+!models/piper_voice
+models/piper_voice/*
+logs/*
+server.log
+memory.db
+memory.db.bk
+mem.json
+cache/*
+asset/
+tmp/
+chat_history/
+knowledge_base/
+
+# Ignore Python artifacts
+__pycache__/
+*.pyc
+*.pyo
+.idea/
+lab.py
+
+# Ignore local development environments
+.venv/
+.conda/
+conda/
+
+# System and platform-specific files
+.DS_Store
+*.exe
+
+# Ignore Git-related directories and submodules
+.git/
+submodules/MeloTTS/
+openapi_assistants.json
+openapi_memgpt.json
+legacy/
+mcp_servers.json
