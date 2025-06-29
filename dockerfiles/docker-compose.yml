@@ -3,8 +3,8 @@ services:
     platform: linux/amd64
     image: open-llm-vtuber:latest
     build:
-      context: .              # Build context: current directory containing Dockerfile
-      dockerfile: Dockerfile
+      context: ../              # Build context: current directory containing Dockerfile
+      dockerfile: dockerfile
       args:
         INSTALL_BARK: "true"  # Enable optional installation of Bark (speech synthesis model)
     container_name: open-llm-vtuber

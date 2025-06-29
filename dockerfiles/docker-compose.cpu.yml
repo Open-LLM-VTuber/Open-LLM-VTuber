@@ -1,0 +1,17 @@
+services:
+  vtuber:
+    platform: linux/amd64  # 保留 amd64，适配大多数机器架构；如用 ARM 可改为 linux/arm64
+    image: open-llm-vtuber:cpu
+    build:
+      context: ../              # 构建上下文
+      dockerfile: dockerfile.cpu  # 使用 CPU 版本 Dockerfile
+      args:
+        INSTALL_BARK: "true"  # 可选安装 Bark
+    container_name: open-llm-vtuber-cpu
+    ports:
+      - "12393:12393"         # 宿主机:容器端口映射
+    volumes:
+      - ./:/app               # 挂载当前目录到容器 /app，方便本地开发
+    environment:
+      - UV_LINK_MODE=copy     # 防止 symlink 问题，推荐设置
+    command: ["uv", "run", "run_server.py"]  # 默认启动命令

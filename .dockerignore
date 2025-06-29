@@ -1,53 +1,79 @@
-# Ignore user config and sensitive data
-conf.yaml
-conf.yaml.backup
-.env
-api_keys.py
-src/open_llm_vtuber/llm/user_credentials.json
+# User config & backup
+/conf.yaml
+/conf.yaml.backup
 
-# Ignore non-default assets
+# Default templates retained
+!/config_templates/**
+
+# Backgrounds
 backgrounds/*
+
+# Live2D models - ignore non-defaults
 live2d-models/*
-!live2d-models/mao_pro
-!live2d-models/shizuku
+!live2d-models/mao_pro/**
+!live2d-models/shizuku/**
+
+# Characters
 characters/*
+# All default characters tracked via git
+
+# Avatars
 avatars/*
 
-# Ignore large or cached models and logs
-models/*
-!models/piper_voice
-models/piper_voice/*
-logs/*
-server.log
-memory.db
-memory.db.bk
-mem.json
-cache/*
-asset/
-tmp/
-chat_history/
-knowledge_base/
+# System files
+.DS_Store
 
-# Ignore Python artifacts
+# Python cache
 __pycache__/
 *.pyc
-*.pyo
-.idea/
+
+# IDE & local files
+/.idea/
 lab.py
 
-# Ignore local development environments
+# Virtual envs
 .venv/
 .conda/
 conda/
 
-# System and platform-specific files
-.DS_Store
+# API keys, secrets
+.env
+api_keys.py
+src/open_llm_vtuber/llm/user_credentials.json
+
+# Database
+memory.db*
+mem.json
+
+# Logs
+server.log
+logs/*
+
+# Cache & models
+cache/*
+asset/
+models/*
+!models/piper_voice/**
+src/open_llm_vtuber/tts/asset/
+src/open_llm_vtuber/tts/config/
+src/open_llm_vtuber/asr/models/*
+!src/open_llm_vtuber/asr/models/silero_vad.onnx
+
+# Misc
+tmp/
+private/
+legacy/
+chat_history/
+knowledge_base/
+submodules/MeloTTS
+openapi_*.json
+mcp_servers.json
+
+# Windows builds
 *.exe
 
-# Ignore Git-related directories and submodules
-.git/
-submodules/MeloTTS/
-openapi_assistants.json
-openapi_memgpt.json
-legacy/
-mcp_servers.json
+# Packaging artifacts
+*.egg-info/
+build/
+dist/
+.cache/

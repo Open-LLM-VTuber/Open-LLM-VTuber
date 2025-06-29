@@ -38,10 +38,15 @@ RUN uv pip install funasr modelscope huggingface_hub pywhispercpp torch torchaud
 
 # Then, add the rest of the project source code and install it
 # Installing separately from its dependencies allows optimal layer caching
+# Then, add the rest of the project source code
 ADD . /app
+
+# ✅ 初始化 git 子模块（如 frontend/）
+RUN git submodule update --init --recursive
+
+# 然后再执行项目安装
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-dev --inexact
-
 
 # Bark variant
 FROM base AS bark
