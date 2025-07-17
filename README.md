@@ -77,6 +77,7 @@ This project underwent code refactoring after version `v1.0.0` and is currently 
   - 🗣️ AI proactive speaking feature
   - 💾 Chat log persistence, switch to previous conversations anytime
   - 🌍 TTS translation support (e.g., chat in Chinese while AI uses Japanese voice)
+  - 📡 Multi-platform livestream helper script in `streaming/`
 
 - 🧠 **Extensive model support**:
   - 🤖 Large Language Models (LLM): Ollama, OpenAI (and any OpenAI-compatible API), Gemini, Claude, Mistral, DeepSeek, Zhipu AI, GGUF, LM Studio, vLLM, etc.
