@@ -8,7 +8,7 @@ from pathlib import Path
 
 from .agent_interface import AgentInterface
 from ..output_types import AudioOutput, Actions
-from ...chat_history_manager import get_metadata, update_metadate
+from ...chat_history_manager import get_metadata, update_metadata
 
 
 class HumeAIAgent(AgentInterface):
@@ -86,7 +86,7 @@ class HumeAIAgent(AgentInterface):
                 new_chat_group_id = data.get("chat_group_id")
 
                 if not resume_chat_group_id and self._current_history_uid:
-                    update_metadate(
+                    update_metadata(
                         self._current_conf_uid,
                         self._current_history_uid,
                         {"resume_id": new_chat_group_id, "agent_type": self.AGENT_TYPE},
