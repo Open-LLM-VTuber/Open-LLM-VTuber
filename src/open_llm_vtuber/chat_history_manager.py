@@ -143,8 +143,8 @@ def get_metadata(conf_uid: str, history_uid: str) -> dict:
     return {}
 
 
-def update_metadate(conf_uid: str, history_uid: str, metadata: dict) -> bool:
-    """Set metadata in history file
+def update_metadata(conf_uid: str, history_uid: str, metadata: dict) -> bool:
+    """Set metadata in history file.
 
     Updates existing metadata with new fields, preserving existing ones.
     If no metadata exists, creates new metadata entry.
@@ -180,6 +180,11 @@ def update_metadate(conf_uid: str, history_uid: str, metadata: dict) -> bool:
     except Exception as e:
         logger.error(f"Failed to set metadata: {e}")
     return False
+
+
+# Backwards compatibility for old misspelled function name
+def update_metadate(conf_uid: str, history_uid: str, metadata: dict) -> bool:
+    return update_metadata(conf_uid, history_uid, metadata)
 
 
 def get_history(conf_uid: str, history_uid: str) -> List[HistoryMessage]:
