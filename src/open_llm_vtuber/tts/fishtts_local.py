@@ -54,7 +54,7 @@ class TTSEngine(TTSInterface):
         self.file_extension = audio_format
 
     def generate_audio(self, text, file_name_no_ext=None):
-        file_name = self.generate_cache_file_name(file_name_no_ext or self.output, self.file_extension)
+        file_name = self.generate_cache_file_name(file_name_no_ext, self.file_extension)
 
         # Prepare reference data
         byte_audios = [audio_to_bytes(ref_audio) for ref_audio in self.reference_audio] if self.reference_audio else []
