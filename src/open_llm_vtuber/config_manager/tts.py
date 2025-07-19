@@ -1,6 +1,6 @@
 # config_manager/tts.py
 from pydantic import ValidationInfo, Field, model_validator
-from typing import Literal, Optional, Dict, ClassVar
+from typing import Literal, Optional, List, Dict, ClassVar
 from .i18n import I18nMixin, Description
 
 
