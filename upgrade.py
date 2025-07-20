@@ -3,6 +3,7 @@ from upgrade_codes.upgrade_manager import UpgradeManager
 from upgrade_codes.upgrade_core.constants import TEXTS
 
 upgrade_manager = UpgradeManager()
+upgrade_manager.check_user_config_exists()
 
 def run_upgrade():
     logger = upgrade_manager.logger

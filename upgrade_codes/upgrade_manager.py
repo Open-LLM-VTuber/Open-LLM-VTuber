@@ -16,7 +16,6 @@ class UpgradeManager:
         self.upgrade_utils = UpgradeUtility(self.logger, self.lang)
         self.config_sync = ConfigSynchronizer(self.lang, self.logger)
         self.texts = TEXTS
-        self.check_user_config_exists()
 
     def check_user_config_exists(self):
         if not os.path.exists(USER_CONF):
