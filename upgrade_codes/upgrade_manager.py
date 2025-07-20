@@ -5,6 +5,7 @@ from upgrade_codes.upgrade_core.upgrade_utils import UpgradeUtility
 import os
 from datetime import datetime
 import sys
+from upgrade_codes.upgrade_core.constants import USER_CONF,TEXTS
 
 
 class UpgradeManager:
@@ -14,6 +15,14 @@ class UpgradeManager:
         self.logger = logger
         self.upgrade_utils = UpgradeUtility(self.logger, self.lang)
         self.config_sync = ConfigSynchronizer(self.lang, self.logger)
+        self.check_user_config_exists()
+        self.texts = TEXTS
+
+    def check_user_config_exists(self):
+        import os
+        if not os.path.exists(USER_CONF):
+            print(self.texts[self.lang]["no_config_fatal"])
+            exit(1)
 
     def _configure_logger(self):
         logger.remove()
