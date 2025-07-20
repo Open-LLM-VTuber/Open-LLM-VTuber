@@ -232,7 +232,7 @@ class FishTTSLocalConfig(I18nMixin):
     reference_id: Optional[str] = Field(None, alias="reference_id")
     reference_audio: Optional[str] = Field(None, alias="reference_audio")
     reference_text: Optional[str] = Field(None, alias="reference_text")
-    base_url: str = Field("http://127.0.0.1:8080/v1/tts", alias="base_url")
+    api_url: str = Field("http://127.0.0.1:8080/v1/tts")
     latency: Literal["normal", "balanced"] = Field("normal", alias="latency")
     audio_format: str = Field("wav", alias="audio_format")
     max_new_tokens: int = Field(1024, alias="max_new_tokens")
@@ -263,7 +263,7 @@ class FishTTSLocalConfig(I18nMixin):
             en="List of reference texts for voice synthesis",
             zh="用于语音合成的参考文本列表"
         ),
-        "base_url": Description(
+        "api_url": Description(
             en="Base URL for TTS API",
             zh="TTS API 的基础 URL"
         ),

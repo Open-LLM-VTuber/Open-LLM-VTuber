@@ -57,8 +57,8 @@ class TTSEngine(TTSInterface):
         file_name = self.generate_cache_file_name(file_name_no_ext, self.file_extension)
 
         # Prepare reference data
-        byte_audios = [audio_to_bytes(ref_audio) for ref_audio in self.reference_audio] if self.reference_audio else []
-        ref_texts = [read_ref_text(ref_text) for ref_text in self.reference_text] if self.reference_text else []
+        byte_audios = [audio_to_bytes(ref_audio) for ref_audio in [self.reference_audio]] if [self.reference_audio] else []
+        ref_texts = [read_ref_text(ref_text) for ref_text in [self.reference_text]] if [self.reference_text] else []
 
         data = {
             "text": text,
@@ -94,7 +94,7 @@ class TTSEngine(TTSInterface):
                 },
                 timeout=120
             )
-
+            
             if response.status_code == 200:
                 if self.streaming:
                     # For streaming, we'll save the entire response to a file first
@@ -108,11 +108,11 @@ class TTSEngine(TTSInterface):
 
                 return file_name
             else:
-                logger.critical(
+                logger.error(
                     f"Error: Failed to generate audio. Status code: {response.status_code}\n{response.json()}"
                 )
                 return ""
 
         except Exception as e:
-            logger.critical(f"Error during TTS request: {str(e)}")
+            logger.error(f"Error during TTS request: {str(e)}")
             return ""
