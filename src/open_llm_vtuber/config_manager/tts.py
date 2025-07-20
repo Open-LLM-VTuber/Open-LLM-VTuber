@@ -1,6 +1,6 @@
 # config_manager/tts.py
 from pydantic import ValidationInfo, Field, model_validator
-from typing import Literal, Optional, Dict, ClassVar
+from typing import Literal, List, Optional, Dict, ClassVar
 from .i18n import I18nMixin, Description
 
 
@@ -230,8 +230,8 @@ class FishTTSLocalConfig(I18nMixin):
     
     api_key: str = Field(..., alias="api_key")
     reference_id: Optional[str] = Field(None, alias="reference_id")
-    reference_audio: Optional[str] = Field(None, alias="reference_audio")
-    reference_text: Optional[str] = Field(None, alias="reference_text")
+    reference_audio: Optional[List[str]] = Field(None, alias="reference_audio")
+    reference_text: Optional[List[str]] = Field(None, alias="reference_text")
     api_url: str = Field("http://127.0.0.1:8080/v1/tts")
     latency: Literal["normal", "balanced"] = Field("normal", alias="latency")
     audio_format: str = Field("wav", alias="audio_format")

@@ -336,8 +336,8 @@ character_config:
       # The API key for the local Fish TTS server, "YOUR_API_KEY" by default.
       api_key: 'YOUR_API_KEY'
       # 6-10 seconds of reference audio
-      reference_audio: 'voice.wav'
-      reference_text: 'TEXT SPOKEN IN THE AUDIO'
+      reference_audio: ['voice.wav']
+      reference_text: ['TEXT SPOKEN IN THE AUDIO']
       # Either 'normal' or 'balanced'. balance is faster but lower quality.
       latency: 'normal'
       api_url: 'http://127.0.0.1:8080/v1/tts'

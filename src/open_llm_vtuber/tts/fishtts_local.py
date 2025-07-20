@@ -3,7 +3,6 @@ from loguru import logger
 from .tts_interface import TTSInterface
 import ormsgpack
 from pydub import AudioSegment
-from pydub.playback import play
 from typing import Optional, List, Union
 
 from fish_speech.utils.file import audio_to_bytes, read_ref_text
@@ -57,8 +56,8 @@ class TTSEngine(TTSInterface):
         file_name = self.generate_cache_file_name(file_name_no_ext, self.file_extension)
 
         # Prepare reference data
-        byte_audios = [audio_to_bytes(ref_audio) for ref_audio in [self.reference_audio]] if [self.reference_audio] else []
-        ref_texts = [read_ref_text(ref_text) for ref_text in [self.reference_text]] if [self.reference_text] else []
+        byte_audios = [audio_to_bytes(ref_audio) for ref_audio in self.reference_audio] if self.reference_audio else []
+        ref_texts = [read_ref_text(ref_text) for ref_text in self.reference_text] if self.reference_text else []
 
         data = {
             "text": text,

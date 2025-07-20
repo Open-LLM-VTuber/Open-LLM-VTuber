@@ -332,8 +332,8 @@ character_config:
       # 本地 Fish TTS 服务器的 API 密钥，默认为“YOUR_API_KEY”。
       api_key: 'YOUR_API_KEY'
       # 6-10秒的参考音频
-      reference_audio: 'voice.wav'
-      reference_text: '音频中的文字'
+      reference_audio: ['voice.wav']
+      reference_text: ['音频中的文字']
       # 要么是“normal”，要么是“balanced”。平衡速度更快，但质量较低。
       latency: 'normal'
       api_url: 'http://127.0.0.1:8080/v1/tts'
