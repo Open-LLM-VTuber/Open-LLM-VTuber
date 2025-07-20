@@ -1,6 +1,6 @@
 # config_manager/tts.py
 from pydantic import ValidationInfo, Field, model_validator
-from typing import Literal, Optional, Dict, ClassVar
+from typing import Literal, List, Optional, Dict, ClassVar
 from .i18n import I18nMixin, Description
 
 
@@ -225,6 +225,98 @@ class FishAPITTSConfig(I18nMixin):
         ),
     }
 
+class FishTTSLocalConfig(I18nMixin):
+    """Configuration for TTS Engine."""
+    
+    api_key: str = Field(..., alias="api_key")
+    reference_id: Optional[str] = Field(None, alias="reference_id")
+    reference_audio: Optional[List[str]] = Field(None, alias="reference_audio")
+    reference_text: Optional[List[str]] = Field(None, alias="reference_text")
+    api_url: str = Field("http://127.0.0.1:8080/v1/tts")
+    latency: Literal["normal", "balanced"] = Field("normal", alias="latency")
+    audio_format: str = Field("wav", alias="audio_format")
+    max_new_tokens: int = Field(1024, alias="max_new_tokens")
+    chunk_length: int = Field(300, alias="chunk_length")
+    top_p: float = Field(0.8, alias="top_p")
+    repetition_penalty: float = Field(1.1, alias="repetition_penalty")
+    temperature: float = Field(0.8, alias="temperature")
+    streaming: bool = Field(False, alias="streaming")
+    channels: int = Field(1, alias="channels")
+    rate: int = Field(44100, alias="rate")
+    use_memory_cache: str = Field("off", alias="use_memory_cache")
+    seed: Optional[int] = Field(None, alias="seed")
+
+    DESCRIPTIONS: ClassVar[Dict[str, Description]] = {
+        "api_key": Description(
+            en="API key for TTS service",
+            zh="TTS 服务的 API 密钥"
+        ),
+        "reference_id": Description(
+            en="Voice reference ID from service provider",
+            zh="来自服务提供商的语音参考 ID"
+        ),
+        "reference_audio": Description(
+            en="List of reference audio file paths",
+            zh="参考音频文件路径列表"
+        ),
+        "reference_text": Description(
+            en="List of reference texts for voice synthesis",
+            zh="用于语音合成的参考文本列表"
+        ),
+        "api_url": Description(
+            en="Base URL for TTS API",
+            zh="TTS API 的基础 URL"
+        ),
+        "latency": Description(
+            en="Latency mode (normal or balanced)",
+            zh="延迟模式（normal 或 balanced）"
+        ),
+        "audio_format": Description(
+            en="Output audio format (wav, mp3, flac)",
+            zh="输出音频格式（wav, mp3, flac）"
+        ),
+        "max_new_tokens": Description(
+            en="Maximum new tokens to generate (0 means no limit)",
+            zh="生成的最大新 token 数（0 表示无限制）"
+        ),
+        "chunk_length": Description(
+            en="Chunk length for synthesis",
+            zh="合成的块长度"
+        ),
+        "top_p": Description(
+            en="Top-p sampling value",
+            zh="Top-p 采样值"
+        ),
+        "repetition_penalty": Description(
+            en="Repetition penalty for synthesis",
+            zh="合成的重复惩罚"
+        ),
+        "temperature": Description(
+            en="Temperature for sampling",
+            zh="采样温度"
+        ),
+        "streaming": Description(
+            en="Enable streaming response",
+            zh="启用流式响应"
+        ),
+        "channels": Description(
+            en="Number of audio channels",
+            zh="音频通道数"
+        ),
+        "rate": Description(
+            en="Sample rate for audio",
+            zh="音频采样率"
+        ),
+        "use_memory_cache": Description(
+            en="Cache encoded references in memory (on/off)",
+            zh="在内存中缓存编码的参考（on/off）"
+        ),
+        "seed": Description(
+            en="Seed for deterministic generation (None for random)",
+            zh="确定性生成的种子（None 表示随机）"
+        ),
+    }
+
 
 class CoquiTTSConfig(I18nMixin):
     """Configuration for Coqui TTS."""
@@ -315,6 +407,7 @@ class TTSConfig(I18nMixin):
         "x_tts",
         "gpt_sovits_tts",
         "fish_api_tts",
+        "fish_tts_local",
         "sherpa_onnx_tts",
     ] = Field(..., alias="tts_model")
 
@@ -328,6 +421,7 @@ class TTSConfig(I18nMixin):
     x_tts: Optional[XTTSConfig] = Field(None, alias="x_tts")
     gpt_sovits_tts: Optional[GPTSoVITSConfig] = Field(None, alias="gpt_sovits")
     fish_api_tts: Optional[FishAPITTSConfig] = Field(None, alias="fish_api_tts")
+    fish_tts_local: Optional[FishTTSLocalConfig] = Field(None, alias="fish_tts_local")
     sherpa_onnx_tts: Optional[SherpaOnnxTTSConfig] = Field(
         None, alias="sherpa_onnx_tts"
     )
@@ -353,6 +447,9 @@ class TTSConfig(I18nMixin):
         ),
         "fish_api_tts": Description(
             en="Configuration for Fish API TTS", zh="Fish API TTS 配置"
+        ),
+        "fish_tts_local": Description(
+            en="Configuration for Fish TTS local", zh="Fish TTS local 配置"
         ),
         "sherpa_onnx_tts": Description(
             en="Configuration for Sherpa Onnx TTS", zh="Sherpa Onnx TTS 配置"
@@ -384,6 +481,8 @@ class TTSConfig(I18nMixin):
             values.gpt_sovits_tts.model_validate(values.gpt_sovits_tts.model_dump())
         elif tts_model == "fish_api_tts" and values.fish_api_tts is not None:
             values.fish_api_tts.model_validate(values.fish_api_tts.model_dump())
+        elif tts_model == "fish_tts_local" and values.fish_tts_local is not None:
+            values.fish_tts_local.model_validate(values.fish_tts_local.model_dump())
         elif tts_model == "sherpa_onnx_tts" and values.sherpa_onnx_tts is not None:
             values.sherpa_onnx_tts.model_validate(values.sherpa_onnx_tts.model_dump())
 
