@@ -9,9 +9,32 @@ BACKUP_CONF = "conf.yaml.backup"
 ZH_DEFAULT_CONF = "config_templates/conf.ZH.default.yaml"
 EN_DEFAULT_CONF = "config_templates/conf.default.yaml"
 
+# yaml = YAML()
+# user_config = yaml.load(load_text_file_with_guess_encoding(USER_CONF))
+# CURRENT_SCRIPT_VERSION = user_config.get("system_config", {}).get("conf_version")
 yaml = YAML()
-user_config = yaml.load(load_text_file_with_guess_encoding(USER_CONF))
-CURRENT_SCRIPT_VERSION = user_config.get("system_config", {}).get("conf_version")
+
+def load_user_config():
+    """
+    延迟加载 conf.yaml 的内容，避免模块导入时报错。
+    返回 dict 或 None。
+    """
+    import os
+    if not os.path.exists(USER_CONF):
+        return None
+    text = load_text_file_with_guess_encoding(USER_CONF)
+    if text is None:
+        return None
+    return yaml.load(text)
+
+def get_current_script_version():
+    config = load_user_config()
+    if config:
+        return config.get("system_config", {}).get("conf_version", "UNKNOWN")
+    return "UNKNOWN"
+
+CURRENT_SCRIPT_VERSION = get_current_script_version()
+
 
 TEXTS = {
     "zh": {
@@ -96,6 +119,12 @@ TEXTS = {
             "💡 提示：撤销 commit 后，你可以新建分支或导出补丁以继续操作。"
         ),
         "abort_upgrade": "🛑 为保护本地提交，升级流程已中止。",
+        "no_config_fatal": (
+            "❌ 未找到配置文件 `conf.yaml`。\n"
+            "请执行以下任一操作：\n"
+            "👉 将旧版配置文件复制到当前目录\n"
+            "👉 或运行 `run_server.py` 自动生成默认模板"
+        ),
     },
     "en": {
         # "welcome_message": f"Auto-Upgrade Script {CURRENT_SCRIPT_VERSION}\nOpen-LLM-VTuber upgrade script - This script is highly experimental and may not work as expected.",
@@ -178,6 +207,13 @@ Continue? (y/N): """,
             "💡 Recommendation: After undoing the commit, you can switch to a new branch or export changes as needed."
         ),
         "abort_upgrade": "🛑 Upgrade aborted to protect your local commits.",
+        "no_config_fatal": (
+            "❌ Config file `conf.yaml` not found.\n"
+            "Please either:\n"
+            "👉 Copy your old config file to the current directory\n"
+            "👉 Or run `run_server.py` to generate a default template"
+        ),
+
     },
 }
 
