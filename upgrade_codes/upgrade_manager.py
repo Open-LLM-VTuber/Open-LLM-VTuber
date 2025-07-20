@@ -15,11 +15,10 @@ class UpgradeManager:
         self.logger = logger
         self.upgrade_utils = UpgradeUtility(self.logger, self.lang)
         self.config_sync = ConfigSynchronizer(self.lang, self.logger)
-        self.check_user_config_exists()
         self.texts = TEXTS
+        self.check_user_config_exists()
 
     def check_user_config_exists(self):
-        import os
         if not os.path.exists(USER_CONF):
             print(self.texts[self.lang]["no_config_fatal"])
             exit(1)

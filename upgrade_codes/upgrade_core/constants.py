@@ -112,10 +112,10 @@ TEXTS = {
         ),
         "abort_upgrade": "🛑 为保护本地提交，升级流程已中止。",
         "no_config_fatal": (
-            "\n❌ 未找到配置文件 conf.yaml。\n"
+            "❌ 未找到配置文件 conf.yaml。\n"
             "请执行以下任一操作：\n"
             "👉 将旧版配置文件复制到当前目录\n"
-            "👉 或运行 run_server.py 自动生成默认模板\n"
+            "👉 或运行 run_server.py 自动生成默认模板"
         ),
     },
     "en": {
@@ -199,10 +199,10 @@ Continue? (y/N): """,
         ),
         "abort_upgrade": "🛑 Upgrade aborted to protect your local commits.",
         "no_config_fatal": (
-            "\n❌ Config file conf.yaml not found.\n"
+            "❌ Config file conf.yaml not found.\n"
             "Please either:\n"
             "👉 Copy your old config file to the current directory\n"
-            "👉 Or run run_server.py to generate a default template\n"
+            "👉 Or run run_server.py to generate a default template"
         ),
     },
 }
