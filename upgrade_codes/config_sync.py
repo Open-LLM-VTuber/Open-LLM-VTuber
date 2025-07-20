@@ -1,6 +1,14 @@
 import os
 import shutil
-from upgrade_codes.upgrade_core.constants import USER_CONF,BACKUP_CONF,TEXTS, ZH_DEFAULT_CONF, EN_DEFAULT_CONF, TEXTS_COMPARE, TEXTS_MERGE
+from upgrade_codes.upgrade_core.constants import (
+    USER_CONF,
+    BACKUP_CONF,
+    TEXTS,
+    ZH_DEFAULT_CONF,
+    EN_DEFAULT_CONF,
+    TEXTS_COMPARE,
+    TEXTS_MERGE,
+)
 import logging
 from ruamel.yaml import YAML
 from src.open_llm_vtuber.config_manager.utils import load_text_file_with_guess_encoding
@@ -10,8 +18,9 @@ from upgrade_codes.upgrade_core.upgrade_utils import UpgradeUtility
 from upgrade_codes.upgrade_core.comment_diff_fn import comment_diff_fn
 from packaging import version
 
+
 class ConfigSynchronizer:
-    def __init__(self, lang="en", logger = logging.getLogger(__name__)):
+    def __init__(self, lang="en", logger=logging.getLogger(__name__)):
         self.lang = lang
         self.texts = TEXTS[lang]
         self.default_path = ZH_DEFAULT_CONF if lang == "zh" else EN_DEFAULT_CONF
@@ -36,10 +45,9 @@ class ConfigSynchronizer:
             # Copy default config to user path
             shutil.copy2(self.default_path, self.user_path)
             return
-        
+
         # Create a backup of the user config file
         self.backup_user_config()
-
 
     def update_user_config(self) -> None:
         """
@@ -62,7 +70,7 @@ class ConfigSynchronizer:
                 self.user_path,
                 self.logger,
                 self.yaml,
-                self.texts_compare
+                self.texts_compare,
             )
             comment_sync.sync()
         else:
@@ -77,11 +85,15 @@ class ConfigSynchronizer:
         if need_upgrade:
             version_upgrade_manager = VersionUpgradeManager(self.lang, self.logger)
             final_version = version_upgrade_manager.upgrade(old_version)
-            self.logger.info(self.texts["version_upgrade_success"].format(old=old_version, new=final_version))
+            self.logger.info(
+                self.texts["version_upgrade_success"].format(
+                    old=old_version, new=final_version
+                )
+            )
         else:
-            self.logger.info(self.texts["version_upgrade_none"].format(version=old_version))
-
-
+            self.logger.info(
+                self.texts["version_upgrade_none"].format(version=old_version)
+            )
 
     def backup_user_config(self):
         backup_path = os.path.abspath(self.backup_path)
@@ -107,7 +119,9 @@ class ConfigSynchronizer:
 
     def merge_configs(self):
         user_config = self.yaml.load(load_text_file_with_guess_encoding(self.user_path))
-        default_config = self.yaml.load(load_text_file_with_guess_encoding(self.default_path))
+        default_config = self.yaml.load(
+            load_text_file_with_guess_encoding(self.default_path)
+        )
 
         new_keys = []
 
@@ -129,7 +143,7 @@ class ConfigSynchronizer:
         for key in new_keys:
             self.logger.info(self.texts_merge["new_config_item"].format(key=key))
         return new_keys
-    
+
     def collect_all_subkeys(self, d, base_path):
         """Collect all keys in the dictionary d, recursively, with base_path as the prefix."""
         keys = []
@@ -157,10 +171,12 @@ class ConfigSynchronizer:
                             self.get_missing_keys(user_val, default_val, current_path)
                         )
                     else:
-                        subtree_missing = self.collect_all_subkeys(default_val, current_path)
+                        subtree_missing = self.collect_all_subkeys(
+                            default_val, current_path
+                        )
                         missing.extend(subtree_missing)
         return missing
-    
+
     def get_extra_keys(self, user, default, path=""):
         """Recursively find keys in user that are not present in default."""
         extra = []
@@ -175,17 +191,21 @@ class ConfigSynchronizer:
             else:
                 default_val = default[key]
                 if isinstance(user_val, dict) and isinstance(default_val, dict):
-                    extra.extend(self.get_extra_keys(user_val, default_val, current_path))
+                    extra.extend(
+                        self.get_extra_keys(user_val, default_val, current_path)
+                    )
                 elif isinstance(user_val, dict):
                     subtree_extra = self.collect_all_subkeys(user_val, current_path)
                     extra.extend(subtree_extra)
         return extra
-    
+
     def delete_extra_keys(self):
         """Delete extra keys in user config that are not present in default config."""
 
         user_config = self.yaml.load(load_text_file_with_guess_encoding(self.user_path))
-        default_config = self.yaml.load(load_text_file_with_guess_encoding(self.default_path))
+        default_config = self.yaml.load(
+            load_text_file_with_guess_encoding(self.default_path)
+        )
         extra_keys = self.get_extra_keys(user_config, default_config)
 
         def delete_key_by_path(config_dict, key_path):
@@ -206,28 +226,43 @@ class ConfigSynchronizer:
         with open(self.user_path, "w", encoding="utf-8") as f:
             self.yaml.dump(user_config, f)
 
-        self.logger.info(self.texts_compare["extra_keys_deleted_count"].format(count=len(deleted_keys)))
+        self.logger.info(
+            self.texts_compare["extra_keys_deleted_count"].format(
+                count=len(deleted_keys)
+            )
+        )
         for key in deleted_keys:
-            self.logger.info(self.texts_compare["extra_keys_deleted_item"].format(key=key))
+            self.logger.info(
+                self.texts_compare["extra_keys_deleted_item"].format(key=key)
+            )
 
     def compare_field_keys(self) -> bool:
         """Compare field structure differences (missing/extra keys)"""
+
         def field_compare_fn(user, default):
             missing = self.get_missing_keys(user, default)
             extra = self.get_extra_keys(user, default)
 
             if missing:
-                self.logger.warning(self.texts_compare["missing_keys"].format(keys=", ".join(missing)))
+                self.logger.warning(
+                    self.texts_compare["missing_keys"].format(keys=", ".join(missing))
+                )
             if extra:
-                self.logger.warning(self.texts_compare["extra_keys"].format(keys=", ".join(extra)))
+                self.logger.warning(
+                    self.texts_compare["extra_keys"].format(keys=", ".join(extra))
+                )
                 self.delete_extra_keys()
             return (not missing, missing + extra)
 
         return self.upgrade_utils.compare_dicts(
             name="keys",
-            get_a=lambda: self.yaml.load(load_text_file_with_guess_encoding(self.user_path)),
-            get_b=lambda: self.yaml.load(load_text_file_with_guess_encoding(self.default_path)),
-            compare_fn=field_compare_fn
+            get_a=lambda: self.yaml.load(
+                load_text_file_with_guess_encoding(self.user_path)
+            ),
+            get_b=lambda: self.yaml.load(
+                load_text_file_with_guess_encoding(self.default_path)
+            ),
+            compare_fn=field_compare_fn,
         )
 
     def compare_comments(self) -> bool:
@@ -235,14 +270,14 @@ class ConfigSynchronizer:
             name="comments",
             get_a=lambda: load_text_file_with_guess_encoding(self.user_path),
             get_b=lambda: load_text_file_with_guess_encoding(self.default_path),
-            compare_fn=comment_diff_fn
+            compare_fn=comment_diff_fn,
         )
 
     def get_latest_version(self):
         with open(self.default_path, "r", encoding="utf-8") as f:
             default_config = self.yaml.load(f)
         return default_config.get("system_config", {}).get("conf_version", "")
-        
+
     def get_old_version(self) -> str:
         """
         Extract the old version from backup config.
@@ -253,19 +288,26 @@ class ConfigSynchronizer:
             yaml = YAML()
             with open(BACKUP_CONF, "r", encoding="utf-8") as f:
                 backup_conf = yaml.load(f)
-                raw_version = backup_conf.get("system_config", {}).get("conf_version", fallback_version)
-                
+                raw_version = backup_conf.get("system_config", {}).get(
+                    "conf_version", fallback_version
+                )
+
                 if version.parse(raw_version) < version.parse(fallback_version):
                     self.logger.warning(
-                        self.texts["version_too_old"].format(found=raw_version, adjusted=fallback_version)
+                        self.texts["version_too_old"].format(
+                            found=raw_version, adjusted=fallback_version
+                        )
                     )
                     return fallback_version
 
-                self.logger.info(self.texts["backup_used_version"].format(backup_version=raw_version))
+                self.logger.info(
+                    self.texts["backup_used_version"].format(backup_version=raw_version)
+                )
                 return raw_version
         except Exception as e:
-            self.logger.warning(self.texts["backup_read_error"].format(version=fallback_version, error=e))
+            self.logger.warning(
+                self.texts["backup_read_error"].format(
+                    version=fallback_version, error=e
+                )
+            )
             return fallback_version
-
-
-

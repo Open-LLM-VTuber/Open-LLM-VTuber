@@ -5,6 +5,7 @@ from upgrade_codes.upgrade_core.constants import USER_CONF, UPGRADE_TEXTS
 from upgrade_codes.from_version.v_1_1_1 import to_v_1_2_0
 # from upgrade_codes.from_version.v_1_2_0 import to_v_1_3_0  # future upgrade
 
+
 class VersionUpgradeManager:
     def __init__(self, language, logger):
         self.logger = logger
@@ -20,7 +21,10 @@ class VersionUpgradeManager:
         """
         return [
             {
-                "from_range": ("v1.1.1", "v1.2.0"),  # Inclusive lower bound, exclusive upper bound
+                "from_range": (
+                    "v1.1.1",
+                    "v1.2.0",
+                ),  # Inclusive lower bound, exclusive upper bound
                 "from_version": "v1.1.1",
                 "to_version": "v1.2.0",
                 "module": to_v_1_2_0,
@@ -54,11 +58,17 @@ class VersionUpgradeManager:
         """
         task = self.resolve_upgrade_task(current_version)
         if not task:
-            self.logger.info(self.log_texts["no_upgrade_routine"].format(version=current_version))
+            self.logger.info(
+                self.log_texts["no_upgrade_routine"].format(version=current_version)
+            )
             return current_version
 
         from_version, to_version, module = task
-        self.logger.info(self.log_texts["upgrading_path"].format(from_version=current_version, to_version=to_version))
+        self.logger.info(
+            self.log_texts["upgrading_path"].format(
+                from_version=current_version, to_version=to_version
+            )
+        )
         upgraded_version = current_version
 
         try:
@@ -69,10 +79,14 @@ class VersionUpgradeManager:
             if isinstance(model_dict, list):
                 new_data = module(model_dict, self.user_config, self.language).upgrade()
                 with open(model_path, "w", encoding="utf-8") as f:
-                    json.dump(new_data, f, indent=self.indent_spaces, ensure_ascii=False)
+                    json.dump(
+                        new_data, f, indent=self.indent_spaces, ensure_ascii=False
+                    )
 
                 upgraded_version = to_version
-                self.logger.info(self.log_texts["upgrade_success"].format(language=self.language))
+                self.logger.info(
+                    self.log_texts["upgrade_success"].format(language=self.language)
+                )
             else:
                 self.logger.info(self.log_texts["already_latest"])
         except Exception as e:

@@ -1,6 +1,7 @@
 import copy
 import yaml
 
+
 class to_v_1_2_0:
     def __init__(self, old_model_list, conf_yaml_path, language):
         """
@@ -11,7 +12,7 @@ class to_v_1_2_0:
         self.old_models = old_model_list
         self.conf_yaml_path = conf_yaml_path
         self.language = language
-        
+
         # Configuration migration mapping table (language-specific)
         self.migration_map = {
             "zh": {
@@ -21,7 +22,7 @@ class to_v_1_2_0:
                 "shizuku-local-001": "mao_pro_001",
                 "distil-medium.en": "large-v3-turbo",
                 "en": "zh",
-                "v1.1.1": "v1.2.0"
+                "v1.1.1": "v1.2.0",
             },
             "en": {
                 "shizuku.png": "mao.png",
@@ -29,8 +30,8 @@ class to_v_1_2_0:
                 "shizuku-local": "mao_pro",
                 "shizuku-local-001": "mao_pro_001",
                 "distil-medium.en": "large-v3-turbo",
-                "v1.1.1": "v1.2.0"
-            }
+                "v1.1.1": "v1.2.0",
+            },
         }
 
     def upgrade(self):
@@ -43,7 +44,13 @@ class to_v_1_2_0:
         return upgraded_models
 
     def _upgrade_live2d_models(self, old_model_list: list) -> list:
-        deprecated = {"other_unit_90001", "player_unit_00003", "mashiro", "shizuku-local", "shizuku"}
+        deprecated = {
+            "other_unit_90001",
+            "player_unit_00003",
+            "mashiro",
+            "shizuku-local",
+            "shizuku",
+        }
         upgrades = {"mao_pro"}
         new_models = []
 
@@ -56,7 +63,9 @@ class to_v_1_2_0:
 
             if name in upgrades:
                 if name == "mao_pro":
-                    upgraded["url"] = "/live2d-models/mao_pro/runtime/mao_pro.model3.json"
+                    upgraded["url"] = (
+                        "/live2d-models/mao_pro/runtime/mao_pro.model3.json"
+                    )
                     upgraded["kScale"] = 0.5
 
             new_models.append(upgraded)
@@ -88,12 +97,14 @@ class to_v_1_2_0:
             # Update ASR config
             asr_config = char_config.get("asr_config", {}).get("faster_whisper", {})
             self._migrate_field(asr_config, "model_path")
-            
+
             if self.language == "zh":
                 self._migrate_field(asr_config, "language")
 
             with open(self.conf_yaml_path, "w", encoding="utf-8") as f:
-                yaml.safe_dump(data, f, allow_unicode=True, sort_keys=False, default_style="'" ) # Auto formatting with '
+                yaml.safe_dump(
+                    data, f, allow_unicode=True, sort_keys=False, default_style="'"
+                )  # Auto formatting with '
 
         except Exception as e:
             raise RuntimeError(f"Failed to upgrade conf.yaml: {e}")

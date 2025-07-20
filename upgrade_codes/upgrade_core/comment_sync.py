@@ -4,6 +4,7 @@ from logging import Logger
 from ruamel.yaml import YAML
 from ruamel.yaml.comments import CommentedMap
 
+
 class CommentSynchronizer:
     def __init__(
         self,
@@ -11,7 +12,7 @@ class CommentSynchronizer:
         user_path: str,
         logger: Logger,
         yaml: YAML,
-        texts_compare: Dict[str, str]
+        texts_compare: Dict[str, str],
     ):
         self.default_path = default_path
         self.user_path = user_path
@@ -27,24 +28,24 @@ class CommentSynchronizer:
                 user_tree: CommentedMap = self.yaml.load(f)
 
             def sync_comments(
-                default_node: CommentedMap,
-                user_node: CommentedMap,
-                path: str = ""
+                default_node: CommentedMap, user_node: CommentedMap, path: str = ""
             ) -> None:
-                if not isinstance(default_node, CommentedMap) or not isinstance(user_node, CommentedMap):
+                if not isinstance(default_node, CommentedMap) or not isinstance(
+                    user_node, CommentedMap
+                ):
                     return
 
                 for key in default_node:
                     if key in user_node:
                         current_path = f"{path}.{key}" if path else key
-                        if hasattr(default_node, 'ca') and hasattr(user_node, 'ca'):
+                        if hasattr(default_node, "ca") and hasattr(user_node, "ca"):
                             if key in default_node.ca.items:
                                 user_node.ca.items[key] = default_node.ca.items[key]
                         sync_comments(default_node[key], user_node[key], current_path)
 
             sync_comments(default_tree, user_tree)
 
-            if hasattr(default_tree, 'ca') and hasattr(user_tree, 'ca'):
+            if hasattr(default_tree, "ca") and hasattr(user_tree, "ca"):
                 user_tree.ca.end = default_tree.ca.end
 
             with open(self.user_path, "w", encoding="utf-8") as f:

@@ -3,8 +3,9 @@ import platform
 import subprocess
 import sys
 import time
-from upgrade_codes.upgrade_core.constants import TEXTS,TEXTS_COMPARE
+from upgrade_codes.upgrade_core.constants import TEXTS, TEXTS_COMPARE
 from typing import Callable, Any
+
 
 class UpgradeUtility:
     def __init__(self, logger, lang):
@@ -34,7 +35,6 @@ class UpgradeUtility:
         except Exception as e:
             return False, f"Unexpected error: {str(e)}"
 
-
     def check_git_installed(self):
         """Check if Git is installed"""
         command = "where git" if sys.platform == "win32" else "which git"
@@ -43,7 +43,6 @@ class UpgradeUtility:
             return result.returncode == 0
         except subprocess.SubprocessError:
             return False
-
 
     def log_system_info(self):
         """Log detailed system information"""
@@ -62,13 +61,14 @@ class UpgradeUtility:
         # Log Git version
         success, git_version = self.run_command("git --version")
         if success:
-            self.logger.info(texts["git_version"].format(git_version=git_version.strip()))
+            self.logger.info(
+                texts["git_version"].format(git_version=git_version.strip())
+            )
 
         # Log current branch
         success, branch = self.run_command("git branch --show-current")
         if success:
             self.logger.info(texts["current_branch"].format(branch=branch.strip()))
-
 
     def time_operation(self, func, *args, **kwargs):
         """Time an operation and return result with timing information"""
@@ -78,13 +78,14 @@ class UpgradeUtility:
         elapsed = end_time - start_time
         return result, elapsed
 
-
     def get_submodule_list(self):
         """Get a list of submodules"""
         if not os.path.exists(".gitmodules"):
             return []
 
-        success, output = self.run_command("git config --file .gitmodules --get-regexp path")
+        success, output = self.run_command(
+            "git config --file .gitmodules --get-regexp path"
+        )
         if not success:
             return []
 
@@ -97,17 +98,16 @@ class UpgradeUtility:
 
         return submodules
 
-
     def has_submodules(self):
         """Check if the repository has submodules by looking for .gitmodules file"""
         return os.path.exists(".gitmodules")
-    
+
     def compare_dicts(
         self,
         name: str,
         get_a: Callable[[], Any],
         get_b: Callable[[], Any],
-        compare_fn: Callable[[Any, Any], Any]
+        compare_fn: Callable[[Any, Any], Any],
     ) -> bool:
         try:
             a = get_a()
@@ -120,19 +120,28 @@ class UpgradeUtility:
                 is_equal, differences = comparison_result, []
 
             if is_equal:
-                msg = self.texts_compare.get("compare_passed", "[DEBUG] {name} comparison passed.")
+                msg = self.texts_compare.get(
+                    "compare_passed", "[DEBUG] {name} comparison passed."
+                )
                 self.logger.debug(msg.format(name=name))
                 return True
             else:
-                msg = self.texts_compare.get("compare_failed", "[WARNING] {name} comparison failed: configs differ.")
+                msg = self.texts_compare.get(
+                    "compare_failed",
+                    "[WARNING] {name} comparison failed: configs differ.",
+                )
                 self.logger.warning(msg.format(name=name))
                 if differences:
                     for item in differences:
-                        self.logger.warning(self.texts_compare.get("compare_diff_item", "- {item}").format(item=item))
+                        self.logger.warning(
+                            self.texts_compare.get(
+                                "compare_diff_item", "- {item}"
+                            ).format(item=item)
+                        )
                 return False
         except Exception as e:
-            msg = self.texts_compare.get("compare_error", "[ERROR] {name} comparison error: {error}")
+            msg = self.texts_compare.get(
+                "compare_error", "[ERROR] {name} comparison error: {error}"
+            )
             self.logger.error(msg.format(name=name, error=e))
             return False
-
-

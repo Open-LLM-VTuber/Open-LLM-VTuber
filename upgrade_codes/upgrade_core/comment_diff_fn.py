@@ -2,6 +2,7 @@ from io import StringIO
 from ruamel.yaml import YAML
 from ruamel.yaml.comments import CommentedMap
 
+
 def get_comment_text(comment_list):
     if not comment_list:
         return ""
@@ -15,6 +16,7 @@ def get_comment_text(comment_list):
             flattened.append(str(c.value).strip())
     return "\n".join(flattened).strip()
 
+
 def extract_comments(yaml_text: str) -> dict:
     yaml = YAML()
     yaml.preserve_quotes = True
@@ -25,7 +27,7 @@ def extract_comments(yaml_text: str) -> dict:
     def recurse(node, path=""):
         if not isinstance(node, CommentedMap):
             return
-        if hasattr(node, 'ca') and isinstance(node.ca.items, dict):
+        if hasattr(node, "ca") and isinstance(node.ca.items, dict):
             for key in node:
                 full_path = f"{path}.{key}" if path else str(key)
                 if key in node.ca.items:
@@ -34,6 +36,7 @@ def extract_comments(yaml_text: str) -> dict:
 
     recurse(data)
     return comment_map
+
 
 def comment_diff_fn(default_text: str, user_text: str):
     default_comments = extract_comments(default_text)

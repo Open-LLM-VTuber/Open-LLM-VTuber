@@ -1,31 +1,23 @@
-Open-LLM-VTuber License 1.0
+MIT License
 
-Copyright © 2025 Open LLM Vtuber. All rights reserved.
+Copyright (c) 2025 Yi-Ting Chiu
 
-This software is licensed under the Apache License Version 2.0 (the "Apache License"), subject to the following Additional Conditions.
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
 
-Additional Conditions
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
 
-1. Definitions
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
 
-"Software" refers to the Open-LLM-VTuber project and all of its associated components, including but not limited to source code, executable files, web applications, desktop clients, documentation, and accompanying assets.
-
-Please note: The Live2D sample models found in the `live2d-models` directory are not covered by Open-LLM-VTuber license. Their use is governed separately by the terms specified in [LICENSE-Live2D.md](LICENSE-Live2D.md).
-
-2. Permitted Uses (No Additional License Required)
-
-You are granted permission to use the software freely, without requiring a commercial license, under the following circumstances:
-
-Non-commercial Uses: Any non-commercial activity including, but not limited to, personal projects, educational purposes, academic research, and non-profit initiatives.
-
-VTuber Streaming and Content Creation: Activities involving VTuber streaming, content creation, broadcasting, and monetization on platforms such as YouTube, Twitch, Bilibili, or other streaming services, provided revenue primarily derives from content creation and not from direct sale, distribution, or subscription to the software itself.
-
-3. Uses Requiring a Commercial License
-
-You must obtain a separate commercial license from Open LLM Vtuber for any of the following uses:
-
-Monetized Access or Hosting Services: Providing paid access to or hosting of the software—whether original, modified, or derivative—including SaaS, subscription models, pay-per-use, or paid downloads and installations.
-
-Commercial Redistribution or Rebranding: Redistributing, repackaging, renaming, or otherwise commercially providing the software (original or modified versions) under any alternative brand, identity, or project name in exchange for payment or other commercial benefits.
-
-Commercial Embedding or Integration: Incorporating this software, wholly or partially, into any commercial software, hardware, or physical product that is sold, licensed, or otherwise distributed for a fee.
+This project is licensed under the MIT License, except for the Live2D sample models, which are governed by [LICENSE-Live2D.md](LICENSE-Live2D.md).
