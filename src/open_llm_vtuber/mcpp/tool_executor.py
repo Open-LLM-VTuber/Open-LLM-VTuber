@@ -90,14 +90,14 @@ class ToolExecutor:
                 # Already formatted as list of blocks
                 content_to_send = result_content
             elif isinstance(result_content, str) and result_content:
-                 # Simple text result
+                # Simple text result
                 content_to_send = result_content
             elif not result_content and is_error:
-                 # Error case, send error message as string
-                 content_to_send = "Error occurred during tool execution."
+                # Error case, send error message as string
+                content_to_send = "Error occurred during tool execution."
             else:
-                 # Fallback for empty or unexpected content
-                 content_to_send = ""
+                # Fallback for empty or unexpected content
+                content_to_send = ""
 
             return {
                 "type": "tool_result",
@@ -107,7 +107,11 @@ class ToolExecutor:
             }
         elif caller_mode == "OpenAI":
             # OpenAI expects content as a string
-            return {"role": "tool", "tool_call_id": tool_id, "content": str(result_content)}
+            return {
+                "role": "tool",
+                "tool_call_id": tool_id,
+                "content": str(result_content),
+            }
         elif caller_mode == "Prompt":
             # Prompt mode also expects a string content for now
             return {
@@ -166,9 +170,9 @@ class ToolExecutor:
                 result_content,
                 parse_error,
             ) = self.parse_tool_call(call)
-            
+
             logger.info(f"Executing tool: {call}")
-            
+
             if parse_error:
                 logger.warning(
                     f"Skipping tool call due to parsing error: {result_content}"
@@ -189,14 +193,15 @@ class ToolExecutor:
                 # Even on parse error, we might need to format a result for the LLM
                 # Use dummy values or the error message
                 formatted_result = self.format_tool_result(
-                     caller_mode,
-                     tool_id or f"parse_error_{datetime.datetime.now(datetime.timezone.utc).isoformat()}",
-                     result_content,
-                     True # is_error
-                 )
+                    caller_mode,
+                    tool_id
+                    or f"parse_error_{datetime.datetime.now(datetime.timezone.utc).isoformat()}",
+                    result_content,
+                    True,  # is_error
+                )
                 if formatted_result:
                     tool_results_for_llm.append(formatted_result)
-                continue # Skip execution logic for this call
+                continue  # Skip execution logic for this call
 
             # Yield 'running' status before execution
             yield {
@@ -205,9 +210,7 @@ class ToolExecutor:
                 "tool_name": tool_name,
                 "status": "running",
                 "content": f"Input: {json.dumps(tool_input)}",
-                "timestamp": datetime.datetime.now(
-                    datetime.timezone.utc
-                ).isoformat()
+                "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat()
                 + "Z",
             }
 
@@ -220,16 +223,20 @@ class ToolExecutor:
             ) = await self.run_single_tool(tool_name, tool_id, tool_input)
 
             # Determine content for status update and LLM result format
-            status_content = text_content # Default to text content
-            llm_formatted_content = text_content # Default to text content for LLM
+            status_content = text_content  # Default to text content
+            llm_formatted_content = text_content  # Default to text content for LLM
 
             has_image = False
             if content_items:
-                image_items = [item for item in content_items if item.get('type') == 'image']
+                image_items = [
+                    item for item in content_items if item.get("type") == "image"
+                ]
                 if image_items:
                     has_image = True
                     num_images = len(image_items)
-                    status_content = f"{text_content}\n[Tool returned {num_images} image(s)]".strip()
+                    status_content = (
+                        f"{text_content}\n[Tool returned {num_images} image(s)]".strip()
+                    )
 
                     if caller_mode == "Claude":
                         # Format for Claude: list of blocks
@@ -237,17 +244,25 @@ class ToolExecutor:
                         if text_content:
                             claude_blocks.append({"type": "text", "text": text_content})
                         for item in content_items:
-                             if item.get('type') == 'image' and 'data' in item and 'mimeType' in item:
-                                 claude_blocks.append({
-                                     "type": "image",
-                                     "source": {
-                                         "type": "base64",
-                                         "media_type": item['mimeType'],
-                                         "data": item['data'],
-                                     }
-                                 })
-                             # Add other non-text types here
-                        llm_formatted_content = claude_blocks if claude_blocks else "" # Use blocks or empty string
+                            if (
+                                item.get("type") == "image"
+                                and "data" in item
+                                and "mimeType" in item
+                            ):
+                                claude_blocks.append(
+                                    {
+                                        "type": "image",
+                                        "source": {
+                                            "type": "base64",
+                                            "media_type": item["mimeType"],
+                                            "data": item["data"],
+                                        },
+                                    }
+                                )
+                            # Add other non-text types here
+                        llm_formatted_content = (
+                            claude_blocks if claude_blocks else ""
+                        )  # Use blocks or empty string
                     elif caller_mode in ["OpenAI", "Prompt"]:
                         llm_formatted_content = status_content
 
@@ -257,10 +272,10 @@ class ToolExecutor:
                 "tool_id": tool_id,
                 "tool_name": tool_name,
                 "status": "error" if is_error else "completed",
-                "content": status_content if not is_error else f"Error: {text_content}", # Use descriptive content or error message
-                "timestamp": datetime.datetime.now(
-                    datetime.timezone.utc
-                ).isoformat()
+                "content": status_content
+                if not is_error
+                else f"Error: {text_content}",  # Use descriptive content or error message
+                "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat()
                 + "Z",
             }
 
@@ -330,7 +345,9 @@ class ToolExecutor:
                 # Check if the first content item is an error reported by MCPClient
                 if content_items and content_items[0].get("type") == "error":
                     is_error = True
-                    text_content = content_items[0].get("text", "Unknown error from tool execution.")
+                    text_content = content_items[0].get(
+                        "text", "Unknown error from tool execution."
+                    )
                 elif content_items and content_items[0].get("type") == "text":
                     text_content = content_items[0].get("text", "")
                 # If no text item is first, text_content remains ""
@@ -340,12 +357,18 @@ class ToolExecutor:
                     if content_items:
                         logger.info(f"Content items from tool '{tool_name}':")
                         for item in content_items:
-                            item_type = item.get('type', 'unknown')
+                            item_type = item.get("type", "unknown")
                             logger.info(f"  Type: {item_type}")
                             for key, value in item.items():
-                                 if key != 'type' and key != 'data': # Avoid logging large data
-                                     log_value = f"(length: {len(value)})" if isinstance(value, str) and len(value) > 100 else value
-                                     logger.info(f"    {key}: {log_value}")
+                                if (
+                                    key != "type" and key != "data"
+                                ):  # Avoid logging large data
+                                    log_value = (
+                                        f"(length: {len(value)})"
+                                        if isinstance(value, str) and len(value) > 100
+                                        else value
+                                    )
+                                    logger.info(f"    {key}: {log_value}")
 
             except (ValueError, RuntimeError, ConnectionError) as e:
                 logger.exception(f"Error executing tool '{tool_name}': {e}")

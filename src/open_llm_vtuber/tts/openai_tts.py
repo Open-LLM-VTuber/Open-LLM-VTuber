@@ -87,13 +87,15 @@ class TTSEngine(TTSInterface):
                 f"Generating audio via {self.client.base_url} for text: '{text[:50]}...' with voice '{self.voice}' model '{self.model}'"
             )
             # Use with_streaming_response for potentially better handling of large audio files or network issues
-            with self.client.audio.speech.with_streaming_response.create(
-                model=self.model,  # Model name expected by the compatible server (e.g., "kokoro")
-                voice=self.voice,  # Voice name(s) expected by the compatible server (e.g., "af_sky+af_bella")
-                input=text,
-                response_format=self.file_extension,  # Use configured extension
-                speed=speed,
-            ) as response:
+            with (
+                self.client.audio.speech.with_streaming_response.create(
+                    model=self.model,  # Model name expected by the compatible server (e.g., "kokoro")
+                    voice=self.voice,  # Voice name(s) expected by the compatible server (e.g., "af_sky+af_bella")
+                    input=text,
+                    response_format=self.file_extension,  # Use configured extension
+                    speed=speed,
+                ) as response
+            ):
                 # Stream the audio content to the file
                 response.stream_to_file(speech_file_path)
 
