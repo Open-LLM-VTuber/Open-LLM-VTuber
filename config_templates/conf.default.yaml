@@ -360,6 +360,13 @@ character_config:
       language: 'en'
       device: ''
 
+    parler_tts:
+      # parler-tts/parler-tts-large-v1
+      # parler-tts/parler-tts-mini-v1
+      model_name: "parler-tts/parler-tts-mini-v1"
+      device: "auto"  # You can set it manually to 'cpu' or 'cuda' or 'cuda:0' or 'mps'
+      voice_description: "A cheerful and high-pitched female voice, slightly exaggerated and playful, with a cute anime-like tone and expressive intonation. The recording is close-up and crystal clear, with no background noise."
+
     # pip install sherpa-onnx
     # documentation: https://k2-fsa.github.io/sherpa/onnx/index.html
     # TTS models download: https://github.com/k2-fsa/sherpa-onnx/releases/tag/tts-models

@@ -371,6 +371,14 @@ class SparkTTSConfig(I18nMixin):
     }
 
 
+class ParlerTTSConfig(I18nMixin):
+    """Configuration for Parler TTS."""
+
+    model_name: str = Field(..., alias="model_name")
+    device: str = Field(..., alias="device")
+    voice_description: str = Field(..., alias="voice_description")
+
+
 class TTSConfig(I18nMixin):
     """Configuration for Text-to-Speech."""
 
@@ -388,6 +396,7 @@ class TTSConfig(I18nMixin):
         "sherpa_onnx_tts",
         "openai_tts",  # Add openai_tts here
         "spark_tts",
+        "parler_tts",
     ] = Field(..., alias="tts_model")
 
     azure_tts: Optional[AzureTTSConfig] = Field(None, alias="azure_tts")
@@ -405,6 +414,7 @@ class TTSConfig(I18nMixin):
     )
     openai_tts: Optional[OpenAITTSConfig] = Field(None, alias="openai_tts")
     spark_tts: Optional[SparkTTSConfig] = Field(None, alias="spark_tts")
+    parler_tts: Optional[ParlerTTSConfig] = Field(None, alias="parler_tts")
 
     DESCRIPTIONS: ClassVar[Dict[str, Description]] = {
         "tts_model": Description(
@@ -468,4 +478,6 @@ class TTSConfig(I18nMixin):
             values.openai_tts.model_validate(values.openai_tts.model_dump())
         elif tts_model == "spark_tts" and values.spark_tts is not None:
             values.spark_tts.model_validate(values.spark_tts.model_dump())
+        elif tts_model == "parler_tts" and values.parler_tts is not None:
+            values.parler_tts.model_validate(values.parler_tts.model_dump())
         return values
