@@ -6,7 +6,7 @@
 
 # 系统设置：与服务器初始化相关的设置
 system_config:
-  conf_version: 'v1.1.1' # 配置文件版本
+  conf_version: 'v1.2.0' # 配置文件版本
   host: 'localhost' # 服务器监听的地址，'0.0.0.0' 表示监听所有网络接口；如果需要安全，可以使用 '127.0.0.1'（仅本地访问）
   port: 12393 # 服务器监听的端口
   config_alts_dir: 'characters' # 用于存放替代配置的目录
@@ -14,20 +14,30 @@ system_config:
     live2d_expression_prompt: 'live2d_expression_prompt' # 将追加到系统提示末尾，让 LLM（大型语言模型）包含控制面部表情的关键字。支持的关键字将自动加载到 `[<insert_emomap_keys>]` 的位置。
     # 启用 think_tag_prompt 可让不具备思考输出的 LLM 也能展示内心想法、心理活动和动作（以括号形式呈现），但不会进行语音合成。更多详情请参考 think_tag_prompt。
     # think_tag_prompt: 'think_tag_prompt'
-  group_conversation_prompt: 'group_conversation_prompt' # 当使用群聊时，此提示词将添加到每个 AI 参与者的记忆中。
+    # live_prompt: 'live_prompt'
+    # 当使用群聊时，此提示词将添加到每个 AI 参与者的记忆中。
+    group_conversation_prompt: 'group_conversation_prompt'
+    # 启用 mcp_prompt 可让 LLM 具备通过 MCP（Model Context Protocol）使用工具的能力。
+    # 请注意：mcp_prompt 由 Agent 决定是否使用。
+    mcp_prompt: 'mcp_prompt'
+    # 当AI被要求主动说话时使用的提示词
+    proactive_speak_prompt: 'proactive_speak_prompt'
+    # 用来增强LLM输出可发音文本的提示词
+    # speakable_prompt: 'speakable_prompt'
+    # 额外指导 LLM 如何使用工具的提示词
+    # tool_guidance_prompt: 'tool_guidance_prompt' 
 
 # 默认角色的配置
 character_config:
-  conf_name: 'shizuku-local' # 角色配置文件的名称
-  conf_uid: 'shizuku-local-001' # 角色配置的唯一标识符
-  live2d_model_name: 'shizuku-local' # Live2D 模型名称
-  character_name: 'Shizuku' # 将在群聊中使用，并显示为 AI 的名称。
-  avatar: 'shizuku.png' # 建议使用正方形图像作为头像。将其保存到 avatars 文件夹中。留空则使用角色名称的首字母作为头像。
+  conf_name: 'mao_pro' # 角色配置文件的名称
+  conf_uid: 'mao_pro_001' # 角色配置的唯一标识符
+  live2d_model_name: 'mao_pro' # Live2D 模型名称
+  character_name: 'Mao' # 将在群聊中使用，并显示为 AI 的名称。
+  avatar: 'mao.png' # 建议使用正方形图像作为头像。将其保存到 avatars 文件夹中。留空则使用角色名称的首字母作为头像。
   human_name: 'Human' # 将在群聊中使用，并显示为人类的名称。
 
   # ============== 提示词 ==============
 
-  # 角色设定选项已弃用
   # 只需在下面输入你想使用的人格提示。
   # 如果你想创建多个角色并在它们之间切换，请在 characters 文件夹中添加角色
   persona_prompt: |
@@ -48,37 +58,16 @@ character_config:
         # 例如：
         # 'openai_compatible_llm', 'llama_cpp_llm', 'claude_llm', 'ollama_llm'
         # 'openai_llm', 'gemini_llm', 'zhipu_llm', 'deepseek_llm', 'groq_llm'
-        # 'mistral_llm'
+        # 'mistral_llm', 'lmstudio_llm' 之类的
         llm_provider: 'ollama_llm' # 使用的 LLM 提供商
         # 是否在第一句回应时遇上逗号就直接生成音频以减少首句延迟（默认：True）
         faster_first_response: True
         # 句子分割方法：'regex' 或 'pysbd'
         segment_method: 'pysbd'
-
-      mem0_agent:
-        vector_store:
-          provider: 'qdrant' # 向量存储提供商
-          config:
-            collection_name: 'test' # 集合名称
-            host: 'localhost' # 主机地址
-            port: 6333 # 端口号
-            embedding_model_dims: 1024 # 嵌入模型维度
-
-        # mem0 有自己的 llm 设置，与我们的 llm_config 不同。
-        # 有关更多详细信息，请查看他们的文档
-        llm:
-          provider: 'ollama' # 使用的 LLM 提供商
-          config:
-            model: 'llama3.1:latest' # 使用的模型
-            temperature: 0 # 温度
-            max_tokens: 8000 # 最大令牌数
-            ollama_base_url: 'http://localhost:11434' # Ollama 基础 URL
-
-        embedder:
-          provider: 'ollama' # 使用的嵌入提供商
-          config:
-            model: 'mxbai-embed-large:latest' # 使用的模型
-            ollama_base_url: 'http://localhost:11434' # Ollama 基础 URL
+        # 是否使用 MCP（Model Context Protocol） Plus 以使 LLM 获得使用工具的能力（默认：False）
+        # 'Plus' 意味着它包含了通过 OpenAI API 调用工具的能力。
+        use_mcpp: False
+        mcp_enabled_servers: ["time", "ddg-search"] # 启用的 MCP 服务器
 
       hume_ai_agent:
         api_key: ''
@@ -89,15 +78,36 @@ character_config:
       # MemGPT 配置：MemGPT 暂时被移除
       ##
 
+      letta_agent:
+        host: 'localhost' #主机地址
+        port: 8283 # 端口号
+        id: xxx #letta server运行的Agent的id编号
+        faster_first_response: True
+        # 句子分割方法：'regex' 或 'pysbd'
+        segment_method: 'pysbd'
+        # 一旦选择letta作为agent，那么实际运行时候的llm是在letta上配置的，因此用户需要自己运行letta server
+        # 有关更多详细信息，请查看他们的文档
+
     llm_configs:
       # 一个配置池，用于不同代理中使用的所有无状态 llm 提供商的凭据和连接详细信息
+
+      # 无状态 LLM 模板 (对于非 ChatML 的 LLM, 通常而言不用管这个配置)
+      stateless_llm_with_template:
+        base_url: 'http://localhost:8080/v1'
+        llm_api_key: 'somethingelse'
+        organization_id: null
+        project_id: null
+        model: 'qwen2.5:latest'
+        template: 'CHATML'
+        temperature: 1.0 # value between 0 to 2
+        interrupt_method: 'user'
 
       # OpenAI 兼容推理后端
       openai_compatible_llm:
         base_url: 'http://localhost:11434/v1' # 基础 URL
         llm_api_key: 'somethingelse' # API 密钥
-        organization_id: 'org_eternity' # 组织 ID
-        project_id: 'project_glass' # 项目 ID
+        organization_id: null # 组织 ID
+        project_id: null # 项目 ID
         model: 'qwen2.5:latest' # 使用的模型
         temperature: 1.0 # 温度，介于 0 到 2 之间
         interrupt_method: 'user'
@@ -123,6 +133,11 @@ character_config:
         # 设置为 -1 表示模型将永远保留在内存中（即使退出 open llm vtuber 之后也是）
         keep_alive: -1
         unload_at_exit: True # 退出时从内存中卸载模型
+
+      lmstudio_llm:
+        base_url: 'http://localhost:1234/v1'
+        model: 'qwen2.5:latest'
+        temperature: 1.0 # value between 0 to 2
 
       openai_llm:
         llm_api_key: 'Your Open AI API key' # OpenAI API 密钥
@@ -166,10 +181,12 @@ character_config:
 
     # Faster Whisper 配置
     faster_whisper:
-      model_path: 'distil-medium.en' # 模型路径，distil-medium.en 是一个仅限英语的模型；如果你有好的 GPU，可以使用 distil-large-v3
+      model_path: 'large-v3-turbo' # 模型路径，模型名称，或 hf hub 的模型 id
       download_root: 'models/whisper' # 模型下载根目录
-      language: 'en' # 语言，en、zh 或其他。留空表示自动检测。
+      language: 'zh' # 语言，en、zh 或其他。留空表示自动检测。
       device: 'auto' # 设备，cpu、cuda 或 auto。faster-whisper 不支持 mps
+      compute_type: 'int8'
+      prompt: '' # 提示词，用于辅助生成正确的文本
 
     whisper_cpp:
       # 所有可用模型都列在 https://abdeladim-s.github.io/pywhispercpp/#pywhispercpp.constants.AVAILABLE_MODELS
@@ -178,14 +195,16 @@ character_config:
       print_realtime: False # 是否实时打印
       print_progress: False # 是否打印进度
       language: 'auto' # 语言，en、zh、auto
+      prompt: '' # 提示词，用于辅助生成正确的文本
 
     whisper:
       name: 'medium' # 模型名称
       download_root: 'models/whisper' # 模型下载根目录
       device: 'cpu' # 设备
+      prompt: '' # 提示词，用于辅助生成正确的文本
 
     # FunASR 目前需要在启动时连接互联网以下载/检查模型。您可以在初始化后断开互联网连接。
-    # 或者您可以使用 Faster-Whisper 获得完全离线的体验
+    # 或者您可以使用 sherpa onnx asr 或 Faster-Whisper 获得完全离线的体验
     fun_asr:
       model_name: 'iic/SenseVoiceSmall' # 或 'paraformer-zh'
       vad_model: 'fsmn-vad' # 仅当音频长度超过 30 秒时才需要使用
@@ -252,6 +271,7 @@ character_config:
     #   'azure_tts', 'pyttsx3_tts', 'edge_tts', 'bark_tts',
     #   'cosyvoice_tts', 'melo_tts', 'coqui_tts',
     #   'fish_api_tts', 'x_tts', 'gpt_sovits_tts', 'sherpa_onnx_tts'
+    #   'minimax_tts'
 
     siliconflow_tts:
       api_url: "https://api.siliconflow.cn/v1/audio/speech"
@@ -369,11 +389,35 @@ character_config:
       num_threads: 1 # 计算线程数
       speed: 1.0 # 语速（1.0 为正常）
       debug: false # 启用调试模式（True/False）
+    spark_tts:
+      api_url: 'http://127.0.0.1:6006/' # 初始API地址，使用gradio自带的前端API。地址：https://github.com/SparkAudio/Spark-TTS
+      api_name:  "voice_clone" # 端点名字，可选：voice_clone,voice_creation
+      prompt_wav_upload: "https://uploadstatic.mihoyo.com/ys-obc/2022/11/02/16576950/4d9feb71760c5e8eb5f6c700df12fa0c_6824265537002152805.mp3" # 参考音频地址,api_name: = "voice_clone"时填写
+      gender:  "female" # 生成声线，api_name: = "voice_creation"时填写
+      pitch:  3 # 音高，api_name: = "voice_creation"时填写
+      speed:  3 # 语速，api_name: = "voice_creation"时填写
 
+    openai_tts: # OpenAI 兼容的 TTS（语音合成）接口配置
+      # 如果提供了这些设置，将覆盖 openai_tts.py 文件中的默认值
+      model: 'kokoro' # 服务器预期使用的模型名称（例如 'tts-1'，'kokoro'）
+      voice: 'af_sky+af_bella' # 服务器预期使用的声音名称（例如 'alloy'，'af_sky+af_bella'）
+      api_key: 'not-needed' # 如果服务器需要，可填写 API 密钥
+      base_url: 'http://localhost:8880/v1' # TTS 服务器的基础 URL 地址
+      file_extension: 'mp3' # 音频文件格式（'mp3' 或 'wav'）
+    # 详细文档见：https://platform.minimaxi.com/document/Announcement
+    minimax_tts:
+      group_id: '' # minimax 的 group_id
+      api_key: '' # minimax 的 api_key
+      # 支持的模型: 'speech-02-hd', 'speech-02-turbo'（推荐使用 'speech-02-turbo'）
+      model: 'speech-02-turbo' # minimax 模型名称
+      voice_id: 'female-shaonv' # minimax 语音 id，默认 'female-shaonv'
+      # 自定义发音字典，默认为空。
+      # 示例: '{"tone": ["测试/(ce4)(shi4)", "危险/dangerous"]}'
+      pronunciation_dict: ''
 
   # =================== Voice Activity Detection ===================
   vad_config:
-    vad_model: 'silero_vad'
+    vad_model: null
 
     silero_vad:
       orig_sr: 16000 # 原始音频采样率
@@ -398,6 +442,10 @@ character_config:
       translate_audio: False # 警告：请确保翻译引擎配置成功再开启此选项，否则会翻译失败
       translate_provider: 'deeplx' # 翻译提供商, 目前支持 deeplx 或 tencent
 
+      deeplx:
+        deeplx_target_lang: 'JA'
+        deeplx_api_endpoint: 'http://localhost:1188/v2/translate'
+
 
       #  腾讯文本翻译  每月500万字符  记得关闭后付费,需要手动前往 机器翻译控制台 > 系统设置 关闭
       #   https://cloud.tencent.com/document/product/551/35017
@@ -408,3 +456,11 @@ character_config:
         region: 'ap-guangzhou'
         source_lang: 'zh'
         target_lang: 'ja'
+
+# 直播平台集成
+live_config:
+  bilibili_live:
+    # 要监控的B站直播间ID列表（直播间URL中的数字）
+    room_ids: [1991478060]
+    # SESSDATA cookie值（可选，用于认证请求，可以查看发送弹幕用户名）
+    sessdata: ""

@@ -68,3 +68,7 @@ mem.json
 conf.yaml.backup
 
 *.exe
+
+tmp/
+private/
+mcp_servers.json

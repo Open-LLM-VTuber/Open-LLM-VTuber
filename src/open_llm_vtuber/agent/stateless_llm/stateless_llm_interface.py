@@ -20,7 +20,10 @@ class StatelessLLMInterface(metaclass=abc.ABCMeta):
 
     @abc.abstractmethod
     async def chat_completion(
-        self, messages: List[Dict[str, Any]], system: str = None
+        self,
+        messages: List[Dict[str, Any]],
+        system: str = None,
+        tools: List[Dict[str, Any]] = None,
     ) -> AsyncIterator[str]:
         """
         Generates a chat completion asynchronously and return an iterator to the response.
@@ -29,6 +32,26 @@ class StatelessLLMInterface(metaclass=abc.ABCMeta):
         Parameters:
         - messages (List[Dict[str, Any]]): The list of messages to send to the API.
         - system (str, optional): System prompt to use for this completion.
+        - tools (List[Dict[str, str]], optional): List of tools to use for this completion.
+            - Each tool should follow the format:
+            {
+                "name": "tool_name",
+                "description": "tool_description",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "param1": {
+                            "type": "string",
+                            "description": "Description of param1"
+                        },
+                        "param2": {
+                            "type": "integer",
+                            "description": "Description of param2"
+                        }
+                    },
+                    "required": ["param1"]
+                }
+            }
 
         Yields:
         - str: The content of each chunk from the API response.

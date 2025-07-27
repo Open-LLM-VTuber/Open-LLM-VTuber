@@ -1,6 +1,6 @@
 # System Settings: Setting related to the initialization of the server
 system_config:
-  conf_version: 'v1.1.1'
+  conf_version: 'v1.2.0'
   host: 'localhost' # use 0.0.0.0 if you want other devices to access this page
   port: 12393
   # New setting for alternative configurations
@@ -12,21 +12,31 @@ system_config:
     live2d_expression_prompt: 'live2d_expression_prompt'
     # Enable think_tag_prompt to let LLMs without thinking output show inner thoughts, mental activities and actions (in parentheses format) without voice synthesis. See think_tag_prompt for more details.
     # think_tag_prompt: 'think_tag_prompt'
-  group_conversation_prompt: 'group_conversation_prompt' # When using group conversation, this prompt will be added to the memory of each AI participant.
+    # live_prompt: 'live_prompt'
+    # When using group conversation, this prompt will be added to the memory of each AI participant.
+    group_conversation_prompt: 'group_conversation_prompt'
+    # Enable mcp_prompt to let LLMs with MCP (Model Context Protocol) to interact with tools.
+    # Please note that Agent will decide whether to use this prompt or not.
+    mcp_prompt: 'mcp_prompt'
+    # Prompt used when AI is asked to speak proactively
+    proactive_speak_prompt: 'proactive_speak_prompt'
+    # Prompt to enhance the LLM's ability to output speakable text
+    # speakable_prompt: 'speakable_prompt'
+    # Additional guidance for LLM on how to use tools
+    # tool_guidance_prompt: 'tool_guidance_prompt' 
 
 # configuration for the default character
 character_config:
-  conf_name: 'shizuku-local' # The name of character configuration file.
-  conf_uid: 'shizuku-local-001' # The unique identifier of character configuration.
-  live2d_model_name: 'shizuku-local' # The name of Live2D model. Must be the same as the corresponding name in model_dict.json
-  character_name: 'Shizuku' # Will be used in the group conversation and the display name of the AI.
-  avatar: 'shizuku.png' # Suggest using a square image for the avatar. Save it in the avatars folder. Leave blank to use the first letter of the character name as the avatar.
+  conf_name: 'mao_pro' # The name of character configuration file.
+  conf_uid: 'mao_pro_001' # The unique identifier of character configuration.
+  live2d_model_name: 'mao_pro' # The name of Live2D model. Must be the same as the corresponding name in model_dict.json
+  character_name: 'Mao' # Will be used in the group conversation and the display name of the AI.
+  avatar: 'mao.png' # Suggest using a square image for the avatar. Save it in the avatars folder. Leave blank to use the first letter of the character name as the avatar.
   human_name: 'Human' # Will be used in the group conversation and the display name of the human.
 
   # ============== Prompts ==============
 
-  # Persona choice is DEAD
-  # Just enter the persona prompt you want to use below.
+  # Enter the persona prompt you want to use below.
   # If you want to create multiple characters and switch between them,
   #   add characters in characters folder
   persona_prompt: |
@@ -47,38 +57,27 @@ character_config:
         # examples: 
         # 'openai_compatible_llm', 'llama_cpp_llm', 'claude_llm', 'ollama_llm'
         # 'openai_llm', 'gemini_llm', 'zhipu_llm', 'deepseek_llm', 'groq_llm'
-        # 'mistral_llm'
+        # 'mistral_llm', 'lmstudio_llm', and more
         llm_provider: 'ollama_llm'
         # let ai speak as soon as the first comma is received on the first sentence
         # to reduced latency.
         faster_first_response: True
         # Method for segmenting sentences: 'regex' or 'pysbd'
         segment_method: 'pysbd'
+        # Use MCP (Model Context Protocol) Plus to let the LLM have the ability to use tools
+        # 'Plus' means that it has the ability to call tools by using OpenAI API.
+        use_mcpp: True
+        mcp_enabled_servers: ["time", "ddg-search"] # Enabled MCP servers
 
-      mem0_agent:
-        vector_store:
-          provider: 'qdrant'
-          config:
-            collection_name: 'test'
-            host: 'localhost'
-            port: 6333
-            embedding_model_dims: 1024
-
-        # mem0 has it's own llm settings and is different from our llm_config.
-        # check their docs for more details
-        llm:
-          provider: 'ollama'
-          config:
-            model: 'llama3.1:latest'
-            temperature: 0
-            max_tokens: 8000
-            ollama_base_url: 'http://localhost:11434'
-
-        embedder:
-          provider: 'ollama'
-          config:
-            model: 'mxbai-embed-large:latest'
-            ollama_base_url: 'http://localhost:11434'
+      letta_agent:
+        host: 'localhost' # Host address
+        port: 8283 # Port number
+        id: xxx # ID number of the Agent running on the Letta server
+        faster_first_response: True
+        # Method for segmenting sentences: 'regex' or 'pysbd'
+        segment_method: 'pysbd'
+        # Once Letta is chosen as the agent, the LLM that runs in practice is configured on Letta, so the user needs to run the Letta server themselves.
+        # For more detailed information, please refer to their documentation.
         
       hume_ai_agent:
         api_key: ''
@@ -93,12 +92,23 @@ character_config:
       # a configuration pool for the credentials and connection details for
       # all of the stateless llm providers that will be used in different agents
 
+      # Stateless LLM with Template (For Non-ChatML LLMs, usually not needed)
+      stateless_llm_with_template:
+        base_url: 'http://localhost:8080/v1'
+        llm_api_key: 'somethingelse'
+        organization_id: null
+        project_id: null
+        model: 'qwen2.5:latest'
+        template: 'CHATML'
+        temperature: 1.0 # value between 0 to 2
+        interrupt_method: 'user'
+
       # OpenAI Compatible inference backend
       openai_compatible_llm:
         base_url: 'http://localhost:11434/v1'
         llm_api_key: 'somethingelse'
-        organization_id: 'org_eternity'
-        project_id: 'project_glass'
+        organization_id: null
+        project_id: null
         model: 'qwen2.5:latest'
         temperature: 1.0 # value between 0 to 2
         interrupt_method: 'user'
@@ -124,6 +134,11 @@ character_config:
         # set to -1 to keep the model in memory forever (even after exiting open llm vtuber)
         keep_alive: -1
         unload_at_exit: True # unload the model from memory at exit
+
+      lmstudio_llm:
+        base_url: 'http://localhost:1234/v1'
+        model: 'qwen2.5:latest'
+        temperature: 1.0 # value between 0 to 2
 
       openai_llm:
         llm_api_key: 'Your Open AI API key'
@@ -167,11 +182,12 @@ character_config:
 
     # Faster whisper config
     faster_whisper:
-      model_path: 'distil-medium.en' # distil-medium.en is an English-only model
-      #                               use distil-large-v3 if you have a good GPU
+      model_path: 'large-v3-turbo' # model path, name, or id from hf hub
       download_root: 'models/whisper'
       language: 'en' # en, zh, or something else. put nothing for auto-detect.
       device: 'auto' # cpu, cuda, or auto. faster-whisper doesn't support mps
+      compute_type: 'int8'
+      prompt: '' # You can put a prompt here to help the model understand the context of the audio
 
     whisper_cpp:
       # all available models are listed on https://abdeladim-s.github.io/pywhispercpp/#pywhispercpp.constants.AVAILABLE_MODELS
@@ -180,15 +196,17 @@ character_config:
       print_realtime: False
       print_progress: False
       language: 'auto' # en, zh, auto,
+      prompt: '' # You can put a prompt here to help the model understand the context of the audio
 
     whisper:
       name: 'medium'
       download_root: 'models/whisper'
       device: 'cpu'
+      prompt: '' # You can put a prompt here to help the model understand the context of the audio
 
     # FunASR currently needs internet connection on launch
     # to download / check the models. You can disconnect the internet after initialization.
-    # Or you can use Faster-Whisper for complete offline experience
+    # Or you can use sherpa onnx asr or Faster-Whisper for complete offline experience
     fun_asr:
       model_name: 'iic/SenseVoiceSmall' # or 'paraformer-zh'
       vad_model: 'fsmn-vad' # this is only used to make it works if audio is longer than 30s
@@ -256,6 +274,7 @@ character_config:
     #   'azure_tts', 'pyttsx3_tts', 'edge_tts', 'bark_tts',
     #   'cosyvoice_tts', 'melo_tts', 'coqui_tts',
     #   'fish_api_tts', 'x_tts', 'gpt_sovits_tts', 'sherpa_onnx_tts'
+    #   'minimax_tts'
 
     azure_tts:
       api_key: 'azure-api-key'
@@ -373,11 +392,37 @@ character_config:
       num_threads: 1 # Number of computation threads
       speed: 1.0 # Speech speed (1.0 is normal)
       debug: false # Enable debug mode (True/False)
+    
+    spark_tts:
+      api_url: 'http://127.0.0.1:6006/' # API URL. Uses Gradio's built-in front-end API. Repository: https://github.com/SparkAudio/Spark-TTS
+      api_name:  "voice_clone" # Endpoint name. Options: voice_clone, voice_creation
+      prompt_wav_upload: "https://uploadstatic.mihoyo.com/ys-obc/2022/11/02/16576950/4d9feb71760c5e8eb5f6c700df12fa0c_6824265537002152805.mp3" # Reference audio URL. Provide if api_name equals "voice_clone"
+      gender:  "female" # Voice type (gender). Provide if api_name equals "voice_creation"
+      pitch:  3 # Pitch shift (in semitones) default 3,range 1-5. Valid only if api_name equals "voice_creation"
+      speed:  3 # Speed of the voice (in percent) default 3,range 1-5. Valid only if api_name equals "voice_creation"
 
+    openai_tts: # Configuration for OpenAI-compatible TTS endpoints
+      # These settings override the defaults in the openai_tts.py file if provided
+      model: 'kokoro' # Model name expected by the server (e.g., 'tts-1', 'kokoro')
+      voice: 'af_sky+af_bella' # Voice name(s) expected by the server (e.g., 'alloy', 'af_sky+af_bella')
+      api_key: 'not-needed' # API key if required by the server
+      base_url: 'http://localhost:8880/v1' # Base URL of the TTS server
+      file_extension: 'mp3' # Audio file format ('mp3' or 'wav')
+
+    # For more details, see: https://platform.minimaxi.com/document/Announcement
+    minimax_tts:
+      group_id: '' # Your minimax group_id
+      api_key: '' # Your minimax api_key
+      # Supported models: 'speech-02-hd', 'speech-02-turbo' (recommended: 'speech-02-turbo')
+      model: 'speech-02-turbo' # minimax model name
+      voice_id: 'female-shaonv' # minimax voice id, default is 'female-shaonv'
+      # Custom pronunciation dictionary, default empty.
+      # Example: '{"tone": ["测试/(ce4)(shi4)", "危险/dangerous"]}'
+      pronunciation_dict: ''
 
   # =================== Voice Activity Detection ===================
   vad_config:
-    vad_model: 'silero_vad'
+    vad_model: null
 
     silero_vad:
       orig_sr: 16000 # Original Audio Sample Rate
@@ -415,4 +460,11 @@ character_config:
         region: 'ap-guangzhou'
         source_lang: 'zh'
         target_lang: 'ja'
-        
+
+# Live Streaming Integration
+live_config:
+  bilibili_live:
+    # List of BiliBili live room IDs to monitor
+    room_ids: [1991478060]
+    # SESSDATA cookie value (optional, for authenticated requests)
+    sessdata: ""

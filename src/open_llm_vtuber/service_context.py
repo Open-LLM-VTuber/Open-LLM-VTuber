@@ -1,6 +1,6 @@
 import os
 import json
-
+from typing import Callable
 from loguru import logger
 from fastapi import WebSocket
 
@@ -11,6 +11,13 @@ from .tts.tts_interface import TTSInterface
 from .vad.vad_interface import VADInterface
 from .agent.agents.agent_interface import AgentInterface
 from .translate.translate_interface import TranslateInterface
+
+from .mcpp.server_registry import ServerRegistry
+from .mcpp.tool_manager import ToolManager
+from .mcpp.mcp_client import MCPClient
+from .mcpp.tool_executor import ToolExecutor
+from .mcpp.json_detector import StreamJSONDetector
+from .mcpp.tool_adapter import ToolAdapter
 
 from .asr.asr_factory import ASRFactory
 from .tts.tts_factory import TTSFactory
@@ -49,10 +56,22 @@ class ServiceContext:
         self.vad_engine: VADInterface | None = None
         self.translate_engine: TranslateInterface | None = None
 
+        self.mcp_server_registery: ServerRegistry | None = None
+        self.tool_adapter: ToolAdapter | None = None
+        self.tool_manager: ToolManager | None = None
+        self.mcp_client: MCPClient | None = None
+        self.tool_executor: ToolExecutor | None = None
+
         # the system prompt is a combination of the persona prompt and live2d expression prompt
         self.system_prompt: str = None
 
+        # Store the generated MCP prompt string (if MCP enabled)
+        self.mcp_prompt: str = ""
+
         self.history_uid: str = ""  # Add history_uid field
+        
+        self.send_text: Callable = None
+        self.client_uid: str = None
 
     def __str__(self):
         return (
@@ -68,12 +87,115 @@ class ServiceContext:
             f"    Agent Config: {json.dumps(self.character_config.agent_config.model_dump(), indent=6) if self.character_config.agent_config else 'None'}\n"
             f"  VAD Engine: {type(self.vad_engine).__name__ if self.vad_engine else 'Not Loaded'}\n"
             f"    Agent Config: {json.dumps(self.character_config.vad_config.model_dump(), indent=6) if self.character_config.vad_config else 'None'}\n"
-            f"  System Prompt: {self.system_prompt or 'Not Set'}"
+            f"  System Prompt: {self.system_prompt or 'Not Set'}\n"
+            f"  MCP Enabled: {'Yes' if self.mcp_client else 'No'}"
         )
 
     # ==== Initializers
 
-    def load_cache(
+    async def _init_mcp_components(self, use_mcpp, enabled_servers):
+        """Initializes MCP components based on configuration, dynamically fetching tool info."""
+        logger.debug(
+            f"Initializing MCP components: use_mcpp={use_mcpp}, enabled_servers={enabled_servers}"
+        )
+
+        # Reset MCP components first
+        self.mcp_server_registery = None
+        self.tool_manager = None
+        self.mcp_client = None
+        self.tool_executor = None
+        self.json_detector = None
+        self.mcp_prompt = ""
+
+        if use_mcpp and enabled_servers:
+            # 1. Initialize ServerRegistry
+            self.mcp_server_registery = ServerRegistry()
+            logger.info("ServerRegistry initialized or referenced.")
+
+            # 2. Use ToolAdapter to get the MCP prompt and tools
+            if not self.tool_adapter:
+                logger.error("ToolAdapter not initialized before calling _init_mcp_components.")
+                self.mcp_prompt = "[Error: ToolAdapter not initialized]"
+                return # Exit if ToolAdapter is mandatory and not initialized
+
+            try:
+                (
+                    mcp_prompt_string,
+                    openai_tools,
+                    claude_tools,
+                ) = await self.tool_adapter.get_tools(enabled_servers)
+                # Store the generated prompt string
+                self.mcp_prompt = mcp_prompt_string
+                logger.info(
+                    f"Dynamically generated MCP prompt string (length: {len(self.mcp_prompt)})."
+                )
+                logger.info(
+                    f"Dynamically formatted tools - OpenAI: {len(openai_tools)}, Claude: {len(claude_tools)}."
+                )
+
+                # 3. Initialize ToolManager with the fetched formatted tools
+               
+                _, raw_tools_dict = await self.tool_adapter.get_server_and_tool_info(
+                    enabled_servers
+                )
+                self.tool_manager = ToolManager(
+                    formatted_tools_openai=openai_tools,
+                    formatted_tools_claude=claude_tools,
+                    initial_tools_dict=raw_tools_dict,
+                )
+                logger.info("ToolManager initialized with dynamically fetched tools.")
+
+            except Exception as e:
+                logger.error(
+                    f"Failed during dynamic MCP tool construction: {e}", exc_info=True
+                )
+                # Ensure dependent components are not created if construction fails
+                self.tool_manager = None
+                self.mcp_prompt = "[Error constructing MCP tools/prompt]"
+
+            # 4. Initialize MCPClient
+            if self.mcp_server_registery:
+                self.mcp_client = MCPClient(self.mcp_server_registery, self.send_text, self.client_uid)
+                logger.info("MCPClient initialized for this session.")
+            else:
+                logger.error(
+                    "MCP enabled but ServerRegistry not available. MCPClient not created."
+                )
+                self.mcp_client = None  # Ensure it's None
+
+            # 5. Initialize ToolExecutor
+            if self.mcp_client and self.tool_manager:
+                self.tool_executor = ToolExecutor(self.mcp_client, self.tool_manager)
+                logger.info("ToolExecutor initialized for this session.")
+            else:
+                logger.warning(
+                    "MCPClient or ToolManager not available. ToolExecutor not created."
+                )
+                self.tool_executor = None  # Ensure it's None
+
+            logger.info("StreamJSONDetector initialized for this session.")
+
+        elif use_mcpp and not enabled_servers:
+            logger.warning(
+                "use_mcpp is True, but mcp_enabled_servers list is empty. MCP components not initialized."
+            )
+        else:
+            logger.debug(
+                "MCP components not initialized (use_mcpp is False or no enabled servers)."
+            )
+
+    async def close(self):
+        """Clean up resources, especially the MCPClient."""
+        logger.info("Closing ServiceContext resources...")
+        if self.mcp_client:
+            logger.info(f"Closing MCPClient for context instance {id(self)}...")
+            await self.mcp_client.aclose()
+            self.mcp_client = None
+        if self.agent_engine and hasattr(self.agent_engine, "close"):
+            await self.agent_engine.close()  # Ensure agent resources are also closed
+        logger.info("ServiceContext closed.")
+
+    async def load_cache(
         self,
         config: Config,
         system_config: SystemConfig,
@@ -84,6 +206,10 @@ class ServiceContext:
         vad_engine: VADInterface,
         agent_engine: AgentInterface,
         translate_engine: TranslateInterface | None,
+        mcp_server_registery: ServerRegistry | None = None,
+        tool_adapter: ToolAdapter | None = None,
+        send_text: Callable = None,
+        client_uid: str = None,
     ) -> None:
         """
         Load the ServiceContext with the reference of the provided instances.
@@ -103,10 +229,18 @@ class ServiceContext:
         self.vad_engine = vad_engine
         self.agent_engine = agent_engine
         self.translate_engine = translate_engine
+        # Load potentially shared components by reference
+        self.mcp_server_registery = mcp_server_registery
+        self.tool_adapter = tool_adapter
+        self.send_text = send_text
+        self.client_uid = client_uid
+
+        # Initialize session-specific MCP components
+        await self._init_mcp_components(self.character_config.agent_config.agent_settings.basic_memory_agent.use_mcpp, self.character_config.agent_config.agent_settings.basic_memory_agent.mcp_enabled_servers)
 
         logger.debug(f"Loaded service context with cache: {character_config}")
 
-    def load_from_config(self, config: Config) -> None:
+    async def load_from_config(self, config: Config) -> None:
         """
         Load the ServiceContext with the config.
         Reinitialize the instances if the config is different.
@@ -137,8 +271,19 @@ class ServiceContext:
         # init vad from character config
         self.init_vad(config.character_config.vad_config)
 
+        # Initialize shared ToolAdapter if it doesn't exist yet
+        if not self.tool_adapter and config.character_config.agent_config.agent_settings.basic_memory_agent.use_mcpp:
+            if not self.mcp_server_registery:
+                logger.info("Initializing shared ServerRegistry within load_from_config.")
+                self.mcp_server_registery = ServerRegistry()
+            logger.info("Initializing shared ToolAdapter within load_from_config.")
+            self.tool_adapter = ToolAdapter(server_registery=self.mcp_server_registery)
+
+        # Initialize MCP Components before initializing Agent
+        await self._init_mcp_components(config.character_config.agent_config.agent_settings.basic_memory_agent.use_mcpp, config.character_config.agent_config.agent_settings.basic_memory_agent.mcp_enabled_servers)
+
         # init agent from character config
-        self.init_agent(
+        await self.init_agent(
             config.character_config.agent_config,
             config.character_config.persona_prompt,
         )
@@ -186,6 +331,11 @@ class ServiceContext:
             logger.info("TTS already initialized with the same config.")
 
     def init_vad(self, vad_config: VADConfig) -> None:
+        if vad_config.vad_model is None:
+            logger.info("VAD is disabled.")
+            self.vad_engine = None
+            return
+            
         if not self.vad_engine or (self.character_config.vad_config != vad_config):
             logger.info(f"Initializing VAD: {vad_config.vad_model}")
             self.vad_engine = VADFactory.get_vad_engine(
@@ -197,7 +347,7 @@ class ServiceContext:
         else:
             logger.info("VAD already initialized with the same config.")
 
-    def init_agent(self, agent_config: AgentConfig, persona_prompt: str) -> None:
+    async def init_agent(self, agent_config: AgentConfig, persona_prompt: str) -> None:
         """Initialize or update the LLM engine based on agent configuration."""
         logger.info(f"Initializing Agent: {agent_config.conversation_agent_choice}")
 
@@ -209,7 +359,7 @@ class ServiceContext:
             logger.debug("Agent already initialized with the same config.")
             return
 
-        system_prompt = self.construct_system_prompt(persona_prompt)
+        system_prompt = await self.construct_system_prompt(persona_prompt)
 
         # Pass avatar to agent factory
         avatar = self.character_config.avatar or ""  # Get avatar from config
@@ -222,7 +372,11 @@ class ServiceContext:
                 system_prompt=system_prompt,
                 live2d_model=self.live2d_model,
                 tts_preprocessor_config=self.character_config.tts_preprocessor_config,
-                character_avatar=avatar,  # Add avatar parameter
+                character_avatar=avatar,
+                system_config=self.system_config.model_dump(),
+                tool_manager=self.tool_manager,
+                tool_executor=self.tool_executor,
+                mcp_prompt_string=self.mcp_prompt,
             )
 
             logger.debug(f"Agent choice: {agent_config.conversation_agent_choice}")
@@ -265,7 +419,7 @@ class ServiceContext:
 
     # ==== utils
 
-    def construct_system_prompt(self, persona_prompt: str) -> str:
+    async def construct_system_prompt(self, persona_prompt: str) -> str:
         """
         Append tool prompts to persona prompt.
 
@@ -278,7 +432,10 @@ class ServiceContext:
         logger.debug(f"constructing persona_prompt: '''{persona_prompt}'''")
 
         for prompt_name, prompt_file in self.system_config.tool_prompts.items():
-            if prompt_name == "group_conversation_prompt":
+            if (
+                prompt_name == "group_conversation_prompt"
+                or prompt_name == "proactive_speak_prompt"
+            ):
                 continue
 
             prompt_content = prompt_loader.load_util(prompt_file)
@@ -287,6 +444,9 @@ class ServiceContext:
                 prompt_content = prompt_content.replace(
                     "[<insert_emomap_keys>]", self.live2d_model.emo_str
                 )
+
+            if prompt_name == "mcp_prompt":
+                continue
 
             persona_prompt += prompt_content
 
@@ -338,7 +498,7 @@ class ServiceContext:
                     "character_config": new_character_config_data,
                 }
                 new_config = validate_config(new_config)
-                self.load_from_config(new_config)
+                await self.load_from_config(new_config)  # Await the async load
                 logger.debug(f"New config: {self}")
                 logger.debug(
                     f"New character config: {self.character_config.model_dump()}"

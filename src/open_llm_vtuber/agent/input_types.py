@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from enum import Enum
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 
 
 class ImageSource(Enum):
@@ -82,8 +82,13 @@ class BatchInput(BaseInput):
         texts: List of text data from different sources
         images: Optional list of images
         files: Optional list of files
+        metadata: Optional dictionary of metadata flags for special inputs
+            - 'proactive_speak': Boolean flag indicating if this is a proactive speak input
+            - 'skip_memory': Boolean flag indicating if this input should be skipped in AI's internal memory
+            - 'skip_history': Boolean flag indicating if this input should be skipped in local history storage
     """
 
     texts: List[TextData]
     images: Optional[List[ImageData]] = None
     files: Optional[List[FileData]] = None
+    metadata: Optional[Dict[str, Any]] = None

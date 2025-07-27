@@ -41,7 +41,7 @@ class SileroVADConfig(I18nMixin):
 class VADConfig(I18nMixin):
     """Configuration for Automatic Speech Recognition."""
 
-    vad_model: Literal["silero_vad",] = Field(..., alias="vad_model")
+    vad_model: Optional[Literal["silero_vad"]] = Field(None, alias="vad_model")
     silero_vad: Optional[SileroVADConfig] = Field(None, alias="silero_vad")
 
     DESCRIPTIONS: ClassVar[Dict[str, Description]] = {

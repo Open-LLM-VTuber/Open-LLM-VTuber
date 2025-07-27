@@ -5,6 +5,11 @@ from .agents.agent_interface import AgentInterface
 from .agents.basic_memory_agent import BasicMemoryAgent
 from .stateless_llm_factory import LLMFactory as StatelessLLMFactory
 from .agents.hume_ai import HumeAIAgent
+from .agents.letta_agent import LettaAgent
+
+from ..mcpp.tool_manager import ToolManager
+from ..mcpp.tool_executor import ToolExecutor
+from typing import Optional
 
 
 class AgentFactory:
@@ -55,6 +60,13 @@ class AgentFactory:
                 llm_provider=llm_provider, system_prompt=system_prompt, **llm_config
             )
 
+            tool_prompts = kwargs.get("system_config", {}).get("tool_prompts", {})
+
+            # Extract MCP components/data needed by BasicMemoryAgent from kwargs
+            tool_manager: Optional[ToolManager] = kwargs.get("tool_manager")
+            tool_executor: Optional[ToolExecutor] = kwargs.get("tool_executor")
+            mcp_prompt_string: str = kwargs.get("mcp_prompt_string", "")
+
             # Create the agent with the LLM and live2d_model
             return BasicMemoryAgent(
                 llm=llm,
@@ -65,7 +77,12 @@ class AgentFactory:
                     "faster_first_response", True
                 ),
                 segment_method=basic_memory_settings.get("segment_method", "pysbd"),
+                use_mcpp=basic_memory_settings.get("use_mcpp", False),
                 interrupt_method=interrupt_method,
+                tool_prompts=tool_prompts,
+                tool_manager=tool_manager,
+                tool_executor=tool_executor,
+                mcp_prompt_string=mcp_prompt_string,
             )
 
         elif conversation_agent_choice == "mem0_agent":
@@ -97,6 +114,18 @@ class AgentFactory:
                 host=settings.get("host", "api.hume.ai"),
                 config_id=settings.get("config_id"),
                 idle_timeout=settings.get("idle_timeout", 15),
+            )
+
+        elif conversation_agent_choice == "letta_agent":
+            settings = agent_settings.get("letta_agent", {})
+            return LettaAgent(
+                live2d_model=live2d_model,
+                id=settings.get("id"),
+                tts_preprocessor_config=tts_preprocessor_config,
+                faster_first_response=settings.get("faster_first_response"),
+                segment_method=settings.get("segment_method"),
+                host=settings.get("host"),
+                port=settings.get("port"),
             )
 
         else:

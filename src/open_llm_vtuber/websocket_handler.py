@@ -93,6 +93,8 @@ class WebSocketHandler:
             "switch-config": self._handle_config_switch,
             "fetch-backgrounds": self._handle_fetch_backgrounds,
             "audio-play-start": self._handle_audio_play_start,
+            "request-init-config": self._handle_init_config_request,
+            "heartbeat": self._handle_heartbeat,
         }
 
     async def handle_new_connection(
@@ -109,7 +111,7 @@ class WebSocketHandler:
             Exception: If initialization fails
         """
         try:
-            session_service_context = await self._init_service_context()
+            session_service_context = await self._init_service_context(websocket.send_text, client_uid)
 
             await self._store_client_data(
                 websocket, client_uid, session_service_context
@@ -171,10 +173,10 @@ class WebSocketHandler:
         # Start microphone
         await websocket.send_text(json.dumps({"type": "control", "text": "start-mic"}))
 
-    async def _init_service_context(self) -> ServiceContext:
+    async def _init_service_context(self, send_text: Callable, client_uid: str) -> ServiceContext:
         """Initialize service context for a new session by cloning the default context"""
         session_service_context = ServiceContext()
-        session_service_context.load_cache(
+        await session_service_context.load_cache(
             config=self.default_context_cache.config.model_copy(deep=True),
             system_config=self.default_context_cache.system_config.model_copy(
                 deep=True
@@ -188,6 +190,10 @@ class WebSocketHandler:
             vad_engine=self.default_context_cache.vad_engine,
             agent_engine=self.default_context_cache.agent_engine,
             translate_engine=self.default_context_cache.translate_engine,
+            mcp_server_registery=self.default_context_cache.mcp_server_registery,
+            tool_adapter=self.default_context_cache.tool_adapter,
+            send_text=send_text,
+            client_uid=client_uid,
         )
         return session_service_context
 
@@ -296,6 +302,11 @@ class WebSocketHandler:
             if task and not task.done():
                 task.cancel()
             self.current_conversation_tasks.pop(client_uid, None)
+
+        # Call context close to clean up resources (e.g., MCPClient)
+        context = self.client_contexts.get(client_uid)
+        if context:
+            await context.close()
 
         logger.info(f"Client {client_uid} disconnected")
         message_handler.cleanup_client(client_uid)
@@ -551,3 +562,32 @@ class WebSocketHandler:
     ) -> None:
         """Handle group info request"""
         await self.send_group_update(websocket, client_uid)
+
+    async def _handle_init_config_request(
+        self, websocket: WebSocket, client_uid: str, data: WSMessage
+    ) -> None:
+        """Handle request for initialization configuration"""
+        context = self.client_contexts.get(client_uid)
+        if not context:
+            context = self.default_context_cache
+
+        await websocket.send_text(
+            json.dumps(
+                {
+                    "type": "set-model-and-conf",
+                    "model_info": context.live2d_model.model_info,
+                    "conf_name": context.character_config.conf_name,
+                    "conf_uid": context.character_config.conf_uid,
+                    "client_uid": client_uid,
+                }
+            )
+        )
+
+    async def _handle_heartbeat(
+        self, websocket: WebSocket, client_uid: str, data: WSMessage
+    ) -> None:
+        """Handle heartbeat messages from clients"""
+        try:
+            await websocket.send_json({"type": "heartbeat-ack"})
+        except Exception as e:
+            logger.error(f"Error sending heartbeat acknowledgment: {e}")

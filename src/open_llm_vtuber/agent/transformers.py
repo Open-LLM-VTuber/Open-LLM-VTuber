@@ -1,4 +1,4 @@
-from typing import AsyncIterator, Tuple, Callable, List
+from typing import AsyncIterator, Tuple, Callable, List, Union, Dict, Any
 from functools import wraps
 from .output_types import Actions, SentenceOutput, DisplayText
 from ..utils.tts_preprocessor import tts_filter as filter_text
@@ -24,19 +24,31 @@ def sentence_divider(
     """
 
     def decorator(
-        func: Callable[..., AsyncIterator[str]],
-    ) -> Callable[..., AsyncIterator[SentenceWithTags]]:
+        func: Callable[
+            ..., AsyncIterator[Union[str, Dict[str, Any]]]
+        ],  # Expects str or dict
+    ) -> Callable[
+        ..., AsyncIterator[Union[SentenceWithTags, Dict[str, Any]]]
+    ]:  # Yields SentenceWithTags or dict
         @wraps(func)
-        async def wrapper(*args, **kwargs) -> AsyncIterator[SentenceWithTags]:
+        async def wrapper(
+            *args, **kwargs
+        ) -> AsyncIterator[Union[SentenceWithTags, Dict[str, Any]]]:
             divider = SentenceDivider(
                 faster_first_response=faster_first_response,
                 segment_method=segment_method,
                 valid_tags=valid_tags or [],
             )
-            token_stream = func(*args, **kwargs)
-            async for sentence in divider.process_stream(token_stream):
-                yield sentence
-                logger.debug(f"sentence_divider: {sentence}")
+            stream_from_func = func(*args, **kwargs)
+
+            # Process the mixed stream using the updated SentenceDivider
+            async for item in divider.process_stream(stream_from_func):
+                if isinstance(item, SentenceWithTags):
+                    logger.debug(f"sentence_divider yielding sentence: {item}")
+                elif isinstance(item, dict):
+                    logger.debug(f"sentence_divider yielding dict: {item}")
+                yield item  # Yield either SentenceWithTags or dict
+            # Flushing is handled within divider.process_stream
 
         return wrapper
 
@@ -45,27 +57,43 @@ def sentence_divider(
 
 def actions_extractor(live2d_model: Live2dModel):
     """
-    Decorator that extracts actions from sentences
+    Decorator that extracts actions from sentences, passing through dicts.
     """
 
     def decorator(
-        func: Callable[..., AsyncIterator[SentenceWithTags]],
-    ) -> Callable[..., AsyncIterator[Tuple[SentenceWithTags, Actions]]]:
+        func: Callable[
+            ..., AsyncIterator[Union[SentenceWithTags, Dict[str, Any]]]
+        ],  # Input type hint
+    ) -> Callable[
+        ..., AsyncIterator[Union[Tuple[SentenceWithTags, Actions], Dict[str, Any]]]
+    ]:  # Output type hint
         @wraps(func)
         async def wrapper(
             *args, **kwargs
-        ) -> AsyncIterator[Tuple[SentenceWithTags, Actions]]:
-            sentence_stream = func(*args, **kwargs)
-            async for sentence in sentence_stream:
-                actions = Actions()
-                # Only extract emotions for non-tag text
-                if not any(
-                    tag.state in [TagState.START, TagState.END] for tag in sentence.tags
-                ):
-                    expressions = live2d_model.extract_emotion(sentence.text)
-                    if expressions:
-                        actions.expressions = expressions
-                yield sentence, actions
+        ) -> AsyncIterator[
+            Union[Tuple[SentenceWithTags, Actions], Dict[str, Any]]
+        ]:  # Yield type hint
+            stream = func(*args, **kwargs)
+            async for item in stream:
+                if isinstance(item, SentenceWithTags):
+                    sentence = item
+                    actions = Actions()
+                    # Only extract emotions for non-tag text
+                    if not any(
+                        tag.state in [TagState.START, TagState.END]
+                        for tag in sentence.tags
+                    ):
+                        expressions = live2d_model.extract_emotion(sentence.text)
+                        if expressions:
+                            actions.expressions = expressions
+                    yield sentence, actions  # Yield the tuple
+                elif isinstance(item, dict):
+                    # Pass through dictionaries
+                    yield item
+                else:
+                    logger.warning(
+                        f"actions_extractor received unexpected type: {type(item)}"
+                    )
 
         return wrapper
 
@@ -74,30 +102,52 @@ def actions_extractor(live2d_model: Live2dModel):
 
 def display_processor():
     """
-    Decorator that processes text for display.
+    Decorator that processes text for display, passing through dicts.
     """
 
     def decorator(
-        func: Callable[..., AsyncIterator[Tuple[SentenceWithTags, Actions]]],
-    ) -> Callable[..., AsyncIterator[Tuple[SentenceWithTags, DisplayText, Actions]]]:
+        func: Callable[
+            ..., AsyncIterator[Union[Tuple[SentenceWithTags, Actions], Dict[str, Any]]]
+        ],  # Input type hint
+    ) -> Callable[
+        ...,
+        AsyncIterator[
+            Union[Tuple[SentenceWithTags, DisplayText, Actions], Dict[str, Any]]
+        ],
+    ]:  # Output type hint
         @wraps(func)
         async def wrapper(
             *args, **kwargs
-        ) -> AsyncIterator[Tuple[SentenceWithTags, DisplayText, Actions]]:
+        ) -> AsyncIterator[
+            Union[Tuple[SentenceWithTags, DisplayText, Actions], Dict[str, Any]]
+        ]:  # Yield type hint
             stream = func(*args, **kwargs)
 
-            async for sentence, actions in stream:
-                text = sentence.text
-                # Handle think tag states
-                for tag in sentence.tags:
-                    if tag.name == "think":
-                        if tag.state == TagState.START:
-                            text = "("
-                        elif tag.state == TagState.END:
-                            text = ")"
+            async for item in stream:
+                if (
+                    isinstance(item, tuple)
+                    and len(item) == 2
+                    and isinstance(item[0], SentenceWithTags)
+                ):
+                    sentence, actions = item
+                    text = sentence.text
+                    # Handle think tag states
+                    for tag in sentence.tags:
+                        if tag.name == "think":
+                            if tag.state == TagState.START:
+                                text = "("
+                            elif tag.state == TagState.END:
+                                text = ")"
 
-                display = DisplayText(text=text)  # Simplified DisplayText creation
-                yield sentence, display, actions
+                    display = DisplayText(text=text)  # Simplified DisplayText creation
+                    yield sentence, display, actions  # Yield the tuple
+                elif isinstance(item, dict):
+                    # Pass through dictionaries
+                    yield item
+                else:
+                    logger.warning(
+                        f"display_processor received unexpected type: {type(item)}"
+                    )
 
         return wrapper
 
@@ -108,41 +158,59 @@ def tts_filter(
     tts_preprocessor_config: TTSPreprocessorConfig = None,
 ):
     """
-    Decorator that filters text for TTS.
+    Decorator that filters text for TTS, passing through dicts.
     Skips TTS for think tag content.
     """
 
     def decorator(
         func: Callable[
-            ..., AsyncIterator[Tuple[SentenceWithTags, DisplayText, Actions]]
-        ],
-    ) -> Callable[..., AsyncIterator[SentenceOutput]]:
+            ...,
+            AsyncIterator[
+                Union[Tuple[SentenceWithTags, DisplayText, Actions], Dict[str, Any]]
+            ],
+        ],  # Input type hint
+    ) -> Callable[
+        ..., AsyncIterator[Union[SentenceOutput, Dict[str, Any]]]
+    ]:  # Output type hint
         @wraps(func)
-        async def wrapper(*args, **kwargs) -> AsyncIterator[SentenceOutput]:
-            sentence_stream = func(*args, **kwargs)
+        async def wrapper(
+            *args, **kwargs
+        ) -> AsyncIterator[Union[SentenceOutput, Dict[str, Any]]]:  # Yield type hint
+            stream = func(*args, **kwargs)
             config = tts_preprocessor_config or TTSPreprocessorConfig()
 
-            async for sentence, display, actions in sentence_stream:
-                if any(tag.name == "think" for tag in sentence.tags):
-                    tts = ""
-                else:
-                    tts = filter_text(
-                        text=display.text,
-                        remove_special_char=config.remove_special_char,
-                        ignore_brackets=config.ignore_brackets,
-                        ignore_parentheses=config.ignore_parentheses,
-                        ignore_asterisks=config.ignore_asterisks,
-                        ignore_angle_brackets=config.ignore_angle_brackets,
+            async for item in stream:
+                if (
+                    isinstance(item, tuple)
+                    and len(item) == 3
+                    and isinstance(item[1], DisplayText)
+                ):
+                    sentence, display, actions = item
+                    if any(tag.name == "think" for tag in sentence.tags):
+                        tts = ""
+                    else:
+                        tts = filter_text(
+                            text=display.text,
+                            remove_special_char=config.remove_special_char,
+                            ignore_brackets=config.ignore_brackets,
+                            ignore_parentheses=config.ignore_parentheses,
+                            ignore_asterisks=config.ignore_asterisks,
+                            ignore_angle_brackets=config.ignore_angle_brackets,
+                        )
+
+                    logger.debug(f"[{display.name}] display: {display.text}")
+                    logger.debug(f"[{display.name}] tts: {tts}")
+
+                    yield SentenceOutput(
+                        display_text=display,
+                        tts_text=tts,
+                        actions=actions,
                     )
-
-                logger.debug(f"[{display.name}] display: {display.text}")
-                logger.debug(f"[{display.name}] tts: {tts}")
-
-                yield SentenceOutput(
-                    display_text=display,
-                    tts_text=tts,
-                    actions=actions,
-                )
+                elif isinstance(item, dict):
+                    # Pass through dictionaries
+                    yield item
+                else:
+                    logger.warning(f"tts_filter received unexpected type: {type(item)}")
 
         return wrapper
 

@@ -14,6 +14,8 @@ from ..asr.asr_interface import ASRInterface
 from ..live2d_model import Live2dModel
 from ..tts.tts_interface import TTSInterface
 from ..utils.stream_audio import prepare_audio_payload
+from ..service_context import ServiceContext
+from ..agent.agents.agent_interface import AgentInterface
 
 
 # Convert class methods to standalone functions
@@ -21,6 +23,7 @@ def create_batch_input(
     input_text: str,
     images: Optional[List[Dict[str, Any]]],
     from_name: str,
+    metadata: Optional[Dict[str, Any]] = None,
 ) -> BatchInput:
     """Create batch input for agent processing"""
     return BatchInput(
@@ -37,6 +40,7 @@ def create_batch_input(
         ]
         if images
         else None,
+        metadata=metadata,
     )
 
 

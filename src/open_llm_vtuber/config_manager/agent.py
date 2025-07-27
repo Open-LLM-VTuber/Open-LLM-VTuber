@@ -4,7 +4,7 @@ different types of agents.
 """
 
 from pydantic import BaseModel, Field
-from typing import Dict, ClassVar, Optional, Literal
+from typing import Dict, ClassVar, Optional, Literal, List
 from .i18n import I18nMixin, Description
 from .stateless_llm import StatelessLLMConfigs
 
@@ -15,10 +15,12 @@ class BasicMemoryAgentConfig(I18nMixin, BaseModel):
     """Configuration for the basic memory agent."""
 
     llm_provider: Literal[
+        "stateless_llm_with_template",
         "openai_compatible_llm",
         "claude_llm",
         "llama_cpp_llm",
         "ollama_llm",
+        "lmstudio_llm",
         "openai_llm",
         "gemini_llm",
         "zhipu_llm",
@@ -29,6 +31,9 @@ class BasicMemoryAgentConfig(I18nMixin, BaseModel):
 
     faster_first_response: Optional[bool] = Field(True, alias="faster_first_response")
     segment_method: Literal["regex", "pysbd"] = Field("pysbd", alias="segment_method")
+    use_mcpp: Optional[bool] = Field(False, alias="use_mcpp")
+    mcp_enabled_servers: Optional[List[str]] = Field([], alias="mcp_enabled_servers")
+
     DESCRIPTIONS: ClassVar[Dict[str, Description]] = {
         "llm_provider": Description(
             en="LLM provider to use for this agent",
@@ -41,6 +46,14 @@ class BasicMemoryAgentConfig(I18nMixin, BaseModel):
         "segment_method": Description(
             en="Method for segmenting sentences: 'regex' or 'pysbd' (default: 'pysbd')",
             zh="分割句子的方法：'regex' 或 'pysbd'（默认：'pysbd'）",
+        ),
+        "use_mcpp": Description(
+            en="Whether to use MCP (Model Context Protocol) for the agent (default: True)",
+            zh="是否使用为智能体启用 MCP (Model Context Protocol) Plus（默认：False）",
+        ),
+        "mcp_enabled_servers": Description(
+            en="List of MCP servers to enable for the agent",
+            zh="为智能体启用 MCP 服务器列表",
         ),
     }
 
@@ -132,6 +145,33 @@ class HumeAIConfig(I18nMixin, BaseModel):
     }
 
 
+# =================================
+
+
+class LettaConfig(I18nMixin, BaseModel):
+    """Configuration for the Letta agent."""
+
+    host: str = Field("localhost", alias="host")
+    port: int = Field(8283, alias="port")
+    id: str = Field(..., alias="id")
+    faster_first_response: Optional[bool] = Field(True, alias="faster_first_response")
+    segment_method: Literal["regex", "pysbd"] = Field("pysbd", alias="segment_method")
+
+    DESCRIPTIONS: ClassVar[Dict[str, Description]] = {
+        "host": Description(
+            en="Host address for the Letta server", zh="Letta服务器的主机地址"
+        ),
+        "port": Description(
+            en="Port number for the Letta server (default: 8283)",
+            zh="Letta服务器的端口号（默认：8283）",
+        ),
+        "id": Description(
+            en="Agent instance ID running on the Letta server",
+            zh="指定Letta服务器上运行的Agent实例id",
+        ),
+    }
+
+
 class AgentSettings(I18nMixin, BaseModel):
     """Settings for different types of agents."""
 
@@ -140,6 +180,7 @@ class AgentSettings(I18nMixin, BaseModel):
     )
     mem0_agent: Optional[Mem0Config] = Field(None, alias="mem0_agent")
     hume_ai_agent: Optional[HumeAIConfig] = Field(None, alias="hume_ai_agent")
+    letta_agent: Optional[LettaConfig] = Field(None, alias="letta_agent")
 
     DESCRIPTIONS: ClassVar[Dict[str, Description]] = {
         "basic_memory_agent": Description(
@@ -149,6 +190,9 @@ class AgentSettings(I18nMixin, BaseModel):
         "hume_ai_agent": Description(
             en="Configuration for Hume AI agent", zh="Hume AI 代理配置"
         ),
+        "letta_agent": Description(
+            en="Configuration for Letta agent", zh="Letta 代理配置"
+        ),
     }
 
 
@@ -156,7 +200,7 @@ class AgentConfig(I18nMixin, BaseModel):
     """This class contains all of the configurations related to agent."""
 
     conversation_agent_choice: Literal[
-        "basic_memory_agent", "mem0_agent", "hume_ai_agent"
+        "basic_memory_agent", "mem0_agent", "hume_ai_agent", "letta_agent"
     ] = Field(..., alias="conversation_agent_choice")
     agent_settings: AgentSettings = Field(..., alias="agent_settings")
     llm_configs: StatelessLLMConfigs = Field(..., alias="llm_configs")
@@ -170,5 +214,13 @@ class AgentConfig(I18nMixin, BaseModel):
         ),
         "llm_configs": Description(
             en="Pool of LLM provider configurations", zh="语言模型提供者配置池"
+        ),
+        "faster_first_response": Description(
+            en="Whether to respond as soon as encountering a comma in the first sentence to reduce latency (default: True)",
+            zh="是否在第一句回应时遇上逗号就直接生成音频以减少首句延迟（默认：True）",
+        ),
+        "segment_method": Description(
+            en="Method for segmenting sentences: 'regex' or 'pysbd' (default: 'pysbd')",
+            zh="分割句子的方法：'regex' 或 'pysbd'（默认：'pysbd'）",
         ),
     }

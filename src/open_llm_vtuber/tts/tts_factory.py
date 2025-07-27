@@ -121,11 +121,57 @@ class TTSFactory:
                 latency=kwargs.get("latency"),
                 base_url=kwargs.get("base_url"),
             )
+        elif engine_type == "minimax_tts":
+            from .minimax_tts import TTSEngine as MinimaxTTSEngine
+
+            return MinimaxTTSEngine(
+                group_id=kwargs.get("group_id"),
+                api_key=kwargs.get("api_key"),
+                model=kwargs.get("model", "speech-02-turbo"),
+                voice_id=kwargs.get("voice_id", "male-qn-qingse"),
+                pronunciation_dict=kwargs.get("pronunciation_dict", ""),
+            )
         elif engine_type == "sherpa_onnx_tts":
             from .sherpa_onnx_tts import TTSEngine as SherpaOnnxTTSEngine
 
             return SherpaOnnxTTSEngine(**kwargs)
+        elif engine_type == "openai_tts":
+            from .openai_tts import TTSEngine as OpenAITTSEngine
 
+            # Pass relevant config options, allowing defaults in openai_tts.py if not provided
+            return OpenAITTSEngine(
+                model=kwargs.get("model"),  # Will use default "kokoro" if not in kwargs
+                voice=kwargs.get(
+                    "voice"
+                ),  # Will use default "af_sky+af_bella" if not in kwargs
+                api_key=kwargs.get(
+                    "api_key"
+                ),  # Will use default "not-needed" if not in kwargs
+                base_url=kwargs.get(
+                    "base_url"
+                ),  # Will use default "http://localhost:8880/v1" if not in kwargs
+                file_extension=kwargs.get(
+                    "file_extension"
+                ),  # Will use default "mp3" if not in kwargs
+            )
+
+        elif engine_type == "spark_tts":
+            #         api_url: str = "http://127.0.0.1:7860/",
+            #         prompt_wav_upload: str = "voice_clone/voice_clone_voice.wav",
+            #         api_name:str = "voice_clone",
+            #         gender: str = "male",
+            #         pitch: int = 3,
+            #         speed: int = 3
+            from .spark_tts import TTSEngine as SparkTTSEngine
+
+            return SparkTTSEngine(
+                api_url=kwargs.get("api_url"),
+                prompt_wav_upload=kwargs.get("prompt_wav_upload"),
+                api_name=kwargs.get("api_name"),
+                gender=kwargs.get("gender"),
+                pitch=kwargs.get("pitch"),
+                speed=kwargs.get("speed"),
+            )
         else:
             raise ValueError(f"Unknown TTS engine type: {engine_type}")
 
@@ -133,3 +179,10 @@ class TTSFactory:
 # Example usage:
 # tts_engine = TTSFactory.get_tts_engine("azure", api_key="your_api_key", region="your_region", voice="your_voice")
 # tts_engine.speak("Hello world")
+if __name__ == "__main__":
+    tts_engine = TTSFactory.get_tts_engine(
+        "spark_tts",
+        api_url="http://127.0.0.1:7860/voice_clone",
+        used_voices=r"D:\python\spark_tts\收集的语音\纳西妲-完整.mp3",
+    )
+    tts_engine.generate_audio("Hello world")

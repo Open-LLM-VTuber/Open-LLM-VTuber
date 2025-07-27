@@ -1,6 +1,6 @@
 [project]
 name = "open-llm-vtuber"
-version = "1.1.3"
+version = "1.2.0"
 description = "Talk to any LLM with hands-free voice interaction, voice interruption, and Live2D taking face running locally across platforms"
 readme = "README.md"
 requires-python = ">=3.10,<3.13"
@@ -14,6 +14,7 @@ dependencies = [
     "httpx>=0.28.1",
     "langdetect>=1.0.9",
     "loguru>=0.7.2",
+    "mcp[cli]>=1.6.0",
     "numpy>=1.26.4,<2",
     "onnxruntime>=1.20.1",
     "openai>=1.57.4",
@@ -27,13 +28,23 @@ dependencies = [
     "ruff>=0.8.6",
     "scipy>=1.14.1",
     "sherpa-onnx>=1.10.39",
-    "silero-vad>=5.1.2",
     "soundfile>=0.12.1",
     "tomli>=2.2.1",
-    "torch>=2.6.0",
+    "torch==2.2.2; sys_platform == 'darwin' and platform_machine == 'x86_64'",
+    "torch>=2.6.0; sys_platform == 'darwin' and platform_machine == 'arm64'",
+    "torch>=2.6.0; sys_platform != 'darwin'",
     "tqdm>=4.67.1",
     "uvicorn[standard]>=0.33.0",
     "websocket-client>=1.8.0",
+    "letta-client>=0.1.100",
+    "duckduckgo-mcp-server>=0.1.1",
+]
+
+[project.optional-dependencies]
+bilibili = [
+    "aiohttp~=3.9.0",
+    "Brotli~=1.1.0",
+    "yarl~=1.9.3",
 ]
 
 [tool.pixi.project]

@@ -342,6 +342,94 @@ class SiliconFlowTTSConfig(I18nMixin):
         "stream": Description(en="Enable streaming mode", zh="启用流式模式"),
         "speed": Description(en="Speaking speed multiplier", zh="语速倍数"),
         "gain": Description(en="Audio gain adjustment", zh="音频增益调整"),
+
+class OpenAITTSConfig(I18nMixin):
+    """Configuration for OpenAI-compatible TTS client."""
+
+    model: Optional[str] = Field(None, alias="model")
+    voice: Optional[str] = Field(None, alias="voice")
+    api_key: Optional[str] = Field(None, alias="api_key")
+    base_url: Optional[str] = Field(None, alias="base_url")
+    file_extension: Literal["mp3", "wav"] = Field("mp3", alias="file_extension")
+
+    DESCRIPTIONS: ClassVar[Dict[str, Description]] = {
+        "model": Description(
+            en="Model name for the TTS server (overrides default)",
+            zh="TTS 服务器的模型名称（覆盖默认值）",
+        ),
+        "voice": Description(
+            en="Voice name(s) for the TTS server (overrides default)",
+            zh="TTS 服务器的语音名称（覆盖默认值）",
+        ),
+        "api_key": Description(
+            en="API key if required by the TTS server (overrides default)",
+            zh="TTS 服务器所需的 API 密钥（覆盖默认值）",
+        ),
+        "base_url": Description(
+            en="Base URL of the TTS server (overrides default)",
+            zh="TTS 服务器的基础 URL（覆盖默认值）",
+        ),
+        "file_extension": Description(
+            en="Audio file format (mp3 or wav, defaults to mp3)",
+            zh="音频文件格式（mp3 或 wav，默认为 mp3）",
+        ),
+    }
+
+
+class SparkTTSConfig(I18nMixin):
+    """Configuration for Spark TTS."""
+
+    api_url: str = Field(..., alias="api_url")
+    prompt_wav_upload: str = Field(..., alias="prompt_wav_upload")
+    api_name: str = Field(..., alias="api_name")
+    gender: str = Field(..., alias="gender")
+    pitch: int = Field(..., alias="pitch")
+    speed: int = Field(..., alias="speed")
+
+    DESCRIPTIONS: ClassVar[Dict[str, Description]] = {
+        "prompt_wav_upload": Description(
+            en="Reference audio (used when using voice cloning)",
+            zh="参考音频（使用语音克隆时候使用）",
+        ),
+        "api_url": Description(
+            en="API address of the spark tts gradio web frontend. For example: http://127.0.0.1:7860/voice_clone",
+            zh="你的API地址。举例：http://127.0.0.1:7860/voice_clone",
+        ),
+        "api_name": Description(
+            en="The API endpoint name. For example: voice_clone,voice_creation",
+            zh="你的API名称。举例：voice_clone，voice_creation",
+        ),
+        "gender": Description(
+            en="Gender of the voice (male or female)", zh="声音性别（男或女）"
+        ),
+        "pitch": Description(
+            en="Pitch shift (in semitones) default 3,range 1-5.",
+            zh="音高（以半音为单位）默认3，范围1-5",
+        ),
+        "speed": Description(
+            en="Speed of the voice (in percent) default 3,range 1-5.",
+            zh="声音速度（以百分比为单位）默认3，范围1-5",
+        ),
+    }
+
+
+class MinimaxTTSConfig(I18nMixin):
+    """Configuration for Minimax TTS."""
+
+    group_id: str = Field(..., alias="group_id")
+    api_key: str = Field(..., alias="api_key")
+    model: str = Field("speech-02-turbo", alias="model")
+    voice_id: str = Field("male-qn-qingse", alias="voice_id")
+    pronunciation_dict: str = Field("", alias="pronunciation_dict")
+
+    DESCRIPTIONS: ClassVar[Dict[str, Description]] = {
+        "group_id": Description(en="Minimax group_id", zh="Minimax 的 group_id"),
+        "api_key": Description(en="Minimax API key", zh="Minimax 的 API key"),
+        "model": Description(en="Minimax model name", zh="Minimax 模型名称"),
+        "voice_id": Description(en="Minimax voice id", zh="Minimax 语音 id"),
+        "pronunciation_dict": Description(
+            en="Custom pronunciation dictionary (string)", zh="自定义发音字典（字符串）"
+        ),
     }
 
 
@@ -361,6 +449,9 @@ class TTSConfig(I18nMixin):
         "fish_api_tts",
         "sherpa_onnx_tts",
         "siliconflow_tts",  
+        "openai_tts",  # Add openai_tts here
+        "spark_tts",
+        "minimax_tts",
     ] = Field(..., alias="tts_model")
 
     azure_tts: Optional[AzureTTSConfig] = Field(None, alias="azure_tts")
@@ -379,6 +470,9 @@ class TTSConfig(I18nMixin):
     siliconflow_tts: Optional[SiliconFlowTTSConfig] = Field(
         None, alias="siliconflow_tts"
     )  # 添加新的配置项
+    openai_tts: Optional[OpenAITTSConfig] = Field(None, alias="openai_tts")
+    spark_tts: Optional[SparkTTSConfig] = Field(None, alias="spark_tts")
+    minimax_tts: Optional[MinimaxTTSConfig] = Field(None, alias="minimax_tts")
 
     DESCRIPTIONS: ClassVar[Dict[str, Description]] = {
         "tts_model": Description(
@@ -407,6 +501,12 @@ class TTSConfig(I18nMixin):
         ),
         "siliconflow_tts": Description(
             en="Configuration for SiliconFlow TTS", zh="SiliconFlow TTS 配置"
+        "openai_tts": Description(
+            en="Configuration for OpenAI-compatible TTS", zh="OpenAI 兼容 TTS 配置"
+        ),
+        "spark_tts": Description(en="Configuration for Spark TTS", zh="Spark TTS 配置"),
+        "minimax_tts": Description(
+            en="Configuration for Minimax TTS", zh="Minimax TTS 配置"
         ),
     }
 
@@ -441,5 +541,11 @@ class TTSConfig(I18nMixin):
             tts_model == "siliconflow_tts" and values.siliconflow_tts is not None
         ):  # 添加新的验证逻辑
             values.siliconflow_tts.model_validate(values.siliconflow_tts.model_dump())
+        elif tts_model == "openai_tts" and values.openai_tts is not None:
+            values.openai_tts.model_validate(values.openai_tts.model_dump())
+        elif tts_model == "spark_tts" and values.spark_tts is not None:
+            values.spark_tts.model_validate(values.spark_tts.model_dump())        
+        elif tts_model == "minimax_tts" and values.minimax_tts is not None:
+            values.minimax_tts.model_validate(values.minimax_tts.model_dump())
 
         return values

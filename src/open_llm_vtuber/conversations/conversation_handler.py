@@ -13,6 +13,7 @@ from .group_conversation import process_group_conversation
 from .single_conversation import process_single_conversation
 from .conversation_utils import EMOJI_LIST
 from .types import GroupConversationState
+from prompts import prompt_loader
 
 
 async def handle_conversation_trigger(
@@ -29,8 +30,30 @@ async def handle_conversation_trigger(
     broadcast_to_group: Callable,
 ) -> None:
     """Handle triggers that start a conversation"""
+    metadata = None
+
     if msg_type == "ai-speak-signal":
-        user_input = ""
+        try:
+            # Get proactive speak prompt from config
+            prompt_name = "proactive_speak_prompt"
+            prompt_file = context.system_config.tool_prompts.get(prompt_name)
+            if prompt_file:
+                user_input = prompt_loader.load_util(prompt_file)
+            else:
+                logger.warning(f"Proactive speak prompt not configured, using default")
+                user_input = "Please say something."
+        except Exception as e:
+            logger.error(f"Error loading proactive speak prompt: {e}")
+            user_input = "Please say something."
+
+        # Add metadata to indicate this is a proactive speak request
+        # that should be skipped in both memory and history
+        metadata = {
+            "proactive_speak": True,
+            "skip_memory": True,  # Skip storing in AI's internal memory
+            "skip_history": True,  # Skip storing in local conversation history
+        }
+
         await websocket.send_text(
             json.dumps(
                 {
@@ -68,6 +91,7 @@ async def handle_conversation_trigger(
                     user_input=user_input,
                     images=images,
                     session_emoji=session_emoji,
+                    metadata=metadata,
                 )
             )
     else:
@@ -80,6 +104,7 @@ async def handle_conversation_trigger(
                 user_input=user_input,
                 images=images,
                 session_emoji=session_emoji,
+                metadata=metadata,
             )
         )
 

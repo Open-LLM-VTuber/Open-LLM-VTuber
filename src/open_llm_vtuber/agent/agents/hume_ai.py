@@ -240,13 +240,13 @@ class HumeAIAgent(AgentInterface):
         """Handle user interruption (not implemented for Hume AI)"""
         pass
 
-    async def __del__(self):
+    def __del__(self):
         """Cleanup WebSocket connection and cache files"""
         if self._idle_timer:
             self._idle_timer.cancel()
 
         if self._ws:
-            await self._ws.close()
+            self._ws.close()
 
         # Clean up cache files
         try:

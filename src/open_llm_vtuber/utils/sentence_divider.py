@@ -1,5 +1,5 @@
 import re
-from typing import List, Tuple, AsyncIterator, Optional
+from typing import List, Tuple, AsyncIterator, Optional, Union, Dict, Any
 import pysbd
 from loguru import logger
 from langdetect import detect
@@ -402,181 +402,193 @@ class SentenceDivider:
 
         return (TagInfo(matched_tag, tag_type), text[first_tag.end() :].lstrip())
 
-    async def _process_buffer(self) -> List[SentenceWithTags]:
+    async def _process_buffer(self) -> AsyncIterator[SentenceWithTags]:
         """
-        Process the current buffer and return complete sentences with tags.
-        Handles tags that may appear anywhere in the buffer.
-
-        Returns:
-            List[SentenceWithTags]: List of sentences with their tag information
+        Process the current buffer, yielding complete sentences with tags.
+        This is now an async generator.
+        It consumes processed parts from self._buffer.
         """
-        result = []
+        processed_something = True  # Flag to loop until no more processing can be done
+        while processed_something:
+            processed_something = False
+            original_buffer_len = len(self._buffer)
 
-        while self._buffer.strip():
+            if not self._buffer.strip():
+                break
+
             # Find the next tag position
             next_tag_pos = len(self._buffer)
+            tag_pattern_found = None
             for tag in self.valid_tags:
                 patterns = [f"<{tag}>", f"</{tag}>", f"<{tag}/>"]
                 for pattern in patterns:
                     pos = self._buffer.find(pattern)
                     if pos != -1 and pos < next_tag_pos:
                         next_tag_pos = pos
+                        tag_pattern_found = pattern  # Store the found pattern
 
             if next_tag_pos == 0:
                 # Tag is at the start of buffer
                 tag_info, remaining = self._extract_tag(self._buffer)
                 if tag_info:
-                    result.append(
-                        SentenceWithTags(
-                            text=self._buffer[
-                                : len(self._buffer) - len(remaining)
-                            ].strip(),
-                            tags=[tag_info],  # Tag itself is a single-item list
-                        )
-                    )
+                    processed_text = self._buffer[
+                        : len(self._buffer) - len(remaining)
+                    ].strip()
+                    # Yield the tag itself, represented as a SentenceWithTags
+                    yield SentenceWithTags(text=processed_text, tags=[tag_info])
                     self._buffer = remaining
-                    continue
+                    processed_something = True
+                    continue  # Restart processing loop for the remaining buffer
 
             elif next_tag_pos < len(self._buffer):
                 # Tag is in the middle - process text before tag first
                 text_before_tag = self._buffer[:next_tag_pos]
                 current_tags = self._get_current_tags()
+                processed_segment = ""
 
                 # Process complete sentences in text before tag
                 if contains_end_punctuation(text_before_tag):
-                    sentences, remaining = self._segment_text(text_before_tag)
+                    sentences, remaining_before = self._segment_text(text_before_tag)
                     for sentence in sentences:
                         if sentence.strip():
-                            result.append(
-                                SentenceWithTags(
-                                    text=sentence.strip(),
-                                    tags=current_tags or [TagInfo("", TagState.NONE)],
-                                )
-                            )
-
-                    if remaining.strip():
-                        result.append(
-                            SentenceWithTags(
-                                text=remaining.strip(),
-                                tags=current_tags or [TagInfo("", TagState.NONE)],
-                            )
-                        )
-
-                elif text_before_tag.strip():
-                    # No complete sentence but has content
-                    result.append(
-                        SentenceWithTags(
-                            text=text_before_tag.strip(),
-                            tags=current_tags or [TagInfo("", TagState.NONE)],
-                        )
-                    )
-
-                # Process the tag
-                self._buffer = self._buffer[next_tag_pos:]
-                tag_info, remaining = self._extract_tag(self._buffer)
-                if tag_info:
-                    result.append(
-                        SentenceWithTags(
-                            text=self._buffer[
-                                : len(self._buffer) - len(remaining)
-                            ].strip(),
-                            tags=[tag_info],
-                        )
-                    )
-                    self._buffer = remaining
-                continue
-
-            # No tags found - process normal text
-            current_tags = self._get_current_tags()
-
-            # Handle first sentence with comma if enabled
-            if (
-                self._is_first_sentence
-                and self.faster_first_response
-                and contains_comma(self._buffer)
-            ):
-                sentence, remaining = comma_splitter(self._buffer)
-                if sentence.strip():
-                    result.append(
-                        SentenceWithTags(
-                            text=sentence.strip(),
-                            tags=current_tags or [TagInfo("", TagState.NONE)],
-                        )
-                    )
-                self._buffer = remaining
-                self._is_first_sentence = False
-                continue
-
-            # Process normal sentences
-            if contains_end_punctuation(self._buffer):
-                sentences, remaining = self._segment_text(self._buffer)
-                self._buffer = remaining
-                self._is_first_sentence = False
-                for sentence in sentences:
-                    if sentence.strip():
-                        result.append(
-                            SentenceWithTags(
+                            yield SentenceWithTags(
                                 text=sentence.strip(),
                                 tags=current_tags or [TagInfo("", TagState.NONE)],
                             )
-                        )
-            break
+                    # The part consumed includes sentences + what's left before the tag
+                    processed_segment = text_before_tag
+                    self._buffer = self._buffer[len(processed_segment) :]
+                    processed_something = True
+                    continue  # Restart processing loop
 
-        return result
+                elif text_before_tag.strip() and tag_pattern_found:
+                    # No sentence end, but content exists AND we found a tag pattern after it.
+                    # We can yield this segment because the tag provides a boundary.
+                    yield SentenceWithTags(
+                        text=text_before_tag.strip(),
+                        tags=current_tags or [TagInfo("", TagState.NONE)],
+                    )
+                    self._buffer = self._buffer[len(text_before_tag) :]
+                    processed_something = True
+                    continue  # Restart processing loop
+                # --- If no tag found after text_before_tag, we wait for more input or end punctuation ---
 
-    async def process_stream(self, segment_stream) -> AsyncIterator[SentenceWithTags]:
-        """
-        Process a stream of tokens and yield complete sentences with tag information.
-        pysbd may not able to handle ...
+                # Process the tag itself if we haven't continued
+                tag_info, remaining_after_tag = self._extract_tag(self._buffer)
+                if tag_info:
+                    processed_tag_text = self._buffer[
+                        : len(self._buffer) - len(remaining_after_tag)
+                    ].strip()
+                    yield SentenceWithTags(text=processed_tag_text, tags=[tag_info])
+                    self._buffer = remaining_after_tag
+                    processed_something = True
+                    continue  # Restart processing loop
 
-        Args:
-            segment_stream: An async iterator yielding segments
-
-        Yields:
-            SentenceWithTags: Complete sentences with their tag information
-        """
-        self._full_response = []
-
-        async for segment in segment_stream:
-            self._buffer += segment
-            self._full_response.append(segment)
-
-            # Process buffer after punctuation, when buffer gets too long,
-            # or when we see a tag
-            should_process = any(
-                re.search(f"{tag}(?:/)?>", self._buffer) for tag in self.valid_tags
-            ) or has_punctuation(self._buffer)
-
-            if should_process:
-                sentences = await self._process_buffer()
-                for sentence in sentences:
-                    yield sentence
-
-        # Process remaining text at end of stream
-        if self._buffer.strip():
-            tag_info, remaining = self._extract_tag(self._buffer)
-            if tag_info:
-                yield SentenceWithTags(
-                    text=self._buffer[: len(self._buffer) - len(remaining)].strip(),
-                    tags=[tag_info],
-                )
-                self._buffer = remaining
-
-            if self._buffer.strip():
-                sentences, remaining = self._segment_text(self._buffer)
+            # No tags found or tag is not at the beginning/middle of processable segment
+            # Process normal text if buffer has changed or punctuation exists
+            if original_buffer_len > 0:
                 current_tags = self._get_current_tags()
 
-                for sentence in sentences:
+                # Handle first sentence with comma if enabled
+                if (
+                    self._is_first_sentence
+                    and self.faster_first_response
+                    and contains_comma(self._buffer)
+                ):
+                    sentence, remaining = comma_splitter(self._buffer)
                     if sentence.strip():
                         yield SentenceWithTags(
                             text=sentence.strip(),
                             tags=current_tags or [TagInfo("", TagState.NONE)],
                         )
-            if remaining.strip():
-                yield SentenceWithTags(
-                    text=remaining.strip(),
-                    tags=current_tags or [TagInfo("", TagState.NONE)],
+                        self._buffer = remaining
+                        self._is_first_sentence = False
+                        processed_something = True
+                        continue  # Restart processing loop
+
+                # Process normal sentences based on end punctuation
+                if contains_end_punctuation(self._buffer):
+                    sentences, remaining = self._segment_text(self._buffer)
+                    if sentences:  # Only process if segmentation yielded sentences
+                        self._buffer = remaining
+                        self._is_first_sentence = False
+                        processed_something = True
+                        for sentence in sentences:
+                            if sentence.strip():
+                                yield SentenceWithTags(
+                                    text=sentence.strip(),
+                                    tags=current_tags or [TagInfo("", TagState.NONE)],
+                                )
+                        continue  # Restart processing loop
+
+            # If we reached here without processing anything, break the loop
+            if not processed_something:
+                break
+
+    async def _flush_buffer(self) -> AsyncIterator[SentenceWithTags]:
+        """
+        Process and yield all remaining content in the buffer at the end of the stream.
+        """
+        logger.debug(f"Flushing remaining buffer: '{self._buffer}'")
+        # First, run _process_buffer to yield any standard sentences/tags
+        async for sentence in self._process_buffer():
+            yield sentence
+
+        # After processing standard structures, if anything is left, yield it as a final fragment
+        if self._buffer.strip():
+            logger.debug(
+                f"Yielding final fragment from buffer: '{self._buffer.strip()}'"
+            )
+            current_tags = self._get_current_tags()
+            yield SentenceWithTags(
+                text=self._buffer.strip(),
+                tags=current_tags or [TagInfo("", TagState.NONE)],
+            )
+            self._buffer = ""  # Clear buffer after flushing
+
+    async def process_stream(
+        self, segment_stream: AsyncIterator[Union[str, Dict[str, Any]]]
+    ) -> AsyncIterator[Union[SentenceWithTags, Dict[str, Any]]]:
+        """
+        Process a stream of tokens (strings) and dictionaries.
+        Yields complete sentences with tags (SentenceWithTags) or dictionaries directly.
+
+        Args:
+            segment_stream: An async iterator yielding strings or dictionaries.
+
+        Yields:
+            Union[SentenceWithTags, Dict[str, Any]]: Complete sentences/tags or original dictionaries.
+        """
+        self._full_response = []
+        self.reset()  # Ensure state is clean
+
+        async for item in segment_stream:
+            if isinstance(item, dict):
+                # Before yielding the dict, process and yield any complete sentences formed so far
+                async for sentence in self._process_buffer():
+                    self._full_response.append(
+                        sentence.text
+                    )  # Track for complete response
+                    yield sentence
+                # Now yield the dictionary
+                yield item
+            elif isinstance(item, str):
+                self._buffer += item
+                # Process the buffer incrementally as string chunks arrive
+                async for sentence in self._process_buffer():
+                    self._full_response.append(
+                        sentence.text
+                    )  # Track for complete response
+                    yield sentence
+            else:
+                logger.warning(
+                    f"SentenceDivider received unexpected type: {type(item)}"
                 )
+
+        # After the stream finishes, flush any remaining text in the buffer
+        async for sentence in self._flush_buffer():
+            self._full_response.append(sentence.text)
+            yield sentence
 
     @property
     def complete_response(self) -> str:
