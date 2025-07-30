@@ -29,7 +29,9 @@ class Description(MultiLingualString):
     Represents a description with translations in multiple languages.
     """
 
-    notes: MultiLingualString | None = Field(None, description="Additional notes")
+    notes: MultiLingualString | None = Field(
+        default=None, description="Additional notes"
+    )
 
     def get_text(self, lang_code: str) -> str:
         """

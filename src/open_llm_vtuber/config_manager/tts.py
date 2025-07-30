@@ -304,18 +304,14 @@ class SherpaOnnxTTSConfig(I18nMixin):
 class SiliconFlowTTSConfig(I18nMixin):
     """Configuration for SiliconFlow TTS."""
 
-    api_url: str = Field(
-        "https://api.siliconflow.cn/v1/audio/speech", alias="api_url"
-    )  
-    api_key: str = Field(
-        "Bearer sk-pudrpldoifoanxcrdsbobzzjaihlyuzxrryskdultvjdpaoq", alias="api_key"
-    )
+    api_url: str = Field("https://api.siliconflow.cn/v1/audio/speech", alias="api_url")
+    api_key: str = Field(..., alias="api_key")
     default_model: str = Field("FunAudioLLM/CosyVoice2-0.5B", alias="default_model")
     default_voice: str = Field(
         "speech:Dreamflowers:5bdstvc39i:xkqldnpasqmoqbakubom", alias="default_voice"
     )
     sample_rate: int = Field(32000, alias="sample_rate")
-    response_format: str = Field("mp3", alias="response_format")  
+    response_format: str = Field("mp3", alias="response_format")
     stream: bool = Field(True, alias="stream")
     speed: float = Field(1, alias="speed")
     gain: int = Field(0, alias="gain")
@@ -342,6 +338,8 @@ class SiliconFlowTTSConfig(I18nMixin):
         "stream": Description(en="Enable streaming mode", zh="启用流式模式"),
         "speed": Description(en="Speaking speed multiplier", zh="语速倍数"),
         "gain": Description(en="Audio gain adjustment", zh="音频增益调整"),
+    }
+
 
 class OpenAITTSConfig(I18nMixin):
     """Configuration for OpenAI-compatible TTS client."""
@@ -448,7 +446,7 @@ class TTSConfig(I18nMixin):
         "gpt_sovits_tts",
         "fish_api_tts",
         "sherpa_onnx_tts",
-        "siliconflow_tts",  
+        "siliconflow_tts",
         "openai_tts",  # Add openai_tts here
         "spark_tts",
         "minimax_tts",
@@ -469,7 +467,7 @@ class TTSConfig(I18nMixin):
     )
     siliconflow_tts: Optional[SiliconFlowTTSConfig] = Field(
         None, alias="siliconflow_tts"
-    )  # 添加新的配置项
+    )
     openai_tts: Optional[OpenAITTSConfig] = Field(None, alias="openai_tts")
     spark_tts: Optional[SparkTTSConfig] = Field(None, alias="spark_tts")
     minimax_tts: Optional[MinimaxTTSConfig] = Field(None, alias="minimax_tts")
@@ -501,6 +499,7 @@ class TTSConfig(I18nMixin):
         ),
         "siliconflow_tts": Description(
             en="Configuration for SiliconFlow TTS", zh="SiliconFlow TTS 配置"
+        ),
         "openai_tts": Description(
             en="Configuration for OpenAI-compatible TTS", zh="OpenAI 兼容 TTS 配置"
         ),
@@ -537,14 +536,12 @@ class TTSConfig(I18nMixin):
             values.fish_api_tts.model_validate(values.fish_api_tts.model_dump())
         elif tts_model == "sherpa_onnx_tts" and values.sherpa_onnx_tts is not None:
             values.sherpa_onnx_tts.model_validate(values.sherpa_onnx_tts.model_dump())
-        elif (
-            tts_model == "siliconflow_tts" and values.siliconflow_tts is not None
-        ):  # 添加新的验证逻辑
+        elif tts_model == "siliconflow_tts" and values.siliconflow_tts is not None:
             values.siliconflow_tts.model_validate(values.siliconflow_tts.model_dump())
         elif tts_model == "openai_tts" and values.openai_tts is not None:
             values.openai_tts.model_validate(values.openai_tts.model_dump())
         elif tts_model == "spark_tts" and values.spark_tts is not None:
-            values.spark_tts.model_validate(values.spark_tts.model_dump())        
+            values.spark_tts.model_validate(values.spark_tts.model_dump())
         elif tts_model == "minimax_tts" and values.minimax_tts is not None:
             values.minimax_tts.model_validate(values.minimax_tts.model_dump())
 
