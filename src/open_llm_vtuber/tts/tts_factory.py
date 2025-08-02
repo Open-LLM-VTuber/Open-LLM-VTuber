@@ -172,6 +172,19 @@ class TTSFactory:
                 pitch=kwargs.get("pitch"),
                 speed=kwargs.get("speed"),
             )
+        elif engine_type == "voicebox_tts":
+            from .voicebox_tts import TTSEngine as VoiceboxTTSEngine
+
+            return VoiceboxTTSEngine(
+                api_url=kwargs.get("api_url", "http://localhost:50021"),
+                speaker_id=kwargs.get("speaker_id", 1),
+                speed_scale=kwargs.get("speed_scale", 1.0),
+                pitch_scale=kwargs.get("pitch_scale", 0.0),
+                intonation_scale=kwargs.get("intonation_scale", 1.0),
+                volume_scale=kwargs.get("volume_scale", 1.0),
+                pre_phoneme_length=kwargs.get("pre_phoneme_length", 0.1),
+                post_phoneme_length=kwargs.get("post_phoneme_length", 0.1),
+            )
         else:
             raise ValueError(f"Unknown TTS engine type: {engine_type}")
 
