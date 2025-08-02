@@ -312,13 +312,18 @@ class ServiceContext:
         self.character_config = config.character_config
 
     def init_live2d(self, live2d_model_name: str) -> None:
-        logger.info(f"Initializing Live2D: {live2d_model_name}")
-        try:
-            self.live2d_model = Live2dModel(live2d_model_name)
-            self.character_config.live2d_model_name = live2d_model_name
-        except Exception as e:
-            logger.critical(f"Error initializing Live2D: {e}")
-            logger.critical("Try to proceed without Live2D...")
+        current_model_name = getattr(self.character_config, 'live2d_model_name', None) if self.character_config else None
+        if not self.live2d_model or (current_model_name != live2d_model_name):
+            logger.info(f"Initializing Live2D: {live2d_model_name} (current: {current_model_name})")
+            try:
+                self.live2d_model = Live2dModel(live2d_model_name)
+                if self.character_config:
+                    self.character_config.live2d_model_name = live2d_model_name
+            except Exception as e:
+                logger.critical(f"Error initializing Live2D: {e}")
+                logger.critical("Try to proceed without Live2D...")
+        else:
+            logger.info(f"Live2D already initialized with the same model: {live2d_model_name}")
 
     def init_asr(self, asr_config: ASRConfig) -> None:
         if not self.asr_engine or (self.character_config.asr_config != asr_config):
@@ -337,7 +342,7 @@ class ServiceContext:
             logger.info(f"Initializing TTS: {tts_config.tts_model}")
             self.tts_engine = TTSFactory.get_tts_engine(
                 tts_config.tts_model,
-                **getattr(tts_config, tts_config.tts_model.lower()).model_dump(),
+                **getattr(tts_config, tts_config.tts_model).model_dump(),
             )
             # saving config should be done after successful initialization
             self.character_config.tts_config = tts_config
@@ -354,7 +359,7 @@ class ServiceContext:
             logger.info(f"Initializing VAD: {vad_config.vad_model}")
             self.vad_engine = VADFactory.get_vad_engine(
                 vad_config.vad_model,
-                **getattr(vad_config, vad_config.vad_model.lower()).model_dump(),
+                **getattr(vad_config, vad_config.vad_model).model_dump(),
             )
             # saving config should be done after successful initialization
             self.character_config.vad_config = vad_config

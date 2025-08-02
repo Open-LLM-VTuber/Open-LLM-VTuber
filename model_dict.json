@@ -26,5 +26,33 @@
                 "": 1
             }
         }
+    },
+    {
+        "name": "shizuku",
+        "description": "",
+        "url": "/live2d-models/shizuku/runtime/shizuku.model3.json",
+        "kScale": 0.5,
+        "initialXshift": 0,
+        "initialYshift": 0,
+        "kXOffset": 1150,
+        "idleMotionGroupName": "Idle",
+        "emotionMap": {
+            "neutral": 0,
+            "anger": 0,
+            "disgust": 0,
+            "fear": 0,
+            "joy": 0,
+            "smirk": 0,
+            "sadness": 0,
+            "surprise": 0
+        },
+        "tapMotions": {
+            "HitAreaHead": {
+                "": 1
+            },
+            "HitAreaBody": {
+                "": 1
+            }
+        }
     }
 ]
