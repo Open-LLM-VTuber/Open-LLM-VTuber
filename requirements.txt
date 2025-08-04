@@ -2,7 +2,7 @@
 #    uv pip compile pyproject.toml -o requirements.txt
 aiohappyeyeballs==2.6.1
     # via aiohttp
-aiohttp==3.11.16
+aiohttp==3.12.14
     # via edge-tts
 aiosignal==1.3.2
     # via aiohttp
@@ -78,7 +78,7 @@ fsspec==2025.3.2
     # via torch
 groq==0.22.0
     # via open-llm-vtuber (pyproject.toml)
-h11==0.14.0
+h11==0.16.0
     # via
     #   httpcore
     #   uvicorn
@@ -159,7 +159,7 @@ propcache==0.3.1
     # via
     #   aiohttp
     #   yarl
-protobuf==6.30.2
+protobuf==6.31.1
     # via onnxruntime
 pycparser==2.22
     # via cffi
@@ -862,7 +862,7 @@ pyyaml==6.0.2
     #   open-llm-vtuber (pyproject.toml)
     #   pre-commit
     #   uvicorn
-requests==2.32.3
+requests==2.32.4
     # via open-llm-vtuber (pyproject.toml)
 rich==14.0.0
     # via
@@ -896,7 +896,7 @@ soundfile==0.13.1
     # via open-llm-vtuber (pyproject.toml)
 srt==3.5.3
     # via edge-tts
-starlette==0.46.1
+starlette==0.47.2
     # via fastapi
 sympy==1.13.1
     # via
@@ -906,7 +906,7 @@ tabulate==0.9.0
     # via edge-tts
 tomli==2.2.1
     # via open-llm-vtuber (pyproject.toml)
-torch==2.6.0
+torch==2.7.1
     # via
     #   open-llm-vtuber (pyproject.toml)
     #   silero-vad
@@ -939,7 +939,7 @@ typing-extensions==4.13.1
     #   uvicorn
 typing-inspection==0.4.0
     # via pydantic
-urllib3==2.3.0
+urllib3==2.5.0
     # via requests
 uvicorn==0.34.0
     # via
