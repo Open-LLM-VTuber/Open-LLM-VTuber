@@ -113,7 +113,7 @@ We use **Ruff** to unify code style and check for potential issues. All submitte
 
 **D3.2. Naming Conventions**
 * Follow Python's **PEP 8** style guide.
-* Use **snake\_case** for naming variables, functions, and modules.
+* Use **snake_case** for naming variables, functions, and modules.
 * Names should be clear, descriptive, and unambiguous. Avoid single-letter variable names (except for loop counters).
 
 **D3.3. Type Hints & Docstrings**
