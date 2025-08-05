@@ -1,6 +1,6 @@
 # Open-LLM-VTuber AI Coding Assistant: Context & Guidelines
 
-`version: 2025.08.04-3`
+`version: 2025.08.05-1`
 
 ## 1. Core Project Context
 
@@ -33,17 +33,17 @@ conf.yaml            # User's configuration file, generated from a template
 
 ### 1.1. Repository Structure
 
-**- Frontend Repository: The frontend is a React application developed in a separate repository: `Open-LLM-VTuber-Web`. Its built artifacts are integrated into the `frontend/` directory of this backend repository via a git submodule.**
+- Frontend Repository: The frontend is a React application developed in a separate repository: `Open-LLM-VTuber-Web`. Its built artifacts are integrated into the `frontend/` directory of this backend repository via a git submodule.
 
-**- Documentation Repository: The official documentation site is hosted in the `open-llm-vtuber.github.io` repository. When asked to generate documentation, create Markdown files in the project root. The user will be responsible for migrating them to the documentation site.**
+- Documentation Repository: The official documentation site is hosted in the `open-llm-vtuber.github.io` repository. When asked to generate documentation, create Markdown files in the project root. The user will be responsible for migrating them to the documentation site.
 
 ### 1.2. Configuration Files
 
-**- Configuration templates are located in the `config_templates/` directory:**
-**- `conf.default.yaml`: Template for English-speaking users.**
-**- `conf.ZH.default.yaml`: Template for Chinese-speaking users.**
-**- When modifying the configuration structure, both template files MUST be updated accordingly.**
-**- Configuration is validated on load using the Pydantic models defined in `src/open_llm_vtuber/config_manager/main.py`. Any changes to configuration options must be reflected in these models.**
+- Configuration templates are located in the `config_templates/` directory:
+- `conf.default.yaml`: Template for English-speaking users.
+- `conf.ZH.default.yaml`: Template for Chinese-speaking users.
+- When modifying the configuration structure, both template files MUST be updated accordingly.
+- Configuration is validated on load using the Pydantic models defined in `src/open_llm_vtuber/config_manager/main.py`. Any changes to configuration options must be reflected in these models.
 
 ## 2. Overarching Coding Philosophy
 
@@ -58,7 +58,7 @@ conf.yaml            # User's configuration file, generated from a template
 
   - All Python code **MUST** be formatted with `uv run ruff format`.
   - All Python code **MUST** pass `uv run ruff check` without errors.
-  - Import statements should be grouped by standard library, third-party, and local modules and sorted by the length of the module name.
+  - Import statements should be grouped by standard library, third-party, and local modules and sorted alphabetically (PEP 8).
 
 ### 3.2. Naming Conventions (PEP 8)
 
@@ -80,7 +80,7 @@ conf.yaml            # User's configuration file, generated from a template
   - All public modules, functions, classes, and methods **MUST** have a docstring in English.
   - Use the **Google Python Style** for docstrings.
   - Docstrings **MUST** include:
-    1.  A one-line summary.
+    1.  Summary.
     2.  `Args:` section describing each parameter, its type, and its purpose.
     3.  `Returns:` section describing the return value, its type, and its meaning.
     4.  (Optional but encouraged) `Raises:` section for any exceptions thrown.
@@ -89,18 +89,18 @@ conf.yaml            # User's configuration file, generated from a template
 ### 3.5. Logging
 
   - Use the `loguru` module for all informational or error output.
-  - **DO NOT** use `print()` or the standard `logging` module for debugging or status messages in the application code.
   - Log messages should be in English, clear, and informative. Use emoji when appropriate.
 
 ## 4. Architectural Principles
 
-### 4.2. Dependency Management
+### 4.1. Dependency Management
 
-  - Use existing libraries defined in `pyproject.toml` to do work.
   - First, try to solve the problem using the Python standard library or existing project dependencies defined in `pyproject.toml`.
   - If a new dependency is required, it must have a compatible license and be well-maintained.
+  - Use `uv add`, `uv remove`, `uv run` instead of pip to manage dependencies. If user uses conda, install uv with pip then.
+  - After adding a new dependency, in addition to `pyproject.toml`, you must add the dependency to `requirements.txt` as well.
 
-### 4.3. Cross-Platform Compatibility
+### 4.2. Cross-Platform Compatibility
 
   - All core logic **MUST** run on macOS, Windows, and Linux.
   - If a feature is platform-specific (e.g., uses a Windows-only API) or hardware-specific (e.g., CUDA), it **MUST** be an optional component. The application should start and run core features even if that component is not available. Use graceful fallbacks or clear error messages.
