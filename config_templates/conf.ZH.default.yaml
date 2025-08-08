@@ -390,6 +390,11 @@ character_config:
       base_url: 'http://localhost:8880/v1' # TTS 服务器的基础 URL 地址
       file_extension: 'mp3' # 音频文件格式（'mp3' 或 'wav'）
 
+    parler_tts:
+      model_name: "parler-tts/parler-tts-mini-v1"
+      device: "auto"  # 您可以手动将其设置为 'cpu'、'cuda'、'cuda:0' 或 'mps'
+      voice_description: "A cheerful and high-pitched female voice, slightly exaggerated and playful, with a cute anime-like tone and expressive intonation. The recording is close-up and crystal clear, with no background noise."
+
   # =================== Voice Activity Detection ===================
   vad_config:
     vad_model: null
