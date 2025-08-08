@@ -149,6 +149,15 @@ class TTSFactory:
                 pitch=kwargs.get("pitch"),
                 speed=kwargs.get("speed"),
             )
+        elif engine_type == "parler_tts":
+            from .parler_tts import ParlerTTSEngine
+
+            return ParlerTTSEngine(
+                model_name=kwargs.get("model_name"),
+                device=kwargs.get("device"),
+                voice_description=kwargs.get("voice_description"),
+            )
+
         else:
             raise ValueError(f"Unknown TTS engine type: {engine_type}")
 
