@@ -35,7 +35,7 @@ class FasterWhisperConfig(I18nMixin):
     compute_type: Literal["int8", "float16", "float32"] = Field(
         "int8", alias="compute_type"
     )
-
+    prompt: str = Field(None, alias="prompt")
     DESCRIPTIONS: ClassVar[Dict[str, Description]] = {
         "model_path": Description(
             en="Path to the Faster Whisper model", zh="Faster Whisper 模型路径"
@@ -55,6 +55,9 @@ class FasterWhisperConfig(I18nMixin):
             en="Compute type for the model (int8, float16, or float32)",
             zh="模型的计算类型（int8、float16 或 float32）",
         ),
+        "prompt": Description(
+            en="prompt", zh="prompt"
+        )
     }
 
 
@@ -66,7 +69,7 @@ class WhisperCPPConfig(I18nMixin):
     print_realtime: bool = Field(False, alias="print_realtime")
     print_progress: bool = Field(False, alias="print_progress")
     language: str = Field("auto", alias="language")
-
+    prompt: str = Field(None, alias="prompt")
     DESCRIPTIONS: ClassVar[Dict[str, Description]] = {
         "model_name": Description(
             en="Name of the Whisper model", zh="Whisper 模型名称"
@@ -83,6 +86,9 @@ class WhisperCPPConfig(I18nMixin):
         "language": Description(
             en="Language code (e.g., auto, en, zh)", zh="语言代码（如 auto、en、zh）"
         ),
+        "prompt": Description(
+            en="prompt", zh="prompt"
+        )
     }
 
 
@@ -92,7 +98,7 @@ class WhisperConfig(I18nMixin):
     name: str = Field(..., alias="name")
     download_root: str = Field(..., alias="download_root")
     device: Literal["cpu", "cuda"] = Field("cpu", alias="device")
-
+    prompt: str = Field(None, alias="prompt")
     DESCRIPTIONS: ClassVar[Dict[str, Description]] = {
         "name": Description(en="Name of the Whisper model", zh="Whisper 模型名称"),
         "download_root": Description(
@@ -101,8 +107,10 @@ class WhisperConfig(I18nMixin):
         "device": Description(
             en="Device to use for inference (cpu or cuda)", zh="推理设备（cpu 或 cuda）"
         ),
+        "prompt": Description(
+            en="prompt", zh="prompt"
+        )
     }
-
 
 class FunASRConfig(I18nMixin):
     """Configuration for FunASR."""
