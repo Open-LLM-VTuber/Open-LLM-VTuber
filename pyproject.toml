@@ -30,7 +30,7 @@ dependencies = [
     "sherpa-onnx>=1.10.39",
     "soundfile>=0.12.1",
     "tomli>=2.2.1",
-    "torch==2.2.2; sys_platform == 'darwin' and platform_machine == 'x86_64'",
+    "torch==2.7.1; sys_platform == 'darwin' and platform_machine == 'x86_64'",
     "torch>=2.6.0; sys_platform == 'darwin' and platform_machine == 'arm64'",
     "torch>=2.6.0; sys_platform != 'darwin'",
     "tqdm>=4.67.1",
@@ -42,7 +42,7 @@ dependencies = [
 
 [project.optional-dependencies]
 bilibili = [
-    "aiohttp~=3.9.0",
+    "aiohttp~=3.12.14",
     "Brotli~=1.1.0",
     "yarl~=1.9.3",
 ]
