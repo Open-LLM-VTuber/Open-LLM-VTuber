@@ -20,7 +20,7 @@ class VoiceRecognition(ASRInterface):
 
     def transcribe_np(self, audio: np.ndarray) -> str:
         if self.prompt is not None:
-            result = self.model.transcribe(audio, prompt=self.prompt)
+            result = self.model.transcribe(audio, initial_prompt=self.prompt)
         else:
             result = self.model.transcribe(audio)
         full_text = result["text"]
