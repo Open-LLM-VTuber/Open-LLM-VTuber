@@ -256,7 +256,7 @@ UPGRADE_TEXTS = {
     "zh": {
         "model_dict_not_found": "⚠️ 未找到 model_dict.json，跳过升级。",
         "model_dict_read_error": "❌ 读取 model_dict.json 失败: {error}",
-        "upgrade_success": "✅ model_dict.json 已成功升级至 v1.2.0 格式 ({language} 语言)",
+        "upgrade_success": "✅ model_dict.json 已成功升级至 v1.2.1 格式 ({language} 语言)",
         "already_latest": "model_dict.json 已是最新格式。",
         "upgrade_error": "❌ 升级 model_dict.json 失败: {error}",
         "no_upgrade_routine": "没有适用于版本 {version} 的升级程序",
@@ -265,7 +265,7 @@ UPGRADE_TEXTS = {
     "en": {
         "model_dict_not_found": "⚠️ model_dict.json not found. Skipping upgrade.",
         "model_dict_read_error": "❌ Failed to read model_dict.json: {error}",
-        "upgrade_success": "✅ model_dict.json upgraded to v1.2.0 format ({language} language)",
+        "upgrade_success": "✅ model_dict.json upgraded to v1.2.1 format ({language} language)",
         "already_latest": "model_dict.json already in latest format.",
         "upgrade_error": "❌ Failed to upgrade model_dict.json: {error}",
         "no_upgrade_routine": "No upgrade routine for version {version}",

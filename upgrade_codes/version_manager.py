@@ -2,8 +2,7 @@ import json
 from pathlib import Path
 from packaging.version import parse as parse_version
 from upgrade_codes.upgrade_core.constants import USER_CONF, UPGRADE_TEXTS
-from upgrade_codes.from_version.v_1_1_1 import to_v_1_2_0
-# from upgrade_codes.from_version.v_1_2_0 import to_v_1_3_0  # future upgrade
+from upgrade_codes.from_version.v_1_1_1 import to_v_1_2_1
 
 
 class VersionUpgradeManager:
@@ -23,16 +22,16 @@ class VersionUpgradeManager:
             {
                 "from_range": (
                     "v1.1.1",
-                    "v1.2.0",
+                    "v1.2.1",
                 ),  # Inclusive lower bound, exclusive upper bound
                 "from_version": "v1.1.1",
-                "to_version": "v1.2.0",
-                "module": to_v_1_2_0,
+                "to_version": "v1.2.1",
+                "module": to_v_1_2_1,
             },
             # Future upgrade example:
             # {
-            #     "from_range": ("v1.2.0", "v1.3.0"),
-            #     "from_version": "v1.2.0",
+            #     "from_range": ("v1.2.1", "v1.3.0"),
+            #     "from_version": "v1.2.1",
             #     "to_version": "v1.3.0",
             #     "module": to_v_1_3_0,
             # },
