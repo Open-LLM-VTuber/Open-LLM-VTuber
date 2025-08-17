@@ -1,0 +1,12 @@
+The currently activated Python version 3.10.18 is not supported by the project (^3.11).
+Trying to find and use a compatible version.
+Using python3.12 (3.12.11)
+INFO:     Started server process [5185]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+INFO:     127.0.0.1:42254 - "GET / HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [5185]

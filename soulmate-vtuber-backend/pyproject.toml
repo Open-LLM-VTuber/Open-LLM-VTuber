@@ -1,0 +1,15 @@
+[tool.poetry]
+name = "soulmate-vtuber-backend"
+version = "0.1.0"
+description = ""
+authors = ["Jules AI <jules@our.company>"]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+fastapi = "^0.109.0"
+uvicorn = {extras = ["standard"], version = "^0.27.0"}
+requests = "^2.31.0" # 新增 curl 的替代品
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
