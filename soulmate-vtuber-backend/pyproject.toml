@@ -1,14 +1,25 @@
 [tool.poetry]
 name = "soulmate-vtuber-backend"
 version = "0.1.0"
-description = ""
-authors = ["Jules AI <jules@our.company>"]
+description = "The backend service for the Soulmate VTuber application."
+authors = ["Your Name <you@example.com>"]
+readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.11"
 fastapi = "^0.109.0"
 uvicorn = {extras = ["standard"], version = "^0.27.0"}
-requests = "^2.31.0" # 新增 curl 的替代品
+pydantic = "^2.5.0"
+pydantic-settings = "^2.2.1"
+google-generativeai = "^0.5.4"
+sqlalchemy = "^2.0.25"
+alembic = "^1.13.1"
+pyyaml = "^6.0.1"
+websockets = "^12.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.0.0"
+pytest-mock = "^3.12.0"
 
 [build-system]
 requires = ["poetry-core"]
