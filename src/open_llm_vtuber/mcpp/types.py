@@ -20,7 +20,7 @@ class MCPServer:
     command: str
     args: list[str] = field(default_factory=list)
     env: Optional[dict[str, str]] = None
-    cwd: Optional[str] = None
+    cwd: str | None = None
     timeout: Optional[timedelta] = timedelta(seconds=30)
     description: str = "No description available."
 
