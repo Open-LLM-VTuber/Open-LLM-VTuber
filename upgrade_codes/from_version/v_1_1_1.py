@@ -2,7 +2,7 @@ import copy
 import yaml
 
 
-class to_v_1_2_0:
+class to_v_1_2_1:
     def __init__(self, old_model_list, conf_yaml_path, language):
         """
         :param old_model_list: list of dicts (each representing a Live2D model config)
@@ -22,7 +22,8 @@ class to_v_1_2_0:
                 "shizuku-local-001": "mao_pro_001",
                 "distil-medium.en": "large-v3-turbo",
                 "en": "zh",
-                "v1.1.1": "v1.2.0",
+                "v1.1.1": "v1.2.1",
+                "v1.2.0": "v1.2.1",
             },
             "en": {
                 "shizuku.png": "mao.png",
@@ -30,7 +31,8 @@ class to_v_1_2_0:
                 "shizuku-local": "mao_pro",
                 "shizuku-local-001": "mao_pro_001",
                 "distil-medium.en": "large-v3-turbo",
-                "v1.1.1": "v1.2.0",
+                "v1.1.1": "v1.2.1",
+                "v1.2.0": "v1.2.1",
             },
         }
 
@@ -79,7 +81,7 @@ class to_v_1_2_0:
 
             # Update system version number
             if "system_config" in data and isinstance(data["system_config"], dict):
-                data["system_config"]["conf_version"] = "v1.2.0"
+                data["system_config"]["conf_version"] = "v1.2.1"
 
             # Update VAD config
             vad_config = data.get("character_config", {}).get("vad_config", {})
