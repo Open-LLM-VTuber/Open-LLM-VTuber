@@ -22,8 +22,6 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 # Copy full source code
 COPY . /app
 
-RUN git submodule update --init --recursive
-
 # Install the actual project (so `from open_llm_vtuber import ...` works)
 RUN uv pip install --no-deps .
 
