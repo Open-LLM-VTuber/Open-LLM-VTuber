@@ -6,7 +6,7 @@
 
 # 系统设置：与服务器初始化相关的设置
 system_config:
-  conf_version: 'v1.2.0' # 配置文件版本
+  conf_version: 'v1.2.1' # 配置文件版本
   host: 'localhost' # 服务器监听的地址，'0.0.0.0' 表示监听所有网络接口；如果需要安全，可以使用 '127.0.0.1'（仅本地访问）
   port: 12393 # 服务器监听的端口
   config_alts_dir: 'characters' # 用于存放替代配置的目录
