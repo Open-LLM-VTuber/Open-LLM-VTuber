@@ -1,0 +1,29 @@
+name: open-llm-vtuber
+
+services:
+  vtuber:
+    image: open-llm-vtuber:cpu
+    container_name: open-llm-vtuber-cpu
+
+    build:
+      context: ../
+      dockerfile: dockerfiles/dockerfile.cpu
+      # 不指定 platform，默认使用宿主架构（mac=arm64，Windows/多数Linux=amd64）
+
+    ports:
+      - "12393:12393"
+
+    # 仅持久化虚拟环境与模型，跨平台无路径问题
+    volumes:
+      - venv_data:/app/.venv
+      - models_data:/app/models
+
+    environment:
+      - UV_LINK_MODE=copy
+
+    restart: unless-stopped
+
+
+volumes:
+  venv_data:
+  models_data:

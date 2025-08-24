@@ -1,0 +1,28 @@
+# dockerfiles/dockerfile.cpu
+FROM python:3.10-slim AS base
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    UV_LINK_MODE=copy
+
+WORKDIR /app
+
+# 基础系统依赖（跨平台通用）
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+      ffmpeg git curl ca-certificates && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# 装 uv（从官方镜像复制可执行文件）
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
+
+# 拷项目（务必包含 pyproject.toml / uv.lock / run_server.py）
+COPY . /app
+
+EXPOSE 12393
+
+# 运行期：uv 会按 pyproject/uv.lock 自动解析并安装到 /app/.venv
+# 首次启动会安装依赖，之后因 .venv 被卷持久化，启动会很快
+CMD ["uv", "run", "run_server.py"]
