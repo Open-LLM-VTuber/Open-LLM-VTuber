@@ -1,33 +1,29 @@
-name: open-llm-vtuber:cpu
+name: open-llm-vtuber
+
 services:
   vtuber:
-    platform: linux/amd64
     image: open-llm-vtuber:cpu
     container_name: open-llm-vtuber-cpu
 
     build:
-      context: ../                  
+      context: ../
       dockerfile: dockerfiles/dockerfile.cpu
-      args:
-        INSTALL_BARK: "true"
+      # 不指定 platform，默认使用宿主架构（mac=arm64，Windows/多数Linux=amd64）
 
     ports:
       - "12393:12393"
 
+    # 仅持久化虚拟环境与模型，跨平台无路径问题
     volumes:
+      - venv_data:/app/.venv
       - models_data:/app/models
 
     environment:
       - UV_LINK_MODE=copy
 
-    healthcheck:
-      test: ["CMD", "curl", "-fsS", "http://localhost:12393/"]   # 若有 /health 就改成 /health
-      interval: 30s
-      timeout: 5s
-      retries: 5
-      start_period: 20s
-
     restart: unless-stopped
 
+
 volumes:
+  venv_data:
   models_data:

@@ -67,7 +67,6 @@ chat_history/
 knowledge_base/
 submodules/MeloTTS
 openapi_*.json
-mcp_servers.json
 
 # Windows builds
 *.exe
