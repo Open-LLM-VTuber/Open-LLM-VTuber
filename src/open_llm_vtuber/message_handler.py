@@ -6,8 +6,12 @@ from collections import defaultdict
 
 class MessageHandler:
     def __init__(self):
-        self._response_events: Dict[str, Dict[Tuple[str, Optional[str]], asyncio.Event]] = defaultdict(dict)
-        self._response_data: Dict[str, Dict[Tuple[str, Optional[str]], dict]] = defaultdict(dict)
+        self._response_events: Dict[
+            str, Dict[Tuple[str, Optional[str]], asyncio.Event]
+        ] = defaultdict(dict)
+        self._response_data: Dict[str, Dict[Tuple[str, Optional[str]], dict]] = (
+            defaultdict(dict)
+        )
 
     async def wait_for_response(
         self,

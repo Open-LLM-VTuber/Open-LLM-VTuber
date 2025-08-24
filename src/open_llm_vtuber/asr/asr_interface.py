@@ -20,6 +20,8 @@ class ASRInterface(metaclass=abc.ABCMeta):
         Returns:
             str: The transcription result.
         """
+        if audio.dtype != np.float32:
+            audio = audio.astype(np.float32)
         return await asyncio.to_thread(self.transcribe_np, audio)
 
     @abc.abstractmethod

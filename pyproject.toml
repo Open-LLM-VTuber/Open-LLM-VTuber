@@ -1,6 +1,6 @@
 [project]
 name = "open-llm-vtuber"
-version = "1.1.3"
+version = "1.2.0"
 description = "Talk to any LLM with hands-free voice interaction, voice interruption, and Live2D taking face running locally across platforms"
 readme = "README.md"
 requires-python = ">=3.10,<3.13"
@@ -57,3 +57,10 @@ open-llm-vtuber = { path = ".", editable = true }
 [tool.pixi.dependencies]
 cudnn = ">=8.0,<9"
 cudatoolkit = ">=11.0,<12"
+
+[tool.ruff]
+target-version = "py310"
+
+[tool.ruff.lint]
+# Ignore E402 (module level import not at top of file) for the run_bilibili_live.py script
+per-file-ignores = { "scripts/run_bilibili_live.py" = ["E402"] }

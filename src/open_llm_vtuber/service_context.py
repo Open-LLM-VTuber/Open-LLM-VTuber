@@ -16,7 +16,6 @@ from .mcpp.server_registry import ServerRegistry
 from .mcpp.tool_manager import ToolManager
 from .mcpp.mcp_client import MCPClient
 from .mcpp.tool_executor import ToolExecutor
-from .mcpp.json_detector import StreamJSONDetector
 from .mcpp.tool_adapter import ToolAdapter
 
 from .asr.asr_factory import ASRFactory
@@ -69,7 +68,7 @@ class ServiceContext:
         self.mcp_prompt: str = ""
 
         self.history_uid: str = ""  # Add history_uid field
-        
+
         self.send_text: Callable = None
         self.client_uid: str = None
 
@@ -114,9 +113,11 @@ class ServiceContext:
 
             # 2. Use ToolAdapter to get the MCP prompt and tools
             if not self.tool_adapter:
-                logger.error("ToolAdapter not initialized before calling _init_mcp_components.")
+                logger.error(
+                    "ToolAdapter not initialized before calling _init_mcp_components."
+                )
                 self.mcp_prompt = "[Error: ToolAdapter not initialized]"
-                return # Exit if ToolAdapter is mandatory and not initialized
+                return  # Exit if ToolAdapter is mandatory and not initialized
 
             try:
                 (
@@ -134,7 +135,7 @@ class ServiceContext:
                 )
 
                 # 3. Initialize ToolManager with the fetched formatted tools
-               
+
                 _, raw_tools_dict = await self.tool_adapter.get_server_and_tool_info(
                     enabled_servers
                 )
@@ -155,7 +156,9 @@ class ServiceContext:
 
             # 4. Initialize MCPClient
             if self.mcp_server_registery:
-                self.mcp_client = MCPClient(self.mcp_server_registery, self.send_text, self.client_uid)
+                self.mcp_client = MCPClient(
+                    self.mcp_server_registery, self.send_text, self.client_uid
+                )
                 logger.info("MCPClient initialized for this session.")
             else:
                 logger.error(
@@ -236,7 +239,10 @@ class ServiceContext:
         self.client_uid = client_uid
 
         # Initialize session-specific MCP components
-        await self._init_mcp_components(self.character_config.agent_config.agent_settings.basic_memory_agent.use_mcpp, self.character_config.agent_config.agent_settings.basic_memory_agent.mcp_enabled_servers)
+        await self._init_mcp_components(
+            self.character_config.agent_config.agent_settings.basic_memory_agent.use_mcpp,
+            self.character_config.agent_config.agent_settings.basic_memory_agent.mcp_enabled_servers,
+        )
 
         logger.debug(f"Loaded service context with cache: {character_config}")
 
@@ -272,15 +278,23 @@ class ServiceContext:
         self.init_vad(config.character_config.vad_config)
 
         # Initialize shared ToolAdapter if it doesn't exist yet
-        if not self.tool_adapter and config.character_config.agent_config.agent_settings.basic_memory_agent.use_mcpp:
+        if (
+            not self.tool_adapter
+            and config.character_config.agent_config.agent_settings.basic_memory_agent.use_mcpp
+        ):
             if not self.mcp_server_registery:
-                logger.info("Initializing shared ServerRegistry within load_from_config.")
+                logger.info(
+                    "Initializing shared ServerRegistry within load_from_config."
+                )
                 self.mcp_server_registery = ServerRegistry()
             logger.info("Initializing shared ToolAdapter within load_from_config.")
             self.tool_adapter = ToolAdapter(server_registery=self.mcp_server_registery)
 
         # Initialize MCP Components before initializing Agent
-        await self._init_mcp_components(config.character_config.agent_config.agent_settings.basic_memory_agent.use_mcpp, config.character_config.agent_config.agent_settings.basic_memory_agent.mcp_enabled_servers)
+        await self._init_mcp_components(
+            config.character_config.agent_config.agent_settings.basic_memory_agent.use_mcpp,
+            config.character_config.agent_config.agent_settings.basic_memory_agent.mcp_enabled_servers,
+        )
 
         # init agent from character config
         await self.init_agent(
@@ -335,7 +349,7 @@ class ServiceContext:
             logger.info("VAD is disabled.")
             self.vad_engine = None
             return
-            
+
         if not self.vad_engine or (self.character_config.vad_config != vad_config):
             logger.info(f"Initializing VAD: {vad_config.vad_model}")
             self.vad_engine = VADFactory.get_vad_engine(

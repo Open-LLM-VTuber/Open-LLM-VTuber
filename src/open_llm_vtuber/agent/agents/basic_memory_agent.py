@@ -331,9 +331,9 @@ class BasicMemoryAgent(AgentInterface):
                             "input": tool_call_data["input"],
                         }
                     )
-                elif event["type"] == "message_delta":
-                    if event["data"]["delta"].get("stop_reason"):
-                        stop_reason = event["data"]["delta"].get("stop_reason")
+                # elif event["type"] == "message_delta":
+                #     if event["data"]["delta"].get("stop_reason"):
+                #         stop_reason = event["data"]["delta"].get("stop_reason")
                 elif event["type"] == "message_stop":
                     break
                 elif event["type"] == "error":
@@ -393,7 +393,7 @@ class BasicMemoryAgent(AgentInterface):
                 if tool_results_for_llm:
                     messages.append({"role": "user", "content": tool_results_for_llm})
 
-                stop_reason = None
+                # stop_reason = None
                 continue
             else:
                 if current_turn_text:

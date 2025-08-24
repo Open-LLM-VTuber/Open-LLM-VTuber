@@ -187,6 +187,7 @@ character_config:
       language: 'en' # en, zh, or something else. put nothing for auto-detect.
       device: 'auto' # cpu, cuda, or auto. faster-whisper doesn't support mps
       compute_type: 'int8'
+      prompt: '' # You can put a prompt here to help the model understand the context of the audio
 
     whisper_cpp:
       # all available models are listed on https://abdeladim-s.github.io/pywhispercpp/#pywhispercpp.constants.AVAILABLE_MODELS
@@ -195,11 +196,13 @@ character_config:
       print_realtime: False
       print_progress: False
       language: 'auto' # en, zh, auto,
+      prompt: '' # You can put a prompt here to help the model understand the context of the audio
 
     whisper:
       name: 'medium'
       download_root: 'models/whisper'
       device: 'cpu'
+      prompt: '' # You can put a prompt here to help the model understand the context of the audio
 
     # FunASR currently needs internet connection on launch
     # to download / check the models. You can disconnect the internet after initialization.
@@ -271,6 +274,7 @@ character_config:
     #   'azure_tts', 'pyttsx3_tts', 'edge_tts', 'bark_tts',
     #   'cosyvoice_tts', 'melo_tts', 'coqui_tts',
     #   'fish_api_tts', 'x_tts', 'gpt_sovits_tts', 'sherpa_onnx_tts'
+    #   'minimax_tts'
 
     azure_tts:
       api_key: 'azure-api-key'
@@ -360,6 +364,17 @@ character_config:
       language: 'en'
       device: ''
 
+    siliconflow_tts:
+      api_url: "https://api.siliconflow.cn/v1/audio/speech"
+      api_key: "your key"
+      default_model: "FunAudioLLM/CosyVoice2-0.5B"
+      default_voice: "speech:Dreamflowers:5bdstvc39i:xkqldnpasqmoqbakubom your voice name"  # Default voice configuration in the format: "speech:MODEL_NAME:VOICE_ID:your voice name"
+      sample_rate: 32000  # Control the output sample rate. The default values and differ for different video output types, as follows: opus: Supports 48000 Hz. wav, pcm: Supports 8000, 16000, 24000, 32000, 44100 Hz, with a default of 44100 Hz. mp3: Supports 32000, 44100 Hz, with a default of 44100 Hz.
+      response_format: "mp3" # The format to audio out. Supported formats are mp3, opus, wav, pcm
+      stream: true
+      speed: 1
+      gain: 0
+
     # pip install sherpa-onnx
     # documentation: https://k2-fsa.github.io/sherpa/onnx/index.html
     # TTS models download: https://github.com/k2-fsa/sherpa-onnx/releases/tag/tts-models
@@ -394,6 +409,16 @@ character_config:
       base_url: 'http://localhost:8880/v1' # Base URL of the TTS server
       file_extension: 'mp3' # Audio file format ('mp3' or 'wav')
 
+    # For more details, see: https://platform.minimaxi.com/document/Announcement
+    minimax_tts:
+      group_id: '' # Your minimax group_id
+      api_key: '' # Your minimax api_key
+      # Supported models: 'speech-02-hd', 'speech-02-turbo' (recommended: 'speech-02-turbo')
+      model: 'speech-02-turbo' # minimax model name
+      voice_id: 'female-shaonv' # minimax voice id, default is 'female-shaonv'
+      # Custom pronunciation dictionary, default empty.
+      # Example: '{"tone": ["测试/(ce4)(shi4)", "危险/dangerous"]}'
+      pronunciation_dict: ''
 
   # =================== Voice Activity Detection ===================
   vad_config:

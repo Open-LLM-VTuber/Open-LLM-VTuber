@@ -78,5 +78,5 @@ class LLMFactory:
             raise ValueError(f"Unsupported LLM provider: {llm_provider}")
 
 
-# 使用工廠創建 LLM 實例
+# Creating an LLM instance using a factory
 # llm_instance = LLMFactory.create_llm("ollama", **config_dict)

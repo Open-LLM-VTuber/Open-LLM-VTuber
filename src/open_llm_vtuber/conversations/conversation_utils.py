@@ -14,8 +14,6 @@ from ..asr.asr_interface import ASRInterface
 from ..live2d_model import Live2dModel
 from ..tts.tts_interface import TTSInterface
 from ..utils.stream_audio import prepare_audio_payload
-from ..service_context import ServiceContext
-from ..agent.agents.agent_interface import AgentInterface
 
 
 # Convert class methods to standalone functions

@@ -40,7 +40,7 @@ async def handle_conversation_trigger(
             if prompt_file:
                 user_input = prompt_loader.load_util(prompt_file)
             else:
-                logger.warning(f"Proactive speak prompt not configured, using default")
+                logger.warning("Proactive speak prompt not configured, using default")
                 user_input = "Please say something."
         except Exception as e:
             logger.error(f"Error loading proactive speak prompt: {e}")

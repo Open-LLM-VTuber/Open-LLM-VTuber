@@ -3,6 +3,7 @@ conf.yaml
 
 # ignore non-default background images
 /backgrounds/*
+!/backgrounds/README.md
 
 # ignore non-default live2d models
 /live2d-models/*
@@ -11,6 +12,7 @@ conf.yaml
 
 # ignore non-default character configs
 /characters/*
+!/characters/README.md
 # but all of the defaults are already tracked, so no need to un-ignore them
 
 # ignore avatars

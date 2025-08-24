@@ -79,7 +79,7 @@ async def process_single_conversation(
             )
 
         if skip_history:
-            logger.debug(f"Skipping storing user input to history (proactive speak)")
+            logger.debug("Skipping storing user input to history (proactive speak)")
 
         logger.info(f"User input: {input_text}")
         if images:

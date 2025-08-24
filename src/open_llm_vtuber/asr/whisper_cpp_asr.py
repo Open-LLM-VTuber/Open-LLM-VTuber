@@ -13,7 +13,7 @@ class VoiceRecognition(ASRInterface):
         language: str = "en",
         print_realtime=False,
         print_progress=False,
-        **kwargs,
+        prompt: str = None,
     ) -> None:
         self.model = Model(
             model=model_name,
@@ -21,11 +21,16 @@ class VoiceRecognition(ASRInterface):
             language=language,
             print_realtime=print_realtime,
             print_progress=print_progress,
-            **kwargs,
         )
+        self.prompt = prompt
 
     def transcribe_np(self, audio: np.ndarray) -> str:
-        segments = self.model.transcribe(audio, new_segment_callback=logger.info)
+        if self.prompt is not None:
+            segments = self.model.transcribe(
+                audio, new_segment_callback=logger.info, prompt=self.prompt
+            )
+        else:
+            segments = self.model.transcribe(audio, new_segment_callback=logger.info)
         full_text = ""
         for segment in segments:
             full_text += segment.text

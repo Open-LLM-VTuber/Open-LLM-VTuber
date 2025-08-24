@@ -2,7 +2,7 @@ import hashlib
 import hmac
 import json
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 
 import httpx
 from loguru import logger
@@ -96,7 +96,7 @@ class TencentTranslate(TranslateInterface):
     def translate(self, text: str) -> str:
         """Translate text"""
         timestamp = int(time.time())
-        date = datetime.utcfromtimestamp(timestamp).strftime("%Y-%m-%d")
+        date = datetime.fromtimestamp(timestamp, timezone.utc).strftime("%Y-%m-%d")
 
         payload = json.dumps(
             {

@@ -1,7 +1,6 @@
 from dataclasses import dataclass, field
 from datetime import timedelta
-from typing import Dict, List, Optional, Any
-from pathlib import Path
+from typing import Optional, Any
 
 
 @dataclass
@@ -11,15 +10,15 @@ class MCPServer:
     Args:
         name (str): Name of the server.
         command (str): Command to run the server.
-        args (List[str], optional): Arguments for the command. Defaults to an empty list.
-        env (Optional[Dict[str, str]], optional): Environment variables for the command. Defaults to None.
+        args (list[str], optional): Arguments for the command. Defaults to an empty list.
+        env (Optional[dict[str, str]], optional): Environment variables for the command. Defaults to None.
         timeout (Optional[timedelta], optional): Timeout for the command. Defaults to 10 seconds.
     """
 
     name: str
     command: str
-    args: List[str] = field(default_factory=list)
-    env: Optional[Dict[str, str]] = None
+    args: list[str] = field(default_factory=list)
+    env: Optional[dict[str, str]] = None
     timeout: Optional[timedelta] = timedelta(seconds=30)
     description: str = "No description available."
 
@@ -29,15 +28,15 @@ class FormattedTool:
     """ "Class representing a formatted tool
 
     Args:
-        input_schema (Dict[str, Any]): Input schema for the tool.
+        input_schema (dict[str, Any]): Input schema for the tool.
         related_server (str): The name of the server that contains the tool.
-        generic_schema (Optional[Dict[str, Any]], optional): Generic schema for the tool. Defaults to None.
+        generic_schema (Optional[dict[str, Any]], optional): Generic schema for the tool. Defaults to None.
         description (str, optional): Description of the tool, usually from the server's tool definition. Defaults to "No description available.".
     """
 
-    input_schema: Dict[str, Any]
+    input_schema: dict[str, Any]
     related_server: str
-    generic_schema: Optional[Dict[str, Any]] = None
+    generic_schema: Optional[dict[str, Any]] = None
     description: str = "No description available."
 
 
@@ -75,11 +74,11 @@ class ToolCallObject:
     function: ToolCallFunctionObject = field(default_factory=ToolCallFunctionObject)
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "ToolCallObject":
+    def from_dict(cls, data: dict[str, Any]) -> "ToolCallObject":
         """Create a ToolCallObject from a dictionary
 
         Args:
-            data (Dict[str, Any]): Dictionary containing tool call data.
+            data (dict[str, Any]): dictionary containing tool call data.
 
         Returns:
             ToolCallObject: A new ToolCallObject instance.

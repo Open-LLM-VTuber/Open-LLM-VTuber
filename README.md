@@ -15,6 +15,8 @@
 [![BuyMeACoffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-ffdd00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://www.buymeacoffee.com/yi.ting)
 [![](https://dcbadge.limes.pink/api/server/3UDA8YFDXx)](https://discord.gg/3UDA8YFDXx)
 
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/Open-LLM-VTuber/Open-LLM-VTuber)
+
 English README | [中文README](https://github.com/t41372/Open-LLM-VTuber/blob/main/README.CN.md)
 
 [Documentation](https://open-llm-vtuber.github.io/docs/quick-start) | [![Roadmap](https://img.shields.io/badge/Roadmap-GitHub_Project-yellow)](https://github.com/orgs/Open-LLM-VTuber/projects/2)
@@ -140,6 +142,12 @@ This content uses sample data owned and copyrighted by Live2D Inc. The sample da
 Note: For commercial use, especially by medium or large-scale enterprises, the use of these Live2D sample models may be subject to additional licensing requirements. If you plan to use this project commercially, please ensure that you have the appropriate permissions from Live2D Inc., or use versions of the project without these models.
 
 
+## Contributors
+Thanks our contributors and maintainers for making this project possible.
+
+<a href="https://github.com/Open-LLM-VTuber/Open-LLM-VTuber/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=Open-LLM-VTuber/Open-LLM-VTuber" />
+</a>
 
 
 ## Star History

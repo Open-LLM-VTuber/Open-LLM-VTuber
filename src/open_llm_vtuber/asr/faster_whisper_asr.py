@@ -14,10 +14,11 @@ class VoiceRecognition(ASRInterface):
         language: str = "en",
         device: str = "auto",
         compute_type: str = "int8",
+        prompt: str = None,
     ) -> None:
         self.MODEL_PATH = model_path
         self.LANG = language
-
+        self.prompt = prompt
         self.model = WhisperModel(
             model_size_or_path=model_path,
             download_root=download_root,
@@ -26,13 +27,21 @@ class VoiceRecognition(ASRInterface):
         )
 
     def transcribe_np(self, audio: np.ndarray) -> str:
-        segments, info = self.model.transcribe(
-            audio,
-            beam_size=5 if self.BEAM_SEARCH else 1,
-            language=self.LANG if self.LANG else None,
-            condition_on_previous_text=False,
-        )
-
+        if self.prompt:
+            segments, info = self.model.transcribe(
+                audio,
+                beam_size=5 if self.BEAM_SEARCH else 1,
+                language=self.LANG if self.LANG else None,
+                condition_on_previous_text=False,
+                prompt=self.prompt,
+            )
+        else:
+            segments, info = self.model.transcribe(
+                audio,
+                beam_size=5 if self.BEAM_SEARCH else 1,
+                language=self.LANG if self.LANG else None,
+                condition_on_previous_text=False,
+            )
         text = [segment.text for segment in segments]
 
         if not text:

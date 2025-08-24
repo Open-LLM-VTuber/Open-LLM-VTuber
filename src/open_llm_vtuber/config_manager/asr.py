@@ -194,7 +194,7 @@ class SherpaOnnxASRConfig(I18nMixin):
     tokens: str = Field(..., alias="tokens")
     num_threads: int = Field(4, alias="num_threads")
     use_itn: bool = Field(True, alias="use_itn")
-    provider: Literal["cpu", "cuda"] = Field("cpu", alias="provider")
+    provider: Literal["cpu", "cuda", "rocm"] = Field("cpu", alias="provider")
 
     DESCRIPTIONS: ClassVar[Dict[str, Description]] = {
         "model_type": Description(

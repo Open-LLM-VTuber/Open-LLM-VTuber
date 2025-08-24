@@ -1,6 +1,5 @@
 from loguru import logger
 from typing import Dict, Any, List, Literal
-from openai import NOT_GIVEN
 
 from .types import FormattedTool
 
