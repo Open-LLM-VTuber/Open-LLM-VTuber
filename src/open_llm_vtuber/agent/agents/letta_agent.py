@@ -128,7 +128,7 @@ class LettaAgent(AgentInterface):
                         _, base64_data = img_data.data.split(",", 1)
                     except ValueError:
                         logger.error(
-                            f"Malformed Data URI. Could not split header and base64 content. Skipping image."
+                            "Malformed Data URI. Could not split header and base64 content. Skipping image."
                         )
                         continue
                     content.append(
@@ -162,3 +162,4 @@ class LettaAgent(AgentInterface):
         messages.append(user_message)
 
         return messages
+
