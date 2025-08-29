@@ -147,7 +147,7 @@ class LettaAgent(AgentInterface):
                         f"Invalid image data format: {type(img_data.data)}. Skipping image."
                     )
 
-            if not image_added and not text_content:
+            if not image_added:
                 logger.warning(
                     "User input contains images but none could be processed."
                 )
