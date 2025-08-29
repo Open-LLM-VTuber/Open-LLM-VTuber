@@ -117,20 +117,28 @@ class LettaAgent(AgentInterface):
             text_content = self._to_text_prompt(input_data)
 
             image_added = False
-            for img_data in input_data.images:
-                if isinstance(img_data.data, str) and img_data.data.startswith("data:image"):
 
-                    # --- FIX #1: Strip the prefix from the Base64 data ---
+            # Iterate through each image in the input
+            for img_data in input_data.images:
+                if isinstance(img_data.data, str) and img_data.data.startswith(
+                    "data:image"
+                ):
                     try:
-                        # Split the string at the first comma to separate the header from the data
+                        # Strip header → keep only base64 data
                         _, base64_data = img_data.data.split(",", 1)
                     except ValueError:
-                        logger.error(f"Malformed Data URI. Could not split header and base64 content. Skipping image.")
+                        logger.error(
+                            f"Malformed Data URI. Could not split header and base64 content. Skipping image."
+                        )
                         continue
                     content.append(
                         {
                             "type": "image",
-                            "source": {"type":"base64","media_type": img_data.mime_type,"data": base64_data},
+                            "source": {
+                                "type": "base64",
+                                "media_type": img_data.mime_type,
+                                "data": base64_data,
+                            },
                         }
                     )
                     image_added = True
@@ -142,12 +150,13 @@ class LettaAgent(AgentInterface):
             if not image_added and not text_content:
                 logger.warning(
                     "User input contains images but none could be processed."
-                )      
+                )
 
             content.append({"type": "text", "text": text_content})
             user_message = {"role": "user", "content": content}
 
         else:
+            # No images → only text
             user_message = {"role": "user", "content": self._to_text_prompt(input_data)}
 
         messages.append(user_message)
