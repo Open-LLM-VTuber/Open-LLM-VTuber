@@ -12,6 +12,7 @@ class MCPServer:
         command (str): Command to run the server.
         args (list[str], optional): Arguments for the command. Defaults to an empty list.
         env (Optional[dict[str, str]], optional): Environment variables for the command. Defaults to None.
+        cwd (Optional[str], optional): Working directory for the command. Defaults to None.
         timeout (Optional[timedelta], optional): Timeout for the command. Defaults to 10 seconds.
     """
 
@@ -19,6 +20,7 @@ class MCPServer:
     command: str
     args: list[str] = field(default_factory=list)
     env: Optional[dict[str, str]] = None
+    cwd: str | None = None
     timeout: Optional[timedelta] = timedelta(seconds=30)
     description: str = "No description available."
 

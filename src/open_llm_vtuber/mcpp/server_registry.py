@@ -22,10 +22,10 @@ class ServerRegistry:
             config_path = validate_file(config_path, ".json")
         except ValueError:
             logger.error(
-                f"MCPSM: File '{config_path}' does not exist, or is not a json file."
+                f"MCPSR: File '{config_path}' does not exist, or is not a json file."
             )
             raise ValueError(
-                f"MCPSM: File '{config_path}' does not exist, or is not a json file."
+                f"MCPSR: File '{config_path}' does not exist, or is not a json file."
             )
 
         self.config: Dict[str, Union[str, dict]] = json.loads(
@@ -49,13 +49,13 @@ class ServerRegistry:
         """Load servers from the config file."""
         servers_config: Dict[str, Dict[str, Any]] = self.config.get("mcp_servers", {})
         if servers_config == {}:
-            logger.warning("MCPSM: No servers found in the config file.")
+            logger.warning("MCPSR: No servers found in the config file.")
             return
 
         for server_name, server_details in servers_config.items():
             if "command" not in server_details or "args" not in server_details:
                 logger.warning(
-                    f"MCPSM: Invalid server details for '{server_name}'. Ignoring."
+                    f"MCPSR: Invalid server details for '{server_name}'. Ignoring."
                 )
                 continue
 
@@ -63,20 +63,20 @@ class ServerRegistry:
             if command == "npx":
                 if not self.npx_available:
                     logger.warning(
-                        f"MCPSM: npx is not available. Cannot load server '{server_name}'."
+                        f"MCPSR: npx is not available. Cannot load server '{server_name}'."
                     )
                     continue
             elif command == "uvx":
                 if not self.uvx_available:
                     logger.warning(
-                        f"MCPSM: uvx is not available. Cannot load server '{server_name}'."
+                        f"MCPSR: uvx is not available. Cannot load server '{server_name}'."
                     )
                     continue
 
             elif command == "node":
                 if not self.node_available:
                     logger.warning(
-                        f"MCPSM: node is not available. Cannot load server '{server_name}'."
+                        f"MCPSR: node is not available. Cannot load server '{server_name}'."
                     )
                     continue
 
@@ -85,17 +85,18 @@ class ServerRegistry:
                 command=command,
                 args=server_details["args"],
                 env=server_details.get("env", None),
+                cwd=server_details.get("cwd", None),
                 timeout=server_details.get("timeout", None),
             )
-            logger.debug(f"MCPSM: Loaded server: '{server_name}'.")
+            logger.debug(f"MCPSR: Loaded server: '{server_name}'.")
 
     def remove_server(self, server_name: str) -> None:
         """Remove a server from the available servers."""
         try:
             self.servers.pop(server_name)
-            logger.info(f"MCPSM: Removed server: {server_name}")
+            logger.info(f"MCPSR: Removed server: {server_name}")
         except KeyError:
-            logger.warning(f"MCPSM: Server '{server_name}' not found. Cannot remove.")
+            logger.warning(f"MCPSR: Server '{server_name}' not found. Cannot remove.")
 
     def get_server(self, server_name: str) -> Optional[MCPServer]:
         """Get the server by name."""
