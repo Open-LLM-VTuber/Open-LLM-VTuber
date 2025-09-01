@@ -1,0 +1,35 @@
+version: "3.9"
+name: open-llm-vtuber
+
+services:
+  vtuber:
+    image: open-llm-vtuber
+    container_name: open-llm-vtuber
+
+    build:
+      context: ../
+      dockerfile: dockerfiles/dockerfile
+
+    ports:
+      - "12393:12393"
+
+    volumes:
+      - models_data:/app/models
+
+    environment:
+      - UV_LINK_MODE=copy
+
+    restart: unless-stopped
+
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:12393/"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+volumes:
+  models_data:
+
+environment:
+  - OLLAMA_API_BASE=http://host.docker.internal:11434
