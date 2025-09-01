@@ -1,12 +1,14 @@
 # User config & backup
 /conf.yaml
+# Avatars
+# avatars/*
+# Backgrounds
+# backgrounds/*
+
 /conf.yaml.backup
 
 # Default templates retained
 !/config_templates/**
-
-# Backgrounds
-backgrounds/*
 
 # Live2D models - ignore non-defaults
 live2d-models/*
@@ -17,8 +19,7 @@ live2d-models/*
 characters/*
 # All default characters tracked via git
 
-# Avatars
-avatars/*
+
 
 # System files
 .DS_Store

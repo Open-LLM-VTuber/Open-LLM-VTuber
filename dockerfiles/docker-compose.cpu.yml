@@ -1,3 +1,4 @@
+version: "3.9"
 name: open-llm-vtuber
 
 services:
@@ -8,22 +9,33 @@ services:
     build:
       context: ../
       dockerfile: dockerfiles/dockerfile.cpu
-      # 不指定 platform，默认使用宿主架构（mac=arm64，Windows/多数Linux=amd64）
+      # 需要 Bark 就加：
+      # args:
+      #   INSTALL_BARK: "true"
 
     ports:
       - "12393:12393"
 
-    # 仅持久化虚拟环境与模型，跨平台无路径问题
+    # 模型缓存持久化（可选、推荐）
     volumes:
-      - venv_data:/app/.venv
       - models_data:/app/models
+      # ⭐️ 用户用 Docker Desktop GUI 时，只需再加一条把“本地 conf 目录”挂到 /app/conf：
+      # Host path: <你的本机 conf 目录>   →   Container path: /app/conf
 
     environment:
       - UV_LINK_MODE=copy
+      # 你的程序仍会从根目录 /app/conf.yaml 读取；不改也可用
+      # 如需显式指定，可加：CONFIG_FILE=/app/conf.yaml
 
     restart: unless-stopped
 
+    healthcheck:
+      # 如果你的服务有 /health，请改为 /health
+      test: ["CMD", "curl", "-fsS", "http://localhost:12393/"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
 
 volumes:
-  venv_data:
   models_data:

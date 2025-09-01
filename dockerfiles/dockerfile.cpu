@@ -1,5 +1,5 @@
 # dockerfiles/dockerfile.cpu
-FROM python:3.10-slim AS base
+FROM python:3.10.16-slim AS base
 
 ENV DEBIAN_FRONTEND=noninteractive \
     PYTHONDONTWRITEBYTECODE=1 \
@@ -9,20 +9,44 @@ ENV DEBIAN_FRONTEND=noninteractive \
 
 WORKDIR /app
 
-# 基础系统依赖（跨平台通用）
+# 1) 系统依赖
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
       ffmpeg git curl ca-certificates && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# 装 uv（从官方镜像复制可执行文件）
+# 2) 安装 uv
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
 
-# 拷项目（务必包含 pyproject.toml / uv.lock / run_server.py）
+# 3) 先复制锁文件，以提高缓存命中
+COPY pyproject.toml uv.lock ./
+
+# 4) 构建期安装依赖（运行时无需再等）
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --no-dev
+
+# 5) 复制源码
 COPY . /app
 
-EXPOSE 12393
+# 6) 安装项目自身
+RUN uv pip install --no-deps .
 
-# 运行期：uv 会按 pyproject/uv.lock 自动解析并安装到 /app/.venv
-# 首次启动会安装依赖，之后因 .venv 被卷持久化，启动会很快
-CMD ["uv", "run", "run_server.py"]
+# 7) 预建 conf 目录（方便后续挂载到 /app/conf）
+RUN mkdir -p /app/conf
+
+# 8) 入口脚本：如果用户挂了 /app/conf/conf.yaml 而根目录没有，就放到根目录供程序读取
+RUN printf '%s\n' \
+  '#!/usr/bin/env sh' \
+  'set -e' \
+  '# 1) 用户 conf 优先：把 /app/conf/conf.yaml 链接/覆盖到根目录' \
+  'if [ -f "/app/conf/conf.yaml" ]; then' \
+  '  ln -sf /app/conf/conf.yaml /app/conf.yaml 2>/dev/null || cp -f /app/conf/conf.yaml /app/conf.yaml' \
+  'elif [ ! -e "/app/conf.yaml" ] && [ -f "/app/config_templates/conf.yaml" ]; then' \
+  '  # 2) 根目录没有 → 用模板补上' \
+  '  cp /app/config_templates/conf.yaml /app/conf.yaml' \
+  'fi' \
+  'exec uv run run_server.py' \
+  > /usr/local/bin/entrypoint.sh && chmod +x /usr/local/bin/entrypoint.sh
+
+EXPOSE 12393
+CMD ["/usr/local/bin/entrypoint.sh"]
