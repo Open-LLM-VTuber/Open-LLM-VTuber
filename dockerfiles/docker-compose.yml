@@ -2,34 +2,40 @@ version: "3.9"
 name: open-llm-vtuber
 
 services:
-  vtuber:
-    image: open-llm-vtuber
-    container_name: open-llm-vtuber
-
-    build:
-      context: ../
-      dockerfile: dockerfiles/dockerfile
-
+  # 1) Ollama 服务
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama
+    # 发布两个端口：Ollama(11434) + 你的应用(12393)
     ports:
+      - "11434:11434"
       - "12393:12393"
-
+    # Ollama 模型缓存
     volumes:
-      - models_data:/app/models
-
-    environment:
-      - UV_LINK_MODE=copy
-
+      - ollama_data:/root/.ollama
     restart: unless-stopped
 
-    healthcheck:
-      test: ["CMD", "curl", "-fsS", "http://localhost:12393/"]
-      interval: 30s
-      timeout: 5s
-      retries: 5
-      start_period: 20s
+  # 2) 你的应用
+  vtuber:
+    image: open-llm-vtuber:cpu
+    container_name: open-llm-vtuber-cpu
+    build:
+      context: ../
+      dockerfile: dockerfiles/dockerfile.cpu
+    # 关键：与 ollama 共享网络命名空间
+    network_mode: "service:ollama"
+    # 其余卷：模型/配置（可选）
+    volumes:
+      - models_data:/app/models
+      # 用户若要自定义配置目录，在 Docker Desktop GUI 里把本机 conf 目录挂到 /app/conf
+      # - ./conf:/app/conf:ro
+    environment:
+      - UV_LINK_MODE=copy
+      # 你的 conf.yaml 里仍是 http://localhost:11434/v1，无需修改
+    depends_on:
+      - ollama
+    restart: unless-stopped
 
 volumes:
+  ollama_data:
   models_data:
-
-environment:
-  - OLLAMA_API_BASE=http://host.docker.internal:11434
