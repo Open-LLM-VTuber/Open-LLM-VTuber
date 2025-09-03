@@ -1,52 +1,76 @@
-# dockerfiles/dockerfile.cpu
-FROM python:3.10.16-slim AS base
+# ================================
+# All-in-one: Ollama + App
+# ================================
+FROM ollama/ollama:latest AS ollama-src
+FROM python:3.10-slim AS base
 
 ENV DEBIAN_FRONTEND=noninteractive \
     PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
-    UV_LINK_MODE=copy
+    UV_LINK_MODE=copy \
+    CONFIG_FILE=/app/conf/conf.yaml
 
 WORKDIR /app
 
-# 1) 系统依赖
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-      ffmpeg git curl ca-certificates && \
-    apt-get clean && rm -rf /var/lib/apt/lists/*
+# 基础依赖
+RUN apt-get update -o Acquire::Retries=5 \
+ && apt-get install -y --no-install-recommends \
+      ffmpeg git curl ca-certificates \
+ && rm -rf /var/lib/apt/lists/*
 
-# 2) 安装 uv
+# 安装 uv
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
 
-# 3) 先复制锁文件，以提高缓存命中
-COPY pyproject.toml uv.lock ./
+# 安装 Ollama
+COPY --from=ollama/ollama:latest /bin/ollama /usr/local/bin/ollama
 
-# 4) 构建期安装依赖（运行时无需再等）
+# 先装依赖（利用缓存）
+COPY pyproject.toml uv.lock ./
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-dev
 
-# 5) 复制源码
+# 拷源码并安装项目本体（不重复装依赖）
 COPY . /app
-
-# 6) 安装项目自身
 RUN uv pip install --no-deps .
 
-# 7) 预建 conf 目录（方便后续挂载到 /app/conf）
-RUN mkdir -p /app/conf
-
-# 8) 入口脚本：如果用户挂了 /app/conf/conf.yaml 而根目录没有，就放到根目录供程序读取
+# 启动脚本
 RUN printf '%s\n' \
   '#!/usr/bin/env sh' \
   'set -e' \
-  '# 1) 用户 conf 优先：把 /app/conf/conf.yaml 链接/覆盖到根目录' \
+  '' \
+  '# 1) 配置：优先使用挂到 /app/conf 的 conf.yaml；否则用模板' \
   'if [ -f "/app/conf/conf.yaml" ]; then' \
   '  ln -sf /app/conf/conf.yaml /app/conf.yaml 2>/dev/null || cp -f /app/conf/conf.yaml /app/conf.yaml' \
   'elif [ ! -e "/app/conf.yaml" ] && [ -f "/app/config_templates/conf.yaml" ]; then' \
-  '  # 2) 根目录没有 → 用模板补上' \
   '  cp /app/config_templates/conf.yaml /app/conf.yaml' \
   'fi' \
+  '' \
+  '# 2) 启动 Ollama（仅容器内可见）' \
+  'export OLLAMA_HOST="${OLLAMA_HOST:-127.0.0.1:11434}"' \
+  'ollama serve & ' \
+  '' \
+  '# 3) 等待 Ollama 就绪（最多 60s）' \
+  'for i in $(seq 1 60); do' \
+  '  if curl -fsS "http://127.0.0.1:11434/v1/models" >/dev/null 2>&1; then break; fi' \
+  '  sleep 1' \
+  'done' \
+  '' \
+  '# 4) 可选：预拉默认模型' \
+  'if [ -n "${OLLAMA_DEFAULT_MODEL:-}" ]; then' \
+  '  ollama list | grep -q "^${OLLAMA_DEFAULT_MODEL} " || ollama pull "$OLLAMA_DEFAULT_MODEL" || true' \
+  'fi' \
+  '' \
+  '# 5) 启动应用（显式绑定 0.0.0.0:12393）' \
   'exec uv run run_server.py' \
-  > /usr/local/bin/entrypoint.sh && chmod +x /usr/local/bin/entrypoint.sh
+  > /usr/local/bin/start-all && chmod +x /usr/local/bin/start-all
 
+VOLUME ["/root/.ollama", "/app/models"]
+
+# ✅ 只声明应用端口即可（Ollama 不对外暴露）
 EXPOSE 12393
-CMD ["/usr/local/bin/entrypoint.sh"]
+
+ARG OLLAMA_DEFAULT_MODEL=
+ENV OLLAMA_DEFAULT_MODEL=${OLLAMA_DEFAULT_MODEL}
+
+CMD ["/usr/local/bin/start-all"]
