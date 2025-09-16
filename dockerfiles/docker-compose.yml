@@ -1,19 +1,19 @@
 version: "3.9"
 services:
   open-llm-vtuber:
-    image: open-llm-vtuber   # 如果要tag就加一个:xxx
+    image: open-llm-vtuber   # Add :tag if needed
     # container_name: open-llm-vtuber
     build:
       context: ../
-      dockerfile: dockerfiles/dockerfile   # 保持与你的文件名一致
+      dockerfile: dockerfiles/dockerfile   # Must match your actual filename
     ports:
-      - "12393:12393"   # ✅ 只暴露应用端口
+      - "12393:12393"   # ✅ Only expose the application port
     environment:
       - OLLAMA_DEFAULT_MODEL=deepseek-r1:8b
     volumes:
-      - ollama_data:/root/.ollama   # ✅ 模型缓存持久化
-      - models_data:/app/models     # ✅ 应用缓存
-      # - ./conf:/app/conf:ro       # （可选）用户配置目录
+      - ollama_data:/root/.ollama   # ✅ Persistent cache for models
+      - models_data:/app/models     # ✅ Application cache
+      # - ./conf:/app/conf:ro       # (Optional) User configuration directory
     restart: unless-stopped
 
 volumes:
