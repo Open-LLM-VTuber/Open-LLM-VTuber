@@ -8,6 +8,7 @@ from typing import (
     Union,
     Optional,
 )
+import asyncio
 from loguru import logger
 from .agent_interface import AgentInterface
 from ..output_types import SentenceOutput, DisplayText
@@ -28,6 +29,13 @@ from ...mcpp.tool_manager import ToolManager
 from ...mcpp.json_detector import StreamJSONDetector
 from ...mcpp.types import ToolCallObject
 from ...mcpp.tool_executor import ToolExecutor
+try:
+    # The MemU Python SDK. Kept optional; agent works without it.
+    from memu import MemuClient  # type: ignore
+except Exception:  # pragma: no cover - optional dependency
+    MemuClient = None  # type: ignore
+
+from ...config_manager import MemUConfig
 
 
 class BasicMemoryAgent(AgentInterface):
@@ -40,15 +48,20 @@ class BasicMemoryAgent(AgentInterface):
         llm: StatelessLLMInterface,
         system: str,
         live2d_model,
-        tts_preprocessor_config: TTSPreprocessorConfig = None,
+        tts_preprocessor_config: TTSPreprocessorConfig | None = None,
         faster_first_response: bool = True,
         segment_method: str = "pysbd",
         use_mcpp: bool = False,
         interrupt_method: Literal["system", "user"] = "user",
-        tool_prompts: Dict[str, str] = None,
+        tool_prompts: Dict[str, str] | None = None,
         tool_manager: Optional[ToolManager] = None,
         tool_executor: Optional[ToolExecutor] = None,
         mcp_prompt_string: str = "",
+        memu_config: Optional[MemUConfig] = None,
+        user_id: str = "default_user",
+        agent_id: str = "default_agent",
+        user_name: str = "Human",
+        agent_name: str = "AI",
     ):
         """Initialize agent with LLM and configuration."""
         super().__init__()
@@ -67,6 +80,13 @@ class BasicMemoryAgent(AgentInterface):
         self._tool_executor = tool_executor
         self._mcp_prompt_string = mcp_prompt_string
         self._json_detector = StreamJSONDetector()
+        # MemU related fields
+        self._memu_config: Optional[MemUConfig] = memu_config
+        self._memu_client: Any = None
+        self._memu_user_id = user_id
+        self._memu_agent_id = agent_id
+        self._memu_user_name = user_name
+        self._memu_agent_name = agent_name
 
         self._formatted_tools_openai = []
         self._formatted_tools_claude = []
@@ -108,6 +128,27 @@ class BasicMemoryAgent(AgentInterface):
             logger.warning(
                 "use_mcpp is False, but some MCP components were passed to the agent."
             )
+
+        # Initialize MemU client if configured
+        if self._memu_config and self._memu_config.enable:
+            if not MemuClient:
+                logger.warning(
+                    "MemU is enabled but 'memu-py' is not installed. Please run 'uv add memu-py' to enable it."
+                )
+            elif not self._memu_config.api_key:
+                logger.warning(
+                    "MemU is enabled, but API key is missing. Disabling MemU for this session."
+                )
+            else:
+                try:
+                    self._memu_client = MemuClient(
+                        base_url=self._memu_config.base_url,
+                        api_key=self._memu_config.api_key,
+                    )
+                    logger.info("MemU long-term memory enabled for this agent ✨")
+                except Exception as e:
+                    logger.error(f"Failed to initialize MemU client: {e}")
+                    self._memu_client = None
 
         logger.info("BasicMemoryAgent initialized.")
 
@@ -598,6 +639,9 @@ class BasicMemoryAgent(AgentInterface):
             self.reset_interrupt()
             self.prompt_mode_flag = False
 
+            # Extract plain text input for retrieval and memorization
+            input_text = self._to_text_prompt(input_data)
+
             messages = self._to_messages(input_data)
             tools = None
             tool_mode = None
@@ -643,7 +687,60 @@ class BasicMemoryAgent(AgentInterface):
                 return
             else:
                 logger.info("Starting simple chat completion.")
-                token_stream = self._llm.chat_completion(messages, self._system)
+                # Retrieve long-term memory context from MemU (non-blocking to event loop)
+                turn_system_prompt = self._system
+                if self._memu_client and input_text:
+                    try:
+                        async def _retrieve_context() -> str:
+                            def _sync_call() -> str:
+                                try:
+                                    client: Any = self._memu_client
+                                    if client is None:
+                                        return ""
+                                    retrieve = getattr(
+                                        client, "retrieve_related_memory_items", None
+                                    )
+                                    if retrieve is None:
+                                        return ""
+                                    resp = retrieve(
+                                        user_id=self._memu_user_id,
+                                        agent_id=self._memu_agent_id,
+                                        query=input_text,
+                                        top_k=self._memu_config.top_k if self._memu_config else 3,
+                                        min_similarity=self._memu_config.min_similarity if self._memu_config else 0.7,
+                                    )
+                                    related = getattr(resp, "related_memories", [])
+                                    if not related:
+                                        return ""
+                                    lines = []
+                                    for item in related:
+                                        try:
+                                            content = item.memory.content  # type: ignore[attr-defined]
+                                        except Exception:
+                                            content = getattr(item, "content", None) or str(item)
+                                        if content:
+                                            lines.append(f"- {content}")
+                                    if not lines:
+                                        return ""
+                                    return (
+                                        "[Relevant long-term memories for you to consider:]\n"
+                                        + "\n".join(lines)
+                                    )
+                                except Exception as inner_e:  # pragma: no cover - defensive
+                                    logger.error(f"MemU retrieval error: {inner_e}")
+                                    return ""
+
+                            return await asyncio.to_thread(_sync_call)
+
+                        long_term_memory_context = await _retrieve_context()
+                        if long_term_memory_context:
+                            logger.info("Injected long-term memories into this turn's context.")
+                            logger.debug(f"MemU context injected:\n{long_term_memory_context}")
+                            turn_system_prompt = f"{long_term_memory_context}\n\n{self._system}"
+                    except Exception as e:
+                        logger.error(f"Failed to retrieve memories from MemU: {e}")
+
+                token_stream = self._llm.chat_completion(messages, turn_system_prompt)
                 complete_response = ""
                 async for event in token_stream:
                     text_chunk = ""
@@ -658,6 +755,42 @@ class BasicMemoryAgent(AgentInterface):
                         complete_response += text_chunk
                 if complete_response:
                     self._add_message(complete_response, "assistant")
+
+                    # Schedule memorization of this turn to MemU (fire-and-forget)
+                    if self._memu_client and input_text:
+                        try:
+                            def _sync_memorize() -> None:
+                                try:
+                                    client: Any = self._memu_client
+                                    if client is None:
+                                        return
+                                    memorize = getattr(
+                                        client, "memorize_conversation", None
+                                    )
+                                    if memorize is None:
+                                        return
+                                    memorize(
+                                        conversation=[
+                                            {"role": "user", "content": input_text},
+                                            {"role": "assistant", "content": complete_response},
+                                        ],
+                                        user_id=self._memu_user_id,
+                                        user_name=self._memu_user_name,
+                                        agent_id=self._memu_agent_id,
+                                        agent_name=self._memu_agent_name,
+                                    )
+                                except Exception as err:
+                                    logger.error(f"MemU memorize_conversation failed: {err}")
+
+                            skip_memory = False
+                            if input_data.metadata and input_data.metadata.get("skip_memory", False):
+                                skip_memory = True
+
+                            if not skip_memory:
+                                asyncio.create_task(asyncio.to_thread(_sync_memorize))
+                                logger.info("Scheduled conversation for memorization with MemU.")
+                        except Exception as e:
+                            logger.error(f"Failed to schedule memorization to MemU: {e}")
 
         return chat_with_memory
 

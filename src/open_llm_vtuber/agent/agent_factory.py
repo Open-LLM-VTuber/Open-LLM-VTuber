@@ -67,7 +67,19 @@ class AgentFactory:
             tool_executor: Optional[ToolExecutor] = kwargs.get("tool_executor")
             mcp_prompt_string: str = kwargs.get("mcp_prompt_string", "")
 
-            # Create the agent with the LLM and live2d_model
+            # Prepare MemU config if present
+            memu_config_dict = basic_memory_settings.get("memu_config")
+            memu_config = None
+            if memu_config_dict:
+                try:
+                    from ..config_manager import MemUConfig
+
+                    memu_config = MemUConfig(**memu_config_dict)
+                except Exception as e:
+                    logger.error(f"Invalid MemU configuration: {e}")
+                    memu_config = None
+
+            # Create the agent with the LLM, tools and optional MemU
             return BasicMemoryAgent(
                 llm=llm,
                 system=system_prompt,
@@ -83,6 +95,11 @@ class AgentFactory:
                 tool_manager=tool_manager,
                 tool_executor=tool_executor,
                 mcp_prompt_string=mcp_prompt_string,
+                memu_config=memu_config,
+                user_id=kwargs.get("client_uid", "default_user"),
+                agent_id=kwargs.get("conf_uid", "default_agent"),
+                user_name=kwargs.get("human_name", "Human"),
+                agent_name=kwargs.get("character_name", "AI"),
             )
 
         elif conversation_agent_choice == "mem0_agent":

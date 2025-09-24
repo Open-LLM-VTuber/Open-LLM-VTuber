@@ -391,6 +391,11 @@ class ServiceContext:
                 tool_manager=self.tool_manager,
                 tool_executor=self.tool_executor,
                 mcp_prompt_string=self.mcp_prompt,
+                # IDs and names for MemU
+                client_uid=self.client_uid,
+                conf_uid=self.character_config.conf_uid,
+                human_name=self.character_config.human_name,
+                character_name=self.character_config.character_name,
             )
 
             logger.debug(f"Agent choice: {agent_config.conversation_agent_choice}")
