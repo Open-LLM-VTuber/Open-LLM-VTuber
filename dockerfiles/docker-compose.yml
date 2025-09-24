@@ -8,8 +8,6 @@ services:
       dockerfile: dockerfiles/dockerfile   # Must match your actual filename
     ports:
       - "12393:12393"   # ✅ Only expose the application port
-    environment:
-      - OLLAMA_DEFAULT_MODEL=deepseek-r1:8b
     gpus: all
     volumes:
       - ollama_data:/root/.ollama   # ✅ Persistent cache for models
