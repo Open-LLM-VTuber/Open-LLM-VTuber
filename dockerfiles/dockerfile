@@ -45,11 +45,26 @@ RUN printf '%s\n' \
   '#!/usr/bin/env sh' \
   'set -e' \
   '' \
+  '# 0) Ensure unified mount dir exists' \
+  'mkdir -p /app/conf' \
+  '' \
   '# 1) Config: prefer user-provided /app/conf/conf.yaml; otherwise use template' \
   'if [ -f "/app/conf/conf.yaml" ]; then' \
   '  ln -sf /app/conf/conf.yaml /app/conf.yaml 2>/dev/null || cp -f /app/conf/conf.yaml /app/conf.yaml' \
   'elif [ ! -e "/app/conf.yaml" ] && [ -f "/app/config_templates/conf.yaml" ]; then' \
   '  cp /app/config_templates/conf.yaml /app/conf.yaml' \
+  'fi' \
+  '' \
+  '# 1b) Link live2d-models, characters from /app/conf; otherwise use default' \
+  'if [ -d "/app/conf/live2d-models" ]; then' \
+  '  rm -rf /app/live2d-models && ln -s /app/conf/live2d-models /app/live2d-models' \
+  'elif [ -d "/app/config_templates/live2d-models" ] && [ ! -e "/app/live2d-models" ]; then' \
+  '  cp -r /app/config_templates/live2d-models /app/live2d-models' \
+  'fi' \
+  'if [ -d "/app/conf/characters" ]; then' \
+  '  rm -rf /app/characters && ln -s /app/conf/characters /app/characters' \
+  'elif [ -d "/app/config_templates/characters" ] && [ ! -e "/app/characters" ]; then' \
+  '  cp -r /app/config_templates/characters /app/characters' \
   'fi' \
   '' \
   '# 2) Start Ollama (only visible inside container)' \
@@ -71,7 +86,8 @@ RUN printf '%s\n' \
   'exec uv run run_server.py' \
   > /usr/local/bin/start-all && chmod +x /usr/local/bin/start-all
 
-VOLUME ["/root/.ollama", "/app/models"]
+# Volumes: ollama cache, models, and unified config mount (conf.yaml + live2d-models + characters)
+VOLUME ["/root/.ollama", "/app/models", "/app/conf"]
 
 # ✅ Only expose the app port (Ollama is not exposed externally)
 EXPOSE 12393

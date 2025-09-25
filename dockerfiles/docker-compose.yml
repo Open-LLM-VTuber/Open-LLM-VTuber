@@ -1,18 +1,16 @@
 version: "3.9"
 services:
   open-llm-vtuber:
-    image: open-llm-vtuber   # Add :tag if needed
-    # container_name: open-llm-vtuber
-    build:
-      context: ../
-      dockerfile: dockerfiles/dockerfile   # Must match your actual filename
+    image: openllmvtuber/open-llm-vtuber:latest
     ports:
-      - "12393:12393"   # ✅ Only expose the application port
-    gpus: all
+      - "12393:12393"
+    environment:
+      ## Optional: Specify the model to be automatically downloaded at startup by default
+      ## For example, deepseek-r1:8b
+      - OLLAMA_DEFAULT_MODEL=deepseek-r1:8b
     volumes:
-      - ollama_data:/root/.ollama   # ✅ Persistent cache for models
-      - models_data:/app/models     # ✅ Application cache
-      # - ./conf:/app/conf:ro       # (Optional) User configuration directory
+      - ollama_data:/root/.ollama
+      - models_data:/app/models
     restart: unless-stopped
 
 volumes:
