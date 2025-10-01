@@ -1,5 +1,5 @@
 # config_manager/tts.py
-from pydantic import ValidationInfo, Field, model_validator
+from pydantic import BaseModel, ValidationInfo, Field, model_validator
 from typing import Literal, Optional, Dict, ClassVar
 from .i18n import I18nMixin, Description
 
@@ -426,7 +426,47 @@ class MinimaxTTSConfig(I18nMixin):
         "model": Description(en="Minimax model name", zh="Minimax 模型名称"),
         "voice_id": Description(en="Minimax voice id", zh="Minimax 语音 id"),
         "pronunciation_dict": Description(
-            en="Custom pronunciation dictionary (string)", zh="自定义发音字典（字符串）"
+            en="Custom pronunciation dictionary (string)", zh="自定义発音字典（字符串）"
+        ),
+    }
+
+
+class VoiceboxTTSConfig(BaseModel):
+    """Configuration for VOICEBOX TTS."""
+
+    api_url: str = Field("http://localhost:50021", alias="api_url")
+    speaker_id: int = Field(1, alias="speaker_id")
+    speed_scale: float = Field(1.0, alias="speed_scale")
+    pitch_scale: float = Field(0.0, alias="pitch_scale")
+    intonation_scale: float = Field(1.0, alias="intonation_scale")
+    volume_scale: float = Field(1.0, alias="volume_scale")
+    pre_phoneme_length: float = Field(0.1, alias="pre_phoneme_length")
+    post_phoneme_length: float = Field(0.1, alias="post_phoneme_length")
+
+    DESCRIPTIONS: ClassVar[Dict[str, Description]] = {
+        "api_url": Description(
+            en="VOICEBOX API endpoint URL", zh="VOICEBOX API エンドポイントURL"
+        ),
+        "speaker_id": Description(
+            en="Speaker ID (0-21, see docs for details)", zh="スピーカーID (0-21、詳細はドキュメントを参照)"
+        ),
+        "speed_scale": Description(
+            en="Speech speed (0.5-2.0)", zh="話速 (0.5-2.0)"
+        ),
+        "pitch_scale": Description(
+            en="Pitch adjustment (-0.15-0.15)", zh="ピッチ調整 (-0.15-0.15)"
+        ),
+        "intonation_scale": Description(
+            en="Intonation strength (0.0-2.0)", zh="イントネーション強度 (0.0-2.0)"
+        ),
+        "volume_scale": Description(
+            en="Volume (0.0-2.0)", zh="音量 (0.0-2.0)"
+        ),
+        "pre_phoneme_length": Description(
+            en="Silence before speech (0.0-1.5)", zh="音声前の無音時間 (0.0-1.5)"
+        ),
+        "post_phoneme_length": Description(
+            en="Silence after speech (0.0-1.5)", zh="音声後の無音時間 (0.0-1.5)"
         ),
     }
 
@@ -450,6 +490,7 @@ class TTSConfig(I18nMixin):
         "openai_tts",  # Add openai_tts here
         "spark_tts",
         "minimax_tts",
+        "voicebox_tts",
     ] = Field(..., alias="tts_model")
 
     azure_tts: Optional[AzureTTSConfig] = Field(None, alias="azure_tts")
@@ -471,6 +512,7 @@ class TTSConfig(I18nMixin):
     openai_tts: Optional[OpenAITTSConfig] = Field(None, alias="openai_tts")
     spark_tts: Optional[SparkTTSConfig] = Field(None, alias="spark_tts")
     minimax_tts: Optional[MinimaxTTSConfig] = Field(None, alias="minimax_tts")
+    voicebox_tts: Optional[VoiceboxTTSConfig] = Field(None, alias="voicebox_tts")
 
     DESCRIPTIONS: ClassVar[Dict[str, Description]] = {
         "tts_model": Description(
@@ -506,6 +548,9 @@ class TTSConfig(I18nMixin):
         "spark_tts": Description(en="Configuration for Spark TTS", zh="Spark TTS 配置"),
         "minimax_tts": Description(
             en="Configuration for Minimax TTS", zh="Minimax TTS 配置"
+        ),
+        "voicebox_tts": Description(
+            en="Configuration for VOICEBOX TTS", zh="VOICEBOX TTS 設定"
         ),
     }
 
@@ -544,5 +589,7 @@ class TTSConfig(I18nMixin):
             values.spark_tts.model_validate(values.spark_tts.model_dump())
         elif tts_model == "minimax_tts" and values.minimax_tts is not None:
             values.minimax_tts.model_validate(values.minimax_tts.model_dump())
+        elif tts_model == "voicebox_tts" and values.voicebox_tts is not None:
+            values.voicebox_tts.model_validate(values.voicebox_tts.model_dump())
 
         return values
