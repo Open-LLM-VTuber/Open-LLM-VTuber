@@ -1,8 +1,7 @@
 # 🐳 Open-LLM-VTuber Docker 构建指南
 
-:::note 关于我们的docker团队
+## 关于我们的docker团队
 我们在 docker hub 成立了[openllmvtuber团队](https://hub.docker.com/orgs/openllmvtuber/members)，目前docker镜像由[@Harry_Y](https://github.com/Harry-Yu-Shuhang)维护。
-:::
 
 ## 📁 构建目录
 进入 Docker 构建目录：

@@ -1,9 +1,8 @@
 # 🐳 Open-LLM-VTuber Docker Build Guide
 
-:::note About Our Docker Team
+## About Our Docker Team
 We have established the [openllmvtuber team](https://hub.docker.com/orgs/openllmvtuber/members) on Docker Hub.  
 The Docker images are currently maintained by [@Harry_Y](https://github.com/Harry-Yu-Shuhang).  
-:::
 
 ## 📁 Build Context
 Enter the Docker build directory:
