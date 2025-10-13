@@ -10,6 +10,8 @@ duckduckgo-mcp-server==0.1.1
     # via open-llm-vtuber (pyproject.toml)
 edge-tts==7.2.3
     # via open-llm-vtuber (pyproject.toml)
+elevenlabs==2.17.0
+    # via open-llm-vtuber (pyproject.toml)
 fastapi==0.118.0
     # via open-llm-vtuber (pyproject.toml)
 groq==0.32.0
@@ -46,9 +48,7 @@ ruamel-yaml==0.18.15
     # via open-llm-vtuber (pyproject.toml)
 ruff==0.13.2
     # via open-llm-vtuber (pyproject.toml)
-scipy==1.15.3 ; python_full_version < '3.11'
-    # via open-llm-vtuber (pyproject.toml)
-scipy==1.16.2 ; python_full_version >= '3.11'
+scipy==1.16.2
     # via open-llm-vtuber (pyproject.toml)
 sherpa-onnx==1.12.14
     # via open-llm-vtuber (pyproject.toml)
