@@ -1,0 +1,30 @@
+name: Sync Requirements
+
+on:
+  push:
+    paths:
+      - pyproject.toml
+
+jobs:
+  regenerate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v3
+      - name: Compile default requirements
+        run: uv pip compile pyproject.toml -o requirements.txt --no-deps --universal
+      - name: Compile bilibili requirements
+        run: uv pip compile pyproject.toml --extra bilibili -o requirements-bilibili.txt --no-deps --universal --no-annotate --no-header
+      - name: Commit updated requirements
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "chore: update requirements files (bot)"
+          file_pattern: |
+            requirements.txt
+            requirements-bilibili.txt

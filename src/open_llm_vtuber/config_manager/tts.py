@@ -431,6 +431,49 @@ class MinimaxTTSConfig(I18nMixin):
     }
 
 
+class ElevenLabsTTSConfig(I18nMixin):
+    """Configuration for ElevenLabs TTS."""
+
+    api_key: str = Field(..., alias="api_key")
+    voice_id: str = Field(..., alias="voice_id")
+    model_id: str = Field("eleven_multilingual_v2", alias="model_id")
+    output_format: str = Field("mp3_44100_128", alias="output_format")
+    stability: float = Field(0.5, alias="stability")
+    similarity_boost: float = Field(0.5, alias="similarity_boost")
+    style: float = Field(0.0, alias="style")
+    use_speaker_boost: bool = Field(True, alias="use_speaker_boost")
+
+    DESCRIPTIONS: ClassVar[Dict[str, Description]] = {
+        "api_key": Description(
+            en="API key for ElevenLabs TTS service", zh="ElevenLabs TTS 服务的 API 密钥"
+        ),
+        "voice_id": Description(
+            en="Voice ID from ElevenLabs (e.g., JBFqnCBsd6RMkjVDRZzb)",
+            zh="来自 ElevenLabs 的语音 ID（如 JBFqnCBsd6RMkjVDRZzb）",
+        ),
+        "model_id": Description(
+            en="Model ID for ElevenLabs (e.g., eleven_multilingual_v2)",
+            zh="ElevenLabs 模型 ID（如 eleven_multilingual_v2）",
+        ),
+        "output_format": Description(
+            en="Output audio format (e.g., mp3_44100_128)",
+            zh="输出音频格式（如 mp3_44100_128）",
+        ),
+        "stability": Description(
+            en="Voice stability (0.0 to 1.0)", zh="语音稳定性（0.0 到 1.0）"
+        ),
+        "similarity_boost": Description(
+            en="Voice similarity boost (0.0 to 1.0)", zh="语音相似度增强（0.0 到 1.0）"
+        ),
+        "style": Description(
+            en="Voice style exaggeration (0.0 to 1.0)", zh="语音风格夸张度（0.0 到 1.0）"
+        ),
+        "use_speaker_boost": Description(
+            en="Enable speaker boost for better quality", zh="启用说话人增强以获得更好的质量"
+        ),
+    }
+
+
 class TTSConfig(I18nMixin):
     """Configuration for Text-to-Speech."""
 
@@ -450,6 +493,7 @@ class TTSConfig(I18nMixin):
         "openai_tts",  # Add openai_tts here
         "spark_tts",
         "minimax_tts",
+        "elevenlabs_tts",
     ] = Field(..., alias="tts_model")
 
     azure_tts: Optional[AzureTTSConfig] = Field(None, alias="azure_tts")
@@ -471,6 +515,7 @@ class TTSConfig(I18nMixin):
     openai_tts: Optional[OpenAITTSConfig] = Field(None, alias="openai_tts")
     spark_tts: Optional[SparkTTSConfig] = Field(None, alias="spark_tts")
     minimax_tts: Optional[MinimaxTTSConfig] = Field(None, alias="minimax_tts")
+    elevenlabs_tts: ElevenLabsTTSConfig | None = Field(None, alias="elevenlabs_tts")
 
     DESCRIPTIONS: ClassVar[Dict[str, Description]] = {
         "tts_model": Description(
@@ -506,6 +551,9 @@ class TTSConfig(I18nMixin):
         "spark_tts": Description(en="Configuration for Spark TTS", zh="Spark TTS 配置"),
         "minimax_tts": Description(
             en="Configuration for Minimax TTS", zh="Minimax TTS 配置"
+        ),
+        "elevenlabs_tts": Description(
+            en="Configuration for ElevenLabs TTS", zh="ElevenLabs TTS 配置"
         ),
     }
 
@@ -544,5 +592,7 @@ class TTSConfig(I18nMixin):
             values.spark_tts.model_validate(values.spark_tts.model_dump())
         elif tts_model == "minimax_tts" and values.minimax_tts is not None:
             values.minimax_tts.model_validate(values.minimax_tts.model_dump())
+        elif tts_model == "elevenlabs_tts" and values.elevenlabs_tts is not None:
+            values.elevenlabs_tts.model_validate(values.elevenlabs_tts.model_dump())
 
         return values
