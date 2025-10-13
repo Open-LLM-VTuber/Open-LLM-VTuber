@@ -9,6 +9,7 @@ dependencies = [
     "azure-cognitiveservices-speech>=1.41.1",
     "chardet>=5.2.0",
     "edge-tts>=7.0.0",
+    "elevenlabs>=1.0.0",
     "fastapi[standard]>=0.115.8",
     "groq>=0.13.0",
     "httpx>=0.28.1",
