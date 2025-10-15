@@ -4,6 +4,29 @@ from typing import Dict, ClassVar
 from .i18n import I18nMixin, Description
 
 
+class WebFrontendAuthConfig(I18nMixin):
+    """Configuration for the web frontend basic HTTP authentication."""
+
+    enabled: bool = Field(False, alias="enabled")
+    username: str = Field("admin", alias="username")
+    password: str = Field("change-me", alias="password")
+
+    DESCRIPTIONS: ClassVar[Dict[str, Description]] = {
+        "enabled": Description(
+            en="Enable basic HTTP authentication for the web frontend",
+            zh="为 Web 前端启用基础 HTTP 认证",
+        ),
+        "username": Description(
+            en="Username for web frontend basic HTTP authentication",
+            zh="Web 前端基础 HTTP 认证的用户名",
+        ),
+        "password": Description(
+            en="Password for web frontend basic HTTP authentication",
+            zh="Web 前端基础 HTTP 认证的密码",
+        ),
+    }
+
+
 class SystemConfig(I18nMixin):
     """System configuration settings."""
 
@@ -13,6 +36,9 @@ class SystemConfig(I18nMixin):
     config_alts_dir: str = Field(..., alias="config_alts_dir")
     tool_prompts: Dict[str, str] = Field(..., alias="tool_prompts")
     enable_proxy: bool = Field(False, alias="enable_proxy")
+    web_frontend_auth: WebFrontendAuthConfig = Field(
+        default_factory=WebFrontendAuthConfig, alias="web_frontend_auth"
+    )
 
     DESCRIPTIONS: ClassVar[Dict[str, Description]] = {
         "conf_version": Description(en="Configuration version", zh="配置文件版本"),
@@ -28,6 +54,10 @@ class SystemConfig(I18nMixin):
         "enable_proxy": Description(
             en="Enable proxy mode for multiple clients",
             zh="启用代理模式以支持多个客户端使用一个 ws 连接",
+        ),
+        "web_frontend_auth": Description(
+            en="Basic HTTP authentication settings for the web frontend",
+            zh="Web 前端基础 HTTP 认证设置",
         ),
     }
 

@@ -25,6 +25,12 @@ system_config:
     # Additional guidance for LLM on how to use tools
     # tool_guidance_prompt: 'tool_guidance_prompt' 
 
+  # Basic HTTP auth configuration for the web frontend
+  web_frontend_auth:
+    enabled: false
+    username: 'admin'
+    password: 'change-me'
+
 # configuration for the default character
 character_config:
   conf_name: 'mao_pro' # The name of character configuration file.

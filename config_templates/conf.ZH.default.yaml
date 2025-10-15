@@ -27,6 +27,12 @@ system_config:
     # 额外指导 LLM 如何使用工具的提示词
     # tool_guidance_prompt: 'tool_guidance_prompt' 
 
+  # Web 前端基础 HTTP 认证配置
+  web_frontend_auth:
+    enabled: false
+    username: 'admin'
+    password: 'change-me'
+
 # 默认角色的配置
 character_config:
   conf_name: 'mao_pro' # 角色配置文件的名称
