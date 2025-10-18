@@ -271,7 +271,7 @@ character_config:
     #   'azure_tts', 'pyttsx3_tts', 'edge_tts', 'bark_tts',
     #   'cosyvoice_tts', 'melo_tts', 'coqui_tts',
     #   'fish_api_tts', 'x_tts', 'gpt_sovits_tts', 'sherpa_onnx_tts'
-    #   'minimax_tts'
+    #   'minimax_tts', 'elevenlabs_tts'
 
     siliconflow_tts:
       api_url: "https://api.siliconflow.cn/v1/audio/speech"
@@ -414,6 +414,16 @@ character_config:
       # 自定义发音字典，默认为空。
       # 示例: '{"tone": ["测试/(ce4)(shi4)", "危险/dangerous"]}'
       pronunciation_dict: ''
+
+    elevenlabs_tts:
+      api_key: ''
+      voice_id: '' # 来自 ElevenLabs 的语音 ID
+      model_id: 'eleven_multilingual_v2' # 模型 ID（如 eleven_multilingual_v2）
+      output_format: 'mp3_44100_128' # 输出音频格式（如 mp3_44100_128）
+      stability: 0.5 # 语音稳定性（0.0 到 1.0）
+      similarity_boost: 0.5 # 语音相似度增强（0.0 到 1.0）
+      style: 0.0 # 语音风格夸张度（0.0 到 1.0）
+      use_speaker_boost: true # 启用说话人增强以获得更好的质量
 
   # =================== Voice Activity Detection ===================
   vad_config:

@@ -57,9 +57,7 @@ class MCPClient:
         timeout = server.timeout if server.timeout else DEFAULT_TIMEOUT
 
         server_params = StdioServerParameters(
-            command=server.command,
-            args=server.args,
-            env=server.env,
+            command=server.command, args=server.args, env=server.env, cwd=server.cwd
         )
 
         try:
