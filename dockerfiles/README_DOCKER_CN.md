@@ -16,6 +16,8 @@ cd dockerfiles
 > ⚠️ 注意：`--load` 只会将当前主机架构（如 amd64）加载到本地 Docker。  
 > 若要推送完整的多架构镜像到 Docker Hub，请使用下方的 `--push` 命令。
 
+> ⚠️ 注意: 如果需要多平台构建，请参考[docker官方的多平台构建文档](https://docs.docker.com/build/building/multi-platform/)，修改配置。以下命令都是多平台的，如果单平台构建，修改--platform参数即可。
+
 ```
 docker buildx build --platform linux/amd64,linux/arm64 -t <你的DockerHub用户名>/<镜像名>:latest -f dockerfile ../ --load
 ```
