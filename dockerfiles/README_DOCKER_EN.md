@@ -17,6 +17,9 @@ cd dockerfiles
 > ⚠️ Note: `--load` only loads the current host architecture (e.g., amd64) into your local Docker.  
 > To push a full multi-arch image to Docker Hub, use the `--push` command below.
 
+> ⚠️ Note: If you need to perform multi-platform builds, please refer to the [official Docker multi-platform build documentation](https://docs.docker.com/build/building/multi-platform/) and adjust your configuration accordingly.
+> All the following commands are configured for multi-platform builds; if you want to build for a single platform, simply modify the `--platform` parameter.
+
 ```
 docker buildx build --platform linux/amd64,linux/arm64 -t <your_dockerhub_username>/<your_image_name>:latest -f dockerfile ../ --load
 ```
