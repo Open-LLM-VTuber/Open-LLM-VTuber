@@ -11,7 +11,7 @@ class WebFrontendAuthConfig(I18nMixin):
     username: str = Field("admin", alias="username")
     password: str = Field("change-me", alias="password")
 
-    DESCRIPTIONS: ClassVar[Dict[str, Description]] = {
+    DESCRIPTIONS: ClassVar[dict[str, Description]] = {
         "enabled": Description(
             en="Enable basic HTTP authentication for the web frontend",
             zh="为 Web 前端启用基础 HTTP 认证",
