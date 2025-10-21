@@ -201,7 +201,7 @@ class WebSocketServer:
             )
 
         @self.app.middleware("http")
-        async def basic_auth_middleware(request: Request, call_next):
+        async def basic_auth_middleware(request: Request, call_next) -> Response:
             path = request.url.path or "/"
 
             if request.method == "OPTIONS" or is_exempt(path):
