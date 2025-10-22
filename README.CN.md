@@ -33,6 +33,8 @@
 
 > :warning: 本项目仍处于早期阶段，目前正在**积极开发中**。
 
+> :warning: 本项目正在进行 v2.0.0 的重大重构，当前版本的主动维护已经受限。我们重视社区的意见和建议，并将考虑将其纳入 v2.0.0 版本中。v2.0.0 的开发进展可以在 [v2.0.0 分支](https://github.com/Open-LLM-VTuber/Open-LLM-VTuber/tree/v2.0.0) 查看。
+
 > :warning: 如果你想远程运行服务端并在其他设备上访问 (比如在电脑上运行服务端，在手机上访问)，由于前端的麦克风功能仅能在安全环境下使用（即 https 或 localhost），请参阅 [MDN 文档](https://developer.mozilla.org/en-US/docs/Web/API/MediaDevices/getUserMedia)，你需要配置反向代理和 https 才能在非本机 (non-localhost) 上正常访问。
 
 
