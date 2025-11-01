@@ -23,7 +23,7 @@ system_config:
     # Prompt to enhance the LLM's ability to output speakable text
     # speakable_prompt: 'speakable_prompt'
     # Additional guidance for LLM on how to use tools
-    # tool_guidance_prompt: 'tool_guidance_prompt' 
+    # tool_guidance_prompt: 'tool_guidance_prompt'
 
 # configuration for the default character
 character_config:
@@ -54,7 +54,7 @@ character_config:
         # The Basic AI Agent. Nothing fancy.
         # choose one of the llm provider from the llm_config
         # and set the required parameters in the corresponding field
-        # examples: 
+        # examples:
         # 'openai_compatible_llm', 'llama_cpp_llm', 'claude_llm', 'ollama_llm'
         # 'openai_llm', 'gemini_llm', 'zhipu_llm', 'deepseek_llm', 'groq_llm'
         # 'mistral_llm', 'lmstudio_llm', and more
@@ -78,13 +78,13 @@ character_config:
         segment_method: 'pysbd'
         # Once Letta is chosen as the agent, the LLM that runs in practice is configured on Letta, so the user needs to run the Letta server themselves.
         # For more detailed information, please refer to their documentation.
-        
+
       hume_ai_agent:
         api_key: ''
         host: 'api.hume.ai' # Do not change this in most cases
         config_id: '' # Optional
         idle_timeout: 15 # How many seconds to wait before disconnecting
- 
+
       # MemGPT Configurations: MemGPT is temporarily removed
       ##
 
@@ -112,8 +112,8 @@ character_config:
         model: 'qwen2.5:latest'
         temperature: 1.0 # value between 0 to 2
         interrupt_method: 'user'
-        # This is the method to use for prompting the interruption signal. 
-        # If the provider supports inserting system prompt anywhere in the chat memory, use 'system'. 
+        # This is the method to use for prompting the interruption signal.
+        # If the provider supports inserting system prompt anywhere in the chat memory, use 'system'.
         # Otherwise, use 'user'. You don't usually need to change this setting.
 
       # Claude API Configuration
@@ -130,7 +130,7 @@ character_config:
         base_url: 'http://localhost:11434/v1'
         model: 'qwen2.5:latest'
         temperature: 1.0 # value between 0 to 2
-        # seconds to keep the model in memory after inactivity. 
+        # seconds to keep the model in memory after inactivity.
         # set to -1 to keep the model in memory forever (even after exiting open llm vtuber)
         keep_alive: -1
         unload_at_exit: True # unload the model from memory at exit
@@ -159,7 +159,7 @@ character_config:
         llm_api_key: 'Your DeepSeek API key'
         model: 'deepseek-chat'
         temperature: 0.7 # note that deepseek's temperature ranges from 0 to 1
-      
+
       mistral_llm:
         llm_api_key: 'Your Mistral API key'
         model: 'pixtral-large-latest'
@@ -260,7 +260,7 @@ character_config:
       # feature_dim: 80       # Feature dimension (should match the model's expected feature dimension)
       use_itn: True # Enable ITN for SenseVoice models (should set to False if not using SenseVoice models)
       # Provider for inference (cpu or cuda) (cuda option needs additional settings. Please check our docs)
-      provider: 'cpu' 
+      provider: 'cpu'
 
     groq_whisper_asr:
       api_key: ''
@@ -274,7 +274,7 @@ character_config:
     #   'azure_tts', 'pyttsx3_tts', 'edge_tts', 'bark_tts',
     #   'cosyvoice_tts', 'melo_tts', 'coqui_tts',
     #   'fish_api_tts', 'x_tts', 'gpt_sovits_tts', 'sherpa_onnx_tts'
-    #   'minimax_tts', 'elevenlabs_tts'
+    #   'minimax_tts'
 
     azure_tts:
       api_key: 'azure-api-key'
@@ -308,16 +308,16 @@ character_config:
     cosyvoice2_tts: # Cosy Voice TTS connects to the gradio webui
       # Check their documentation for deployment and the meaning of the following configurations
       client_url: 'http://127.0.0.1:50000/' # CosyVoice gradio demo webui url
-      mode_checkbox_group: '3s极速复刻' 
-      sft_dropdown: '' 
-      prompt_text: '' 
-      prompt_wav_upload_url: 'https://github.com/gradio-app/gradio/raw/main/test/test_files/audio_sample.wav' 
-      prompt_wav_record_url: 'https://github.com/gradio-app/gradio/raw/main/test/test_files/audio_sample.wav' 
-      instruct_text: '' 
-      stream: False 
-      seed: 0 
-      speed: 1.0 
-      api_name: '/generate_audio' 
+      mode_checkbox_group: '3s极速复刻'
+      sft_dropdown: ''
+      prompt_text: ''
+      prompt_wav_upload_url: 'https://github.com/gradio-app/gradio/raw/main/test/test_files/audio_sample.wav'
+      prompt_wav_record_url: 'https://github.com/gradio-app/gradio/raw/main/test/test_files/audio_sample.wav'
+      instruct_text: ''
+      stream: False
+      seed: 0
+      speed: 1.0
+      api_name: '/generate_audio'
 
     melo_tts:
       speaker: 'EN-Default' # ZH
@@ -379,8 +379,12 @@ character_config:
     # documentation: https://k2-fsa.github.io/sherpa/onnx/index.html
     # TTS models download: https://github.com/k2-fsa/sherpa-onnx/releases/tag/tts-models
     # see config_alts for more examples
+    # A lot of options are prepended with 'vits_'. This will be removed in the future.
+    # All options prepened with 'vits_' work for other models. This is only kept for compatibility reasons.
     sherpa_onnx_tts:
-      vits_model: '/path/to/tts-models/vits-melo-tts-zh_en/model.onnx' # Path to VITS model file
+      type: 'vits' # Model type (vits, matcha, kokoro, kitten)
+      vits_model: '/path/to/tts-models/vits-melo-tts-zh_en/model.onnx' # Path to model file (supports all types) - WILL BE DEPRECEATED - will use 'model' instead in future
+      voices: '' # Path to the voices.bin folder. For use with Kokoro or Kittens models
       vits_lexicon: '/path/to/tts-models/vits-melo-tts-zh_en/lexicon.txt' # Path to lexicon file (optional)
       vits_tokens: '/path/to/tts-models/vits-melo-tts-zh_en/tokens.txt' # Path to tokens file
       vits_data_dir: '' # '/path/to/tts-models/vits-piper-en_GB-cori-high/espeak-ng-data'  # Path to espeak-ng data (optional)
@@ -392,7 +396,7 @@ character_config:
       num_threads: 1 # Number of computation threads
       speed: 1.0 # Speech speed (1.0 is normal)
       debug: false # Enable debug mode (True/False)
-    
+
     spark_tts:
       api_url: 'http://127.0.0.1:6006/' # API URL. Uses Gradio's built-in front-end API. Repository: https://github.com/SparkAudio/Spark-TTS
       api_name:  "voice_clone" # Endpoint name. Options: voice_clone, voice_creation
@@ -419,16 +423,6 @@ character_config:
       # Custom pronunciation dictionary, default empty.
       # Example: '{"tone": ["测试/(ce4)(shi4)", "危险/dangerous"]}'
       pronunciation_dict: ''
-
-    elevenlabs_tts:
-      api_key: ''
-      voice_id: '' # Voice ID from ElevenLabs
-      model_id: 'eleven_multilingual_v2' # Model ID (e.g., eleven_multilingual_v2)
-      output_format: 'mp3_44100_128' # Output audio format (e.g., mp3_44100_128)
-      stability: 0.5 # Voice stability (0.0 to 1.0)
-      similarity_boost: 0.5 # Voice similarity boost (0.0 to 1.0)
-      style: 0.0 # Voice style exaggeration (0.0 to 1.0)
-      use_speaker_boost: true # Enable speaker boost for better quality
 
   # =================== Voice Activity Detection ===================
   vad_config:
@@ -460,7 +454,7 @@ character_config:
       deeplx:
         deeplx_target_lang: 'JA'
         deeplx_api_endpoint: 'http://localhost:1188/v2/translate'
-      
+
       #  Tencent Text Translation  5 million characters per month  Remember to turn off post-payment, need to manually go to Machine Translation Console > System Settings to disable
       #   https://cloud.tencent.com/document/product/551/35017
       #   https://console.cloud.tencent.com/cam/capi

@@ -13,7 +13,9 @@ sys.path.append(current_dir)
 class TTSEngine(TTSInterface):
     def __init__(
         self,
+        type,
         vits_model,
+        voices="",
         vits_lexicon="",
         vits_tokens="",
         vits_data_dir="",
@@ -26,11 +28,13 @@ class TTSEngine(TTSInterface):
         speed=1.0,
         debug=False,
     ):
-        self.vits_model = vits_model
-        self.vits_lexicon = vits_lexicon
-        self.vits_tokens = vits_tokens
-        self.vits_data_dir = vits_data_dir
-        self.vits_dict_dir = vits_dict_dir
+        self.model = vits_model
+        self.type = type.lower()
+        self.voices = voices
+        self.lexicon = vits_lexicon
+        self.tokens = vits_tokens
+        self.data_dir = vits_data_dir
+        self.dict_dir = vits_dict_dir
         self.tts_rule_fsts = tts_rule_fsts
         self.max_num_sentences = max_num_sentences
         self.sid = sid  # Speaker ID
@@ -51,20 +55,70 @@ class TTSEngine(TTSInterface):
         """
         Initialize the sherpa-onnx TTS engine.
         """
-        # Construct the configuration for the TTS engine
-        tts_config = sherpa_onnx.OfflineTtsConfig(
-            model=sherpa_onnx.OfflineTtsModelConfig(
-                vits=sherpa_onnx.OfflineTtsVitsModelConfig(
-                    model=self.vits_model,
-                    lexicon=self.vits_lexicon,
-                    data_dir=self.vits_data_dir,
-                    dict_dir=self.vits_dict_dir,
-                    tokens=self.vits_tokens,
+
+        model = {}
+
+        if self.type == "vits":
+            model = sherpa_onnx.OfflineTtsModelConfig(
+                vits=sherpa_onnx.OfflineTtsVITSModelConfig(
+                    model=self.model,
+                    lexicon=self.lexicon,
+                    data_dir=self.data_dir,
+                    dict_dir=self.dict_dir,
+                    tokens=self.tokens,
                 ),
                 provider=self.provider,
                 debug=self.debug,
                 num_threads=self.num_threads,
-            ),
+            )
+
+        elif self.type == "matcha":
+            model = sherpa_onnx.OfflineTtsModelConfig(
+                matcha=sherpa_onnx.OfflineTtsMatchaModelConfig(
+                    model=self.model,
+                    lexicon=self.lexicon,
+                    data_dir=self.data_dir,
+                    dict_dir=self.dict_dir,
+                    tokens=self.tokens,
+                ),
+                provider=self.provider,
+                debug=self.debug,
+                num_threads=self.num_threads,
+            )
+        # model: str, voices: str, tokens: str, lexicon: str = '', data_dir: str, dict_dir: str = '', length_scale: float = 1.0
+        elif self.type == "kokoro":
+            model = sherpa_onnx.OfflineTtsModelConfig(
+                kokoro=sherpa_onnx.OfflineTtsKokoroModelConfig(
+                    model=self.model,
+                    voices=self.voices,
+                    tokens=self.tokens,
+                    lexicon=self.lexicon,
+                    data_dir=self.data_dir,
+                    dict_dir=self.dict_dir,
+                ),
+                provider=self.provider,
+                debug=self.debug,
+                num_threads=self.num_threads,
+            )
+
+        elif self.type == "kitten":
+            model = sherpa_onnx.OfflineTtsModelConfig(
+                kitten=sherpa_onnx.OfflineTtsKittenModelConfig(
+                    model=self.model,
+                    voices=self.voices,
+                    lexicon=self.lexicon,
+                    data_dir=self.data_dir,
+                    dict_dir=self.dict_dir,
+                    tokens=self.tokens,
+                ),
+                provider=self.provider,
+                debug=self.debug,
+                num_threads=self.num_threads,
+            )
+
+        # Construct the configuration for the TTS engine
+        tts_config = sherpa_onnx.OfflineTtsConfig(
+            model=model,
             rule_fsts=self.tts_rule_fsts,
             max_num_sentences=self.max_num_sentences,
         )

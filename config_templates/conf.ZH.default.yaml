@@ -25,7 +25,7 @@ system_config:
     # 用来增强LLM输出可发音文本的提示词
     # speakable_prompt: 'speakable_prompt'
     # 额外指导 LLM 如何使用工具的提示词
-    # tool_guidance_prompt: 'tool_guidance_prompt' 
+    # tool_guidance_prompt: 'tool_guidance_prompt'
 
 # 默认角色的配置
 character_config:
@@ -271,7 +271,7 @@ character_config:
     #   'azure_tts', 'pyttsx3_tts', 'edge_tts', 'bark_tts',
     #   'cosyvoice_tts', 'melo_tts', 'coqui_tts',
     #   'fish_api_tts', 'x_tts', 'gpt_sovits_tts', 'sherpa_onnx_tts'
-    #   'minimax_tts', 'elevenlabs_tts'
+    #   'minimax_tts'
 
     siliconflow_tts:
       api_url: "https://api.siliconflow.cn/v1/audio/speech"
@@ -376,8 +376,12 @@ character_config:
     # 文档：https://k2-fsa.github.io/sherpa/onnx/index.html
     # TTS 模型下载：https://github.com/k2-fsa/sherpa-onnx/releases/tag/tts-models
     # 查看 config_alts 获取更多示例
+    # 大部分选项都以 'vits_' 开头，这将在未来被删除。
+    # 所有以 'vits_' 开头的选项都可用于其他模型。这仅仅作为兼容性考虑保留。
     sherpa_onnx_tts:
+      type: 'vits' # 模型类型（vits, matcha, kokoro, kitten）
       vits_model: '/path/to/tts-models/vits-melo-tts-zh_en/model.onnx' # VITS 模型文件路径
+      voices: '' # 语音名称（使用 Kokoro 或 Kittens 模型时，必需）
       vits_lexicon: '/path/to/tts-models/vits-melo-tts-zh_en/lexicon.txt' # 词典文件路径（可选）
       vits_tokens: '/path/to/tts-models/vits-melo-tts-zh_en/tokens.txt' # 标记文件路径
       vits_data_dir: '' # '/path/to/tts-models/vits-piper-en_GB-cori-high/espeak-ng-data'  # espeak-ng 数据路径（可选）
@@ -414,16 +418,6 @@ character_config:
       # 自定义发音字典，默认为空。
       # 示例: '{"tone": ["测试/(ce4)(shi4)", "危险/dangerous"]}'
       pronunciation_dict: ''
-
-    elevenlabs_tts:
-      api_key: ''
-      voice_id: '' # 来自 ElevenLabs 的语音 ID
-      model_id: 'eleven_multilingual_v2' # 模型 ID（如 eleven_multilingual_v2）
-      output_format: 'mp3_44100_128' # 输出音频格式（如 mp3_44100_128）
-      stability: 0.5 # 语音稳定性（0.0 到 1.0）
-      similarity_boost: 0.5 # 语音相似度增强（0.0 到 1.0）
-      style: 0.0 # 语音风格夸张度（0.0 到 1.0）
-      use_speaker_boost: true # 启用说话人增强以获得更好的质量
 
   # =================== Voice Activity Detection ===================
   vad_config:
