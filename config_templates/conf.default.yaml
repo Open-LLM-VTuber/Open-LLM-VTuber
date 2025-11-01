@@ -382,8 +382,8 @@ character_config:
     # A lot of options are prepended with 'vits_'. This will be removed in the future.
     # All options prepened with 'vits_' work for other models. This is only kept for compatibility reasons.
     sherpa_onnx_tts:
-      type: 'vits' # Model type (vits, matcha, kokoro, kitten)
-      vits_model: '/path/to/tts-models/vits-melo-tts-zh_en/model.onnx' # Path to model file (supports all types) - WILL BE DEPRECEATED - will use 'model' instead in future
+      model_type: 'vits' # Model type (vits, matcha, kokoro, kitten)
+      vits_model: '/path/to/tts-models/vits-melo-tts-zh_en/model.onnx' #  Path to model file (supports all types). This will be deprecated and replaced by 'model' in a future version.
       voices: '' # Path to the voices.bin folder. For use with Kokoro or Kittens models
       vits_lexicon: '/path/to/tts-models/vits-melo-tts-zh_en/lexicon.txt' # Path to lexicon file (optional)
       vits_tokens: '/path/to/tts-models/vits-melo-tts-zh_en/tokens.txt' # Path to tokens file

@@ -15,6 +15,20 @@ sys.path.append(current_dir)
 
 class TTSEngine(TTSInterface):
     def __init__(self, voice="en-US-AvaMultilingualNeural", pitch="+0Hz", rate="+0%", volume="+0%"):
+        """
+        Initialize Edge TTS.
+
+        Args:
+            voice (str): The voice name to use for Edge TTS (use 'edge-tts --list-voices' to list available voices).
+
+            pitch (str): Pitch adjustment in Hertz. For positive values, append with a '+'. E.g. +0Hz, -10Hz, +20Hz.
+
+            rate (str): Speaking rate adjustment, as a percentage. E.g. +0%, -10%, +20%.
+
+            volume (str): Volume adjustment percentage. E.g. +0%, -10%, +20%.
+
+        """
+
         self.voice = voice
         self.pitch = pitch
         self.rate = rate

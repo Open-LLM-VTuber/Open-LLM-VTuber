@@ -13,7 +13,7 @@ sys.path.append(current_dir)
 class TTSEngine(TTSInterface):
     def __init__(
         self,
-        type,
+        model_type,
         vits_model,
         voices="",
         vits_lexicon="",
@@ -29,7 +29,7 @@ class TTSEngine(TTSInterface):
         debug=False,
     ):
         self.model = vits_model
-        self.type = type.lower()
+        self.model_type = model_type.lower()
         self.voices = voices
         self.lexicon = vits_lexicon
         self.tokens = vits_tokens
@@ -58,9 +58,9 @@ class TTSEngine(TTSInterface):
 
         model = {}
 
-        if self.type == "vits":
+        if self.model_type == "vits":
             model = sherpa_onnx.OfflineTtsModelConfig(
-                vits=sherpa_onnx.OfflineTtsVITSModelConfig(
+                vits=sherpa_onnx.OfflineTtsVitsModelConfig(
                     model=self.model,
                     lexicon=self.lexicon,
                     data_dir=self.data_dir,
@@ -72,7 +72,7 @@ class TTSEngine(TTSInterface):
                 num_threads=self.num_threads,
             )
 
-        elif self.type == "matcha":
+        elif self.model_type == "matcha":
             model = sherpa_onnx.OfflineTtsModelConfig(
                 matcha=sherpa_onnx.OfflineTtsMatchaModelConfig(
                     model=self.model,
@@ -101,7 +101,7 @@ class TTSEngine(TTSInterface):
                 num_threads=self.num_threads,
             )
 
-        elif self.type == "kitten":
+        elif self.model_type == "kitten":
             model = sherpa_onnx.OfflineTtsModelConfig(
                 kitten=sherpa_onnx.OfflineTtsKittenModelConfig(
                     model=self.model,

@@ -44,9 +44,9 @@ class EdgeTTSConfig(I18nMixin):
     """Configuration for Edge TTS."""
 
     voice: str = Field(..., alias="voice")
-    pitch: Optional[str] = Field(..., alias="pitch")
-    rate: Optional[str] = Field(..., alias="rate")
-    volume: Optional[str] = Field(..., alias="volume")
+    pitch: str | None = Field(..., alias="pitch")
+    rate: str | None = Field(..., alias="rate")
+    volume: str | None = Field(..., alias="volume")
 
     DESCRIPTIONS: ClassVar[Dict[str, Description]] = {
         "voice": Description(
@@ -264,8 +264,8 @@ class CoquiTTSConfig(I18nMixin):
 class SherpaOnnxTTSConfig(I18nMixin):
     """Configuration for Sherpa Onnx TTS."""
 
-    type: Literal["vits", "matcha", "kokoro", "kitten"] = Field(
-        "vits", alias="type"
+    model_type: Literal["vits", "matcha", "kokoro", "kitten"] = Field(
+        "vits", alias="model_type"
     )
     vits_model: str = Field(..., alias="vits_model")
     vits_lexicon: Optional[str] = Field(None, alias="vits_lexicon")
@@ -282,7 +282,7 @@ class SherpaOnnxTTSConfig(I18nMixin):
     debug: bool = Field(False, alias="debug")
 
     DESCRIPTIONS: ClassVar[Dict[str, Description]] = {
-        "type": Description(
+        "model_type": Description(
             en="Model type (vits, matcha, kokoro, kitten)", zh="模型类型（vits, matcha, kokoro, kitten）"
         ),
         "vits_model": Description(en="Path to VITS model file", zh="VITS 模型文件路径"),
