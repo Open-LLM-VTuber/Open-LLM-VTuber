@@ -62,7 +62,7 @@ class TTSEngine(TTSInterface):
             'kokoro': sherpa_onnx.OfflineTtsKokoroModelConfig,
             'kitten': sherpa_onnx.OfflineTtsKittenModelConfig,
         }
-        config_class = model_config_map.get(self.type)
+        config_class = model_config_map.get(self.model_type)
 
         if config_class:
             params = {
