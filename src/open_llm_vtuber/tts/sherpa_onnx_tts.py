@@ -13,8 +13,8 @@ sys.path.append(current_dir)
 class TTSEngine(TTSInterface):
     def __init__(
         self,
-        model_type,
-        vits_model,
+        vits_model: str,
+        model_type = "vits",
         voices="",
         vits_lexicon="",
         vits_tokens="",
@@ -56,61 +56,31 @@ class TTSEngine(TTSInterface):
         Initialize the sherpa-onnx TTS engine.
         """
 
-        model = {}
+        model_config_map = {
+            'vits': sherpa_onnx.OfflineTtsVitsModelConfig,
+            'matcha': sherpa_onnx.OfflineTtsMatchaModelConfig,
+            'kokoro': sherpa_onnx.OfflineTtsKokoroModelConfig,
+            'kitten': sherpa_onnx.OfflineTtsKittenModelConfig,
+        }
+        config_class = model_config_map.get(self.type)
 
-        if self.model_type == "vits":
-            model = sherpa_onnx.OfflineTtsModelConfig(
-                vits=sherpa_onnx.OfflineTtsVitsModelConfig(
-                    model=self.model,
-                    lexicon=self.lexicon,
-                    data_dir=self.data_dir,
-                    dict_dir=self.dict_dir,
-                    tokens=self.tokens,
-                ),
-                provider=self.provider,
-                debug=self.debug,
-                num_threads=self.num_threads,
-            )
+        if config_class:
+            params = {
+                'model': self.model,
+                'lexicon': self.lexicon,
+                'data_dir': self.data_dir,
+                'dict_dir': self.dict_dir,
+                'tokens': self.tokens,
+            }
 
-        elif self.model_type == "matcha":
-            model = sherpa_onnx.OfflineTtsModelConfig(
-                matcha=sherpa_onnx.OfflineTtsMatchaModelConfig(
-                    model=self.model,
-                    lexicon=self.lexicon,
-                    data_dir=self.data_dir,
-                    dict_dir=self.dict_dir,
-                    tokens=self.tokens,
-                ),
-                provider=self.provider,
-                debug=self.debug,
-                num_threads=self.num_threads,
-            )
-        # model: str, voices: str, tokens: str, lexicon: str = '', data_dir: str, dict_dir: str = '', length_scale: float = 1.0
-        elif self.type == "kokoro":
-            model = sherpa_onnx.OfflineTtsModelConfig(
-                kokoro=sherpa_onnx.OfflineTtsKokoroModelConfig(
-                    model=self.model,
-                    voices=self.voices,
-                    tokens=self.tokens,
-                    lexicon=self.lexicon,
-                    data_dir=self.data_dir,
-                    dict_dir=self.dict_dir,
-                ),
-                provider=self.provider,
-                debug=self.debug,
-                num_threads=self.num_threads,
-            )
+            if self.model_type == 'kokoro' or self.model_type == 'kitten':
+                params['voices'] = self.voices
 
-        elif self.model_type == "kitten":
+            # ... create params dict and instantiate
+            model_config_obj = config_class(**params)
             model = sherpa_onnx.OfflineTtsModelConfig(
-                kitten=sherpa_onnx.OfflineTtsKittenModelConfig(
-                    model=self.model,
-                    voices=self.voices,
-                    lexicon=self.lexicon,
-                    data_dir=self.data_dir,
-                    dict_dir=self.dict_dir,
-                    tokens=self.tokens,
-                ),
+                **{self.model_type: model_config_obj},
+
                 provider=self.provider,
                 debug=self.debug,
                 num_threads=self.num_threads,

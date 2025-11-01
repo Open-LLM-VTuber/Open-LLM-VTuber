@@ -44,9 +44,9 @@ class EdgeTTSConfig(I18nMixin):
     """Configuration for Edge TTS."""
 
     voice: str = Field(..., alias="voice")
-    pitch: str | None = Field(..., alias="pitch")
-    rate: str | None = Field(..., alias="rate")
-    volume: str | None = Field(..., alias="volume")
+    pitch: str | None = Field(None, alias="pitch")
+    rate: str | None = Field(None, alias="rate")
+    volume: str | None = Field(None, alias="volume")
 
     DESCRIPTIONS: ClassVar[Dict[str, Description]] = {
         "voice": Description(

@@ -290,6 +290,9 @@ character_config:
       # Check out doc at https://github.com/rany2/edge-tts
       # Use `edge-tts --list-voices` to list all available voices
       voice: 'en-US-AvaMultilingualNeural' # 'en-US-AvaMultilingualNeural' #'zh-CN-XiaoxiaoNeural' # 'ja-JP-NanamiNeural'
+      pitch: '+0Hz' # Number of Hertz to adjust pitch by (doesn't affect speed)
+      rate: '+0%' # Changes how fast the speech is played
+      volume: '+0%'
 
     # pyttsx3_tts doesn't have any config.
 
