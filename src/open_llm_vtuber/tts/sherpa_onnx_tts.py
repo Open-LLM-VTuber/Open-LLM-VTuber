@@ -51,16 +51,26 @@ class TTSEngine(TTSInterface):
 
         self.tts = self.initialize_tts()
 
+
     def initialize_tts(self):
         """
         Initialize the sherpa-onnx TTS engine.
         """
 
+        config_class = None
+
+        if (self.model_type == "kitten"):
+            try:
+                config_class = sherpa_onnx.OfflineTtsKittenModelConfig
+            except:
+                logger.critical(f"The 'kitten' model type is not supported on your platform. Please use a different model type.")
+                return None
+
         model_config_map = {
             'vits': sherpa_onnx.OfflineTtsVitsModelConfig,
             'matcha': sherpa_onnx.OfflineTtsMatchaModelConfig,
             'kokoro': sherpa_onnx.OfflineTtsKokoroModelConfig,
-            'kitten': sherpa_onnx.OfflineTtsKittenModelConfig,
+            # We omit the 'kitten' model type here because it is not supported on all platforms.
         }
         config_class = model_config_map.get(self.model_type)
 
