@@ -1,6 +1,7 @@
 from typing import Union, List, Dict, Any, Optional
 import asyncio
 import json
+import random
 from loguru import logger
 import numpy as np
 
@@ -58,6 +59,166 @@ async def process_single_conversation(
         input_text = await process_user_input(
             user_input, context.asr_engine, websocket_send
         )
+        
+        # Check for rock-paper-scissors game
+        if "猜拳" in input_text and context.game_state == "idle":
+            logger.info("Starting rock-paper-scissors game")
+            context.game_state = "playing"
+            
+            # Ask AI to choose a move
+            game_prompt = "我们来玩猜拳游戏吧！请你在剪刀、石头、布中选择一个，只需要回答选择的内容，不要添加其他解释。"
+            
+            batch_input = create_batch_input(
+                input_text=game_prompt,
+                images=None,
+                from_name=context.character_config.human_name,
+                metadata={"skip_history": True}
+            )
+            
+            # Get AI's move
+            ai_move_response = ""
+            agent_output_stream = context.agent_engine.chat(batch_input)
+            async for output_item in agent_output_stream:
+                if isinstance(output_item, (SentenceOutput, AudioOutput)):
+                    response_part = await process_agent_output(
+                        output=output_item,
+                        character_config=context.character_config,
+                        live2d_model=context.live2d_model,
+                        tts_engine=context.tts_engine,
+                        websocket_send=websocket_send,
+                        tts_manager=tts_manager,
+                        translate_engine=context.translate_engine,
+                    )
+                    ai_move_response += str(response_part) if response_part is not None else ""
+            
+            # Extract AI's move
+            ai_move_response = ai_move_response.strip()
+            if "剪刀" in ai_move_response:
+                context.ai_move = "剪刀"
+            elif "石头" in ai_move_response:
+                context.ai_move = "石头"
+            elif "布" in ai_move_response:
+                context.ai_move = "布"
+            else:
+                # Fallback if AI response is unclear
+                context.ai_move = random.choice(["剪刀", "石头", "布"])
+            
+            logger.info(f"AI chose move: {context.ai_move}")
+            
+            # Notify user to make their move
+            prompt_user_move = "现在轮到你出了！请说剪刀、石头或布。"
+            
+            batch_input = create_batch_input(
+                input_text=prompt_user_move,
+                images=None,
+                from_name=context.character_config.human_name,
+                metadata={"skip_history": True}
+            )
+            
+            await websocket_send(json.dumps({"type": "full-text", "text": "Thinking..."}))
+            
+            # Get AI's response to prompt user
+            agent_output_stream = context.agent_engine.chat(batch_input)
+            async for output_item in agent_output_stream:
+                if isinstance(output_item, (SentenceOutput, AudioOutput)):
+                    await process_agent_output(
+                        output=output_item,
+                        character_config=context.character_config,
+                        live2d_model=context.live2d_model,
+                        tts_engine=context.tts_engine,
+                        websocket_send=websocket_send,
+                        tts_manager=tts_manager,
+                        translate_engine=context.translate_engine,
+                    )
+            
+            logger.info("Waiting for user's move")
+            context.game_state = "waiting_for_user"
+            return ""
+        
+        # Handle user's move in rock-paper-scissors game
+        elif context.game_state == "waiting_for_user":
+            logger.info(f"User input for move: {input_text}")
+            user_move = ""
+            if "剪刀" in input_text:
+                user_move = "剪刀"
+            elif "石头" in input_text:
+                user_move = "石头"
+            elif "布" in input_text:
+                user_move = "布"
+            
+            if user_move:
+                logger.info(f"User chose move: {user_move}")
+                # Determine the result
+                result = ""
+                if context.ai_move == user_move:
+                    result = "平局"
+                elif (context.ai_move == "剪刀" and user_move == "布") or \
+                     (context.ai_move == "石头" and user_move == "剪刀") or \
+                     (context.ai_move == "布" and user_move == "石头"):
+                    result = "我赢了"
+                else:
+                    result = "你赢了"
+                logger.info(f"Game result: {result} (AI: {context.ai_move}, User: {user_move})")
+                
+                # Create result prompt for AI
+                result_prompt = f"我们玩猜拳，我出了{context.ai_move}，用户出了{user_move}，结果是{result}。请你说一句有趣的话来回应这个结果。"
+                
+                batch_input = create_batch_input(
+                    input_text=result_prompt,
+                    images=None,
+                    from_name=context.character_config.human_name,
+                    metadata={"skip_history": True}
+                )
+                
+                await websocket_send(json.dumps({"type": "full-text", "text": "Thinking..."}))
+                
+                # Get AI's response
+                agent_output_stream = context.agent_engine.chat(batch_input)
+                async for output_item in agent_output_stream:
+                    if isinstance(output_item, (SentenceOutput, AudioOutput)):
+                        await process_agent_output(
+                            output=output_item,
+                            character_config=context.character_config,
+                            live2d_model=context.live2d_model,
+                            tts_engine=context.tts_engine,
+                            websocket_send=websocket_send,
+                            tts_manager=tts_manager,
+                            translate_engine=context.translate_engine,
+                        )
+                
+                # Reset game state
+                context.game_state = "idle"
+                context.ai_move = ""
+                logger.info("Rock-paper-scissors game ended")
+                return ""
+            else:
+                # Prompt user to make a valid move
+                invalid_move_prompt = "请说剪刀、石头或布，这样我才能和你玩猜拳游戏哦！"
+                
+                batch_input = create_batch_input(
+                    input_text=invalid_move_prompt,
+                    images=None,
+                    from_name=context.character_config.human_name,
+                    metadata={"skip_history": True}
+                )
+                
+                await websocket_send(json.dumps({"type": "full-text", "text": "Thinking..."}))
+                
+                # Get AI's response
+                agent_output_stream = context.agent_engine.chat(batch_input)
+                async for output_item in agent_output_stream:
+                    if isinstance(output_item, (SentenceOutput, AudioOutput)):
+                        await process_agent_output(
+                            output=output_item,
+                            character_config=context.character_config,
+                            live2d_model=context.live2d_model,
+                            tts_engine=context.tts_engine,
+                            websocket_send=websocket_send,
+                            tts_manager=tts_manager,
+                            translate_engine=context.translate_engine,
+                        )
+                
+                return ""
 
         # Create batch input
         batch_input = create_batch_input(

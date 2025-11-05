@@ -71,6 +71,10 @@ class ServiceContext:
 
         self.send_text: Callable = None
         self.client_uid: str = None
+        
+        # Rock-paper-scissors game state
+        self.game_state: str = "idle"  # idle, playing, waiting_for_user
+        self.ai_move: str = ""  # rock, paper, scissors
 
     def __str__(self):
         return (
