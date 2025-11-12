@@ -445,8 +445,8 @@ class PiperTTSConfig(I18nMixin):
 
     DESCRIPTIONS: ClassVar[Dict[str, Description]] = {
         "model_path": Description(
-            en="Path to Piper ONNX model file (without .onnx extension)",
-            zh="Piper ONNX 模型文件路径（不含 .onnx 扩展名）",
+            en="Path to Piper ONNX model file",
+            zh="Piper ONNX 模型文件路径",
         ),
         "speaker_id": Description(
             en="Speaker ID for multi-speaker models (default 0 for single-speaker)",

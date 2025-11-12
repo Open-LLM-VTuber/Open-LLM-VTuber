@@ -1,4 +1,3 @@
-import sys
 import os
 import wave
 
@@ -14,8 +13,6 @@ except ImportError:
     PIPER_AVAILABLE = False
     logger.warning("piper-tts not installed. Run: pip install piper-tts")
 
-current_dir = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(current_dir)
 
 # Piper TTS requires trained ONNX model files for speech synthesis
 # Recommended models:
@@ -39,18 +36,17 @@ class TTSEngine(TTSInterface):
         normalize_audio: bool = True,
         use_cuda: bool = False,
     ):
-        """
-        Initialize Piper TTS engine (using Python API)
+        """Initializes the Piper TTS engine using the Python API.
 
         Args:
-            model_path: Path to Piper ONNX model file, default "models/piper/zh_CN-huayan-medium.onnx"
-            speaker_id: Speaker ID (for multi-speaker models), default 0
-            length_scale: Speed control (larger = slower), default 1.0
-            noise_scale: Audio variation level (0.0-1.0), default 0.667
-            noise_w: Speaking style variation (0.0-1.0), default 0.8
-            volume: Volume level (0.0-1.0), default 1.0
-            normalize_audio: Whether to normalize audio, default True
-            use_cuda: Whether to use GPU acceleration (requires onnxruntime-gpu), default False
+            model_path: Path to the Piper ONNX model file.
+            speaker_id: Speaker ID for multi-speaker models.
+            length_scale: Speed control (e.g., 1.0 is normal speed).
+            noise_scale: Audio variation level (0.0-1.0).
+            noise_w: Speaking style variation (0.0-1.0).
+            volume: Volume level (0.0-1.0).
+            normalize_audio: Whether to normalize audio.
+            use_cuda: Whether to use GPU acceleration.
         """
         if not PIPER_AVAILABLE:
             raise ImportError(
@@ -91,19 +87,20 @@ class TTSEngine(TTSInterface):
             noise_scale=self.noise_scale,
             noise_w_scale=self.noise_w,
             normalize_audio=self.normalize_audio,
-            speaker_id=self.speaker_id if self.speaker_id is not None else 0,
+            speaker_id=self.speaker_id,
         )
 
-    def generate_audio(self, text: str, file_name_no_ext: str = None) -> str:
-        """
-        Generate speech audio file using Piper TTS Python API.
+    def generate_audio(
+        self, text: str, file_name_no_ext: str | None = None
+    ) -> str | None:
+        """Generates a speech audio file using the Piper TTS Python API.
 
         Args:
-            text: Text to convert to speech
-            file_name_no_ext: File name without extension, default None
+            text: The text to convert to speech.
+            file_name_no_ext: The name of the file without the extension. Defaults to None.
 
         Returns:
-            str: Path to the generated audio file, returns None on failure
+            The path to the generated audio file, or None on failure.
         """
         file_name = self.generate_cache_file_name(file_name_no_ext)
 
