@@ -272,7 +272,7 @@ character_config:
     tts_model: 'edge_tts'
     # text to speech model options:
     #   'azure_tts', 'pyttsx3_tts', 'edge_tts', 'bark_tts',
-    #   'cosyvoice_tts', 'melo_tts', 'coqui_tts',
+    #   'cosyvoice_tts', 'melo_tts', 'coqui_tts', 'piper_tts',
     #   'fish_api_tts', 'x_tts', 'gpt_sovits_tts', 'sherpa_onnx_tts'
     #   'minimax_tts'
 
@@ -292,6 +292,16 @@ character_config:
       voice: 'en-US-AvaMultilingualNeural' # 'en-US-AvaMultilingualNeural' #'zh-CN-XiaoxiaoNeural' # 'ja-JP-NanamiNeural'
 
     # pyttsx3_tts doesn't have any config.
+
+    piper_tts:
+      model_path: 'models/piper/zh_CN-huayan-medium.onnx'  # Path to the model file (.onnx)
+      speaker_id: 0             # Speaker ID (for multi-speaker models; keep 0 for single-speaker models)
+      length_scale: 1.0         # Speech speed control (0.5 = 2x faster, 1.0 = normal, 2.0 = 2x slower)
+      noise_scale: 0.667        # Degree of audio variation (0.0–1.0; higher = richer, more varied; recommended 0.667)
+      noise_w: 0.8              # Speaking style variation (0.0–1.0; higher = more expressive; recommended 0.8)
+      volume: 1.0               # Volume level (0.0–1.0; 1.0 = normal)
+      normalize_audio: true     # Whether to normalize audio (recommended: true, for more consistent volume)
+      use_cuda: false           # Whether to use GPU acceleration (requires onnxruntime-gpu)
 
     cosyvoice_tts: # Cosy Voice TTS connects to the gradio webui
       # Check their documentation for deployment and the meaning of the following configurations
