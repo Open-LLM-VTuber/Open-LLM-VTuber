@@ -22,7 +22,12 @@ class TTSFactory:
         elif engine_type == "edge_tts":
             from .edge_tts import TTSEngine as EdgeTTSEngine
 
-            return EdgeTTSEngine(kwargs.get("voice"))
+            return EdgeTTSEngine(
+                voice=kwargs.get("voice"),
+                pitch=kwargs.get("pitch"),
+                rate=kwargs.get("rate"),
+                volume=kwargs.get("volume"),
+            )
         elif engine_type == "pyttsx3_tts":
             from .pyttsx3_tts import TTSEngine as Pyttsx3TTSEngine
 
@@ -171,19 +176,6 @@ class TTSFactory:
                 gender=kwargs.get("gender"),
                 pitch=kwargs.get("pitch"),
                 speed=kwargs.get("speed"),
-            )
-        elif engine_type == "elevenlabs_tts":
-            from .elevenlabs_tts import TTSEngine as ElevenLabsTTSEngine
-
-            return ElevenLabsTTSEngine(
-                api_key=kwargs.get("api_key"),
-                voice_id=kwargs.get("voice_id"),
-                model_id=kwargs.get("model_id", "eleven_multilingual_v2"),
-                output_format=kwargs.get("output_format", "mp3_44100_128"),
-                stability=kwargs.get("stability", 0.5),
-                similarity_boost=kwargs.get("similarity_boost", 0.5),
-                style=kwargs.get("style", 0.0),
-                use_speaker_boost=kwargs.get("use_speaker_boost", True),
             )
         else:
             raise ValueError(f"Unknown TTS engine type: {engine_type}")

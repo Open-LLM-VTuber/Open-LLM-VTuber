@@ -44,12 +44,21 @@ class EdgeTTSConfig(I18nMixin):
     """Configuration for Edge TTS."""
 
     voice: str = Field(..., alias="voice")
+    pitch: str | None = Field(None, alias="pitch")
+    rate: str | None = Field(None, alias="rate")
+    volume: str | None = Field(None, alias="volume")
 
     DESCRIPTIONS: ClassVar[Dict[str, Description]] = {
         "voice": Description(
             en="Voice name to use for Edge TTS (use 'edge-tts --list-voices' to list available voices)",
             zh="Edge TTS 使用的语音名称（使用 'edge-tts --list-voices' 列出可用语音）",
         ),
+        "pitch": Description(
+            en="Pitch adjustment in Hertz. For positive values, append with a '+'. E.g. +0Hz, -10Hz, +20Hz",
+            zh="音调调整，单位为赫兹。正值加上 '+'，例如 '+0Hz'、'-10Hz'、'+20Hz'",
+        ),
+        "rate": Description(en="Speaking rate adjustment, as a percentage. E.g. +0%, -10%, +20%", zh="语速调整，百分比。例如 '+0%'、'-10%'、'+20%'"),
+        "volume": Description(en="Volume adjustment percentage", zh="音量调整百分比"),
     }
 
 
@@ -255,11 +264,15 @@ class CoquiTTSConfig(I18nMixin):
 class SherpaOnnxTTSConfig(I18nMixin):
     """Configuration for Sherpa Onnx TTS."""
 
+    model_type: Literal["vits", "matcha", "kokoro", "kitten"] = Field(
+        "vits", alias="model_type"
+    )
     vits_model: str = Field(..., alias="vits_model")
     vits_lexicon: Optional[str] = Field(None, alias="vits_lexicon")
     vits_tokens: str = Field(..., alias="vits_tokens")
     vits_data_dir: Optional[str] = Field(None, alias="vits_data_dir")
     vits_dict_dir: Optional[str] = Field(None, alias="vits_dict_dir")
+    voices: Optional[str] = Field(None, alias="voices")
     tts_rule_fsts: Optional[str] = Field(None, alias="tts_rule_fsts")
     max_num_sentences: int = Field(2, alias="max_num_sentences")
     sid: int = Field(1, alias="sid")
@@ -269,6 +282,9 @@ class SherpaOnnxTTSConfig(I18nMixin):
     debug: bool = Field(False, alias="debug")
 
     DESCRIPTIONS: ClassVar[Dict[str, Description]] = {
+        "model_type": Description(
+            en="Model type (vits, matcha, kokoro, kitten)", zh="模型类型（vits, matcha, kokoro, kitten）"
+        ),
         "vits_model": Description(en="Path to VITS model file", zh="VITS 模型文件路径"),
         "vits_lexicon": Description(
             en="Path to lexicon file (optional)", zh="词典文件路径（可选）"
@@ -284,6 +300,10 @@ class SherpaOnnxTTSConfig(I18nMixin):
         ),
         "tts_rule_fsts": Description(
             en="Path to rule FSTs file (optional)", zh="规则 FST 文件路径（可选）"
+        ),
+        "voices": Description(
+            en="Path to the voices.bin folder. For use with Kokoro or Kittens models",
+            zh="voices.bin 文件夹路径（用于 Kokoro 或 Kittens 模型）",
         ),
         "max_num_sentences": Description(
             en="Maximum number of sentences per batch", zh="每批次最大句子数"
@@ -431,49 +451,6 @@ class MinimaxTTSConfig(I18nMixin):
     }
 
 
-class ElevenLabsTTSConfig(I18nMixin):
-    """Configuration for ElevenLabs TTS."""
-
-    api_key: str = Field(..., alias="api_key")
-    voice_id: str = Field(..., alias="voice_id")
-    model_id: str = Field("eleven_multilingual_v2", alias="model_id")
-    output_format: str = Field("mp3_44100_128", alias="output_format")
-    stability: float = Field(0.5, alias="stability")
-    similarity_boost: float = Field(0.5, alias="similarity_boost")
-    style: float = Field(0.0, alias="style")
-    use_speaker_boost: bool = Field(True, alias="use_speaker_boost")
-
-    DESCRIPTIONS: ClassVar[Dict[str, Description]] = {
-        "api_key": Description(
-            en="API key for ElevenLabs TTS service", zh="ElevenLabs TTS 服务的 API 密钥"
-        ),
-        "voice_id": Description(
-            en="Voice ID from ElevenLabs (e.g., JBFqnCBsd6RMkjVDRZzb)",
-            zh="来自 ElevenLabs 的语音 ID（如 JBFqnCBsd6RMkjVDRZzb）",
-        ),
-        "model_id": Description(
-            en="Model ID for ElevenLabs (e.g., eleven_multilingual_v2)",
-            zh="ElevenLabs 模型 ID（如 eleven_multilingual_v2）",
-        ),
-        "output_format": Description(
-            en="Output audio format (e.g., mp3_44100_128)",
-            zh="输出音频格式（如 mp3_44100_128）",
-        ),
-        "stability": Description(
-            en="Voice stability (0.0 to 1.0)", zh="语音稳定性（0.0 到 1.0）"
-        ),
-        "similarity_boost": Description(
-            en="Voice similarity boost (0.0 to 1.0)", zh="语音相似度增强（0.0 到 1.0）"
-        ),
-        "style": Description(
-            en="Voice style exaggeration (0.0 to 1.0)", zh="语音风格夸张度（0.0 到 1.0）"
-        ),
-        "use_speaker_boost": Description(
-            en="Enable speaker boost for better quality", zh="启用说话人增强以获得更好的质量"
-        ),
-    }
-
-
 class TTSConfig(I18nMixin):
     """Configuration for Text-to-Speech."""
 
@@ -493,7 +470,6 @@ class TTSConfig(I18nMixin):
         "openai_tts",  # Add openai_tts here
         "spark_tts",
         "minimax_tts",
-        "elevenlabs_tts",
     ] = Field(..., alias="tts_model")
 
     azure_tts: Optional[AzureTTSConfig] = Field(None, alias="azure_tts")
@@ -515,7 +491,6 @@ class TTSConfig(I18nMixin):
     openai_tts: Optional[OpenAITTSConfig] = Field(None, alias="openai_tts")
     spark_tts: Optional[SparkTTSConfig] = Field(None, alias="spark_tts")
     minimax_tts: Optional[MinimaxTTSConfig] = Field(None, alias="minimax_tts")
-    elevenlabs_tts: ElevenLabsTTSConfig | None = Field(None, alias="elevenlabs_tts")
 
     DESCRIPTIONS: ClassVar[Dict[str, Description]] = {
         "tts_model": Description(
@@ -551,9 +526,6 @@ class TTSConfig(I18nMixin):
         "spark_tts": Description(en="Configuration for Spark TTS", zh="Spark TTS 配置"),
         "minimax_tts": Description(
             en="Configuration for Minimax TTS", zh="Minimax TTS 配置"
-        ),
-        "elevenlabs_tts": Description(
-            en="Configuration for ElevenLabs TTS", zh="ElevenLabs TTS 配置"
         ),
     }
 
@@ -592,7 +564,5 @@ class TTSConfig(I18nMixin):
             values.spark_tts.model_validate(values.spark_tts.model_dump())
         elif tts_model == "minimax_tts" and values.minimax_tts is not None:
             values.minimax_tts.model_validate(values.minimax_tts.model_dump())
-        elif tts_model == "elevenlabs_tts" and values.elevenlabs_tts is not None:
-            values.elevenlabs_tts.model_validate(values.elevenlabs_tts.model_dump())
 
         return values

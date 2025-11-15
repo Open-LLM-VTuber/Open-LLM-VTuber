@@ -13,7 +13,9 @@ sys.path.append(current_dir)
 class TTSEngine(TTSInterface):
     def __init__(
         self,
-        vits_model,
+        vits_model: str,
+        model_type = "vits",
+        voices="",
         vits_lexicon="",
         vits_tokens="",
         vits_data_dir="",
@@ -26,11 +28,13 @@ class TTSEngine(TTSInterface):
         speed=1.0,
         debug=False,
     ):
-        self.vits_model = vits_model
-        self.vits_lexicon = vits_lexicon
-        self.vits_tokens = vits_tokens
-        self.vits_data_dir = vits_data_dir
-        self.vits_dict_dir = vits_dict_dir
+        self.model = vits_model
+        self.model_type = model_type.lower()
+        self.voices = voices
+        self.lexicon = vits_lexicon
+        self.tokens = vits_tokens
+        self.data_dir = vits_data_dir
+        self.dict_dir = vits_dict_dir
         self.tts_rule_fsts = tts_rule_fsts
         self.max_num_sentences = max_num_sentences
         self.sid = sid  # Speaker ID
@@ -47,24 +51,54 @@ class TTSEngine(TTSInterface):
 
         self.tts = self.initialize_tts()
 
+
     def initialize_tts(self):
         """
         Initialize the sherpa-onnx TTS engine.
         """
-        # Construct the configuration for the TTS engine
-        tts_config = sherpa_onnx.OfflineTtsConfig(
-            model=sherpa_onnx.OfflineTtsModelConfig(
-                vits=sherpa_onnx.OfflineTtsVitsModelConfig(
-                    model=self.vits_model,
-                    lexicon=self.vits_lexicon,
-                    data_dir=self.vits_data_dir,
-                    dict_dir=self.vits_dict_dir,
-                    tokens=self.vits_tokens,
-                ),
+
+        config_class = None
+
+        if (self.model_type == "kitten"):
+            try:
+                config_class = sherpa_onnx.OfflineTtsKittenModelConfig
+            except:
+                logger.critical(f"The 'kitten' model type is not supported on your platform. Please use a different model type.")
+                return None
+
+        model_config_map = {
+            'vits': sherpa_onnx.OfflineTtsVitsModelConfig,
+            'matcha': sherpa_onnx.OfflineTtsMatchaModelConfig,
+            'kokoro': sherpa_onnx.OfflineTtsKokoroModelConfig,
+            # We omit the 'kitten' model type here because it is not supported on all platforms.
+        }
+        config_class = model_config_map.get(self.model_type)
+
+        if config_class:
+            params = {
+                'model': self.model,
+                'lexicon': self.lexicon,
+                'data_dir': self.data_dir,
+                'dict_dir': self.dict_dir,
+                'tokens': self.tokens,
+            }
+
+            if self.model_type == 'kokoro' or self.model_type == 'kitten':
+                params['voices'] = self.voices
+
+            # ... create params dict and instantiate
+            model_config_obj = config_class(**params)
+            model = sherpa_onnx.OfflineTtsModelConfig(
+                **{self.model_type: model_config_obj},
+
                 provider=self.provider,
                 debug=self.debug,
                 num_threads=self.num_threads,
-            ),
+            )
+
+        # Construct the configuration for the TTS engine
+        tts_config = sherpa_onnx.OfflineTtsConfig(
+            model=model,
             rule_fsts=self.tts_rule_fsts,
             max_num_sentences=self.max_num_sentences,
         )
