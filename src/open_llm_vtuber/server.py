@@ -6,11 +6,15 @@ the WebSocket connections, serves static files, and manages the web tool.
 It uses FastAPI for the server and Starlette for static file serving.
 """
 
+import base64
+import binascii
 import os
+import secrets
 import shutil
 
 from fastapi import FastAPI
 from starlette.middleware.cors import CORSMiddleware
+from starlette.requests import Request
 from starlette.responses import Response
 from starlette.staticfiles import StaticFiles as StarletteStaticFiles
 
@@ -108,6 +112,13 @@ class WebSocketServer:
                 init_proxy_route(server_url=server_url),
             )
 
+        web_auth_config = getattr(system_config, "web_frontend_auth", None)
+        if web_auth_config and web_auth_config.enabled:
+            self._add_web_frontend_basic_auth(
+                username=web_auth_config.username,
+                password=web_auth_config.password,
+            )
+
         # Mount cache directory first (to ensure audio file access)
         if not os.path.exists("cache"):
             os.makedirs("cache")
@@ -160,3 +171,66 @@ class WebSocketServer:
         if os.path.exists(cache_dir):
             shutil.rmtree(cache_dir)
             os.makedirs(cache_dir)
+
+    def _add_web_frontend_basic_auth(self, username: str, password: str) -> None:
+        """
+        Register a middleware that enforces HTTP Basic authentication for the web frontend.
+
+        The middleware rejects unauthenticated requests to all HTTP endpoints except the
+        explicitly excluded prefixes (e.g. documentation and proxy upgrade routes).
+        """
+
+        exempt_prefixes = (
+            "/client-ws",
+            "/proxy-ws",
+            "/tts-ws",
+            "/docs",
+            "/openapi.json",
+            "/redoc",
+        )
+        realm = "Open-LLM-VTuber"
+
+        def is_exempt(path: str) -> bool:
+            return any(path.startswith(prefix) for prefix in exempt_prefixes)
+
+        def unauthorized_response() -> Response:
+            return Response(
+                content="Unauthorized",
+                status_code=401,
+                headers={"WWW-Authenticate": f'Basic realm="{realm}"'},
+            )
+
+        @self.app.middleware("http")
+        async def basic_auth_middleware(request: Request, call_next) -> Response:
+            path = request.url.path or "/"
+
+            if request.method == "OPTIONS" or is_exempt(path):
+                return await call_next(request)
+
+            auth_header = request.headers.get("Authorization")
+            if not self._is_basic_auth_authorized(auth_header, username, password):
+                return unauthorized_response()
+
+            return await call_next(request)
+
+    @staticmethod
+    def _is_basic_auth_authorized(
+        auth_header: str | None, expected_username: str, expected_password: str
+    ) -> bool:
+        if not auth_header or not auth_header.startswith("Basic "):
+            return False
+
+        encoded_credentials = auth_header[6:].strip()
+        try:
+            decoded_bytes = base64.b64decode(encoded_credentials)
+            decoded_credentials = decoded_bytes.decode("utf-8")
+        except (binascii.Error, UnicodeDecodeError):
+            return False
+
+        username, separator, password = decoded_credentials.partition(":")
+        if not separator:
+            return False
+
+        return secrets.compare_digest(username, expected_username) and secrets.compare_digest(
+            password, expected_password
+        )
