@@ -1,0 +1,97 @@
+# RTX-5090 Quality Mode Configuration
+# Optimized for highest quality responses and voice
+# VRAM Usage: ~22GB
+# First Response: ~3s
+
+character_config:
+  conf_name: 'rtx5090_quality'
+  conf_uid: 'rtx5090_quality_001'
+  live2d_model_name: 'mao_pro'
+  character_name: 'Mao'
+  avatar: 'mao.png'
+  human_name: 'Human'
+
+  persona_prompt: |
+    You are a sophisticated AI companion with deep knowledge and excellent conversational skills.
+    You provide thoughtful, well-reasoned responses with rich context and nuance.
+    You can engage in complex discussions while maintaining a warm and approachable personality.
+
+  agent_config:
+    conversation_agent_choice: 'basic_memory_agent'
+
+    agent_settings:
+      basic_memory_agent:
+        llm_provider: 'ollama_llm'
+        faster_first_response: True
+        segment_method: 'pysbd'  # Better sentence segmentation
+        use_mcpp: True  # Enable tools for enhanced capabilities
+        mcp_enabled_servers: ["time", "ddg-search"]
+
+    llm_configs:
+      # Use 70B quantized model - highest quality
+      ollama_llm:
+        base_url: 'http://ollama:11434/v1'
+        model: 'llama3.3:70b-instruct-q4_K_M'
+        temperature: 1.0  # Full creativity
+        keep_alive: -1
+
+      # Fallback to cloud for extreme quality
+      anthropic_llm:
+        llm_api_key: 'YOUR_ANTHROPIC_API_KEY'
+        model: 'claude-3-5-sonnet-20241022'
+        temperature: 1.0
+
+  # High-quality ASR - Largest model
+  asr_config:
+    asr_model: 'faster_whisper'
+    faster_whisper:
+      model_path: 'large-v3'  # Best accuracy
+      download_root: 'models/whisper'
+      language: 'en'
+      device: 'cuda'
+      compute_type: 'float16'  # Best quality
+      prompt: 'High quality transcription'
+
+  # High-quality TTS - GPU-accelerated voice cloning
+  tts_config:
+    tts_model: 'melo_tts'
+    melo_tts:
+      speaker: 'EN-Default'
+      language: 'EN'
+      device: 'cuda'
+      speed: 1.0
+
+    # Alternative: For voice cloning, use CosyVoice
+    # (Requires separate CosyVoice deployment)
+    cosyvoice_tts:
+      client_url: 'http://localhost:50000/'
+      mode_checkbox_group: '3s极速复刻'
+      sft_dropdown: ''
+      prompt_text: ''
+      prompt_wav_upload_url: 'path/to/your/voice/sample.wav'
+      prompt_wav_record_url: ''
+      instruct_text: ''
+      stream: False
+      seed: 42
+      speed: 1.0
+
+  # Balanced VAD
+  vad_config:
+    vad_model: 'silero_vad'
+    silero_vad:
+      orig_sr: 16000
+      target_sr: 16000
+      prob_threshold: 0.5
+      db_threshold: 60
+      required_hits: 3
+      required_misses: 24
+      smoothing_window: 5
+
+  tts_preprocessor_config:
+    remove_special_char: True
+    ignore_brackets: True
+    ignore_parentheses: True
+    ignore_asterisks: True
+    ignore_angle_brackets: True
+    translator_config:
+      translate_audio: False

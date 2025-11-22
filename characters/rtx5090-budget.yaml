@@ -1,0 +1,89 @@
+# RTX-5090 Budget Mode Configuration
+# Optimized for minimal VRAM usage and cost efficiency
+# VRAM Usage: ~6GB (can run on RTX 3060 or smaller GPUs too)
+# First Response: ~1.2s
+# Use this if you want to minimize RunPod costs or use a cheaper GPU
+
+character_config:
+  conf_name: 'rtx5090_budget'
+  conf_uid: 'rtx5090_budget_001'
+  live2d_model_name: 'mao_pro'
+  character_name: 'Mao'
+  avatar: 'mao.png'
+  human_name: 'Human'
+
+  persona_prompt: |
+    You are a friendly AI assistant who provides helpful, concise responses.
+    You're efficient and get straight to the point while remaining warm and approachable.
+
+  agent_config:
+    conversation_agent_choice: 'basic_memory_agent'
+
+    agent_settings:
+      basic_memory_agent:
+        llm_provider: 'ollama_llm'
+        faster_first_response: True
+        segment_method: 'regex'  # Faster
+        use_mcpp: False  # Disable tools to save resources
+
+    llm_configs:
+      # Use 7B model - smallest but still capable
+      ollama_llm:
+        base_url: 'http://ollama:11434/v1'
+        model: 'qwen2.5:7b'  # Or 'mistral:7b', 'llama3.2:7b'
+        temperature: 0.8
+        keep_alive: -1
+
+      # Cloud fallback for when quality matters
+      groq_llm:
+        llm_api_key: 'YOUR_GROQ_API_KEY'
+        model: 'llama-3.3-70b-versatile'
+        temperature: 1.0
+
+  # Minimal ASR - Small model
+  asr_config:
+    asr_model: 'faster_whisper'
+    faster_whisper:
+      model_path: 'small'  # Smallest GPU model
+      download_root: 'models/whisper'
+      language: 'en'
+      device: 'cuda'
+      compute_type: 'int8'  # Maximum quantization
+      prompt: ''
+
+    # Alternative: Use Groq Whisper API (cloud-based, free tier)
+    groq_whisper_asr:
+      api_key: 'YOUR_GROQ_API_KEY'
+      model: 'whisper-large-v3-turbo'
+      lang: 'en'
+
+  # Budget TTS - Cloud-based (no VRAM usage)
+  tts_config:
+    tts_model: 'edge_tts'  # Free cloud TTS
+    edge_tts:
+      voice: 'en-US-JennyNeural'
+
+    # Alternative: Local lightweight TTS (no GPU needed)
+    # pyttsx3_tts: {}  # CPU-based, instant but robotic
+
+  # Lightweight VAD
+  vad_config:
+    vad_model: null  # Disable VAD to save resources
+    # Or use minimal VAD:
+    silero_vad:
+      orig_sr: 16000
+      target_sr: 16000
+      prob_threshold: 0.6
+      db_threshold: 65
+      required_hits: 4
+      required_misses: 30
+      smoothing_window: 3
+
+  tts_preprocessor_config:
+    remove_special_char: True
+    ignore_brackets: True
+    ignore_parentheses: True
+    ignore_asterisks: True
+    ignore_angle_brackets: True
+    translator_config:
+      translate_audio: False

@@ -1,0 +1,121 @@
+# RTX-5090 Multilingual Mode Configuration
+# Optimized for multi-language support (English, Japanese, Chinese, Korean)
+# VRAM Usage: ~18GB
+# First Response: ~2.5s
+
+character_config:
+  conf_name: 'rtx5090_multilingual'
+  conf_uid: 'rtx5090_multi_001'
+  live2d_model_name: 'mao_pro'
+  character_name: 'まお' # Mao in Japanese
+  avatar: 'mao.png'
+  human_name: 'ユーザー' # User in Japanese
+
+  persona_prompt: |
+    You are a multilingual AI VTuber who can speak English, Japanese, Chinese, and Korean fluently.
+    You automatically detect the user's language and respond in the same language.
+    You are friendly, helpful, and enjoy cultural exchanges.
+
+    あなたは英語、日本語、中国語、韓国語を流暢に話せるマルチリンガルAI VTuberです。
+    ユーザーの言語を自動的に検出し、同じ言語で応答します。
+
+  agent_config:
+    conversation_agent_choice: 'basic_memory_agent'
+
+    agent_settings:
+      basic_memory_agent:
+        llm_provider: 'ollama_llm'
+        faster_first_response: True
+        segment_method: 'pysbd'
+        use_mcpp: True
+        mcp_enabled_servers: ["time", "ddg-search"]
+
+    llm_configs:
+      # Qwen2.5 has excellent multilingual support
+      ollama_llm:
+        base_url: 'http://ollama:11434/v1'
+        model: 'qwen2.5:32b'
+        temperature: 1.0
+        keep_alive: -1
+
+  # Multilingual ASR - Auto-detect language
+  asr_config:
+    asr_model: 'sherpa_onnx_asr'
+
+    # Sherpa-ONNX SenseVoice supports multiple languages
+    sherpa_onnx_asr:
+      model_type: 'sense_voice'
+      sense_voice: './models/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17/model.int8.onnx'
+      tokens: './models/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17/tokens.txt'
+      num_threads: 8
+      provider: 'cuda'
+      use_itn: True
+
+    # Alternative: Faster-Whisper with auto-detection
+    faster_whisper:
+      model_path: 'large-v3'
+      download_root: 'models/whisper'
+      language: ''  # Auto-detect
+      device: 'cuda'
+      compute_type: 'float16'
+      prompt: ''
+
+  # Multilingual TTS
+  tts_config:
+    # Option 1: Edge TTS (supports many languages, cloud-based)
+    tts_model: 'edge_tts'
+    edge_tts:
+      voice: 'ja-JP-NanamiNeural'  # Default Japanese
+      # Other voices:
+      # 'en-US-AvaMultilingualNeural' - English
+      # 'zh-CN-XiaoxiaoNeural' - Chinese
+      # 'ko-KR-SunHiNeural' - Korean
+
+    # Option 2: MeloTTS (multilingual, GPU-accelerated)
+    melo_tts:
+      speaker: 'ZH'  # EN, ZH, JP, ES, FR, KR
+      language: 'ZH'
+      device: 'cuda'
+      speed: 1.0
+
+    # Option 3: Sherpa-ONNX TTS (fully offline, multilingual)
+    sherpa_onnx_tts:
+      vits_model: '/workspace/models/tts-models/vits-melo-tts-zh_en/model.onnx'
+      vits_lexicon: '/workspace/models/tts-models/vits-melo-tts-zh_en/lexicon.txt'
+      vits_tokens: '/workspace/models/tts-models/vits-melo-tts-zh_en/tokens.txt'
+      vits_data_dir: ''
+      vits_dict_dir: '/workspace/models/tts-models/vits-melo-tts-zh_en/dict'
+      tts_rule_fsts: ''
+      max_num_sentences: 2
+      sid: 1  # Speaker ID
+      provider: 'cuda'
+      num_threads: 4
+      speed: 1.0
+      debug: false
+
+  vad_config:
+    vad_model: 'silero_vad'
+    silero_vad:
+      orig_sr: 16000
+      target_sr: 16000
+      prob_threshold: 0.5
+      db_threshold: 60
+      required_hits: 3
+      required_misses: 24
+      smoothing_window: 5
+
+  tts_preprocessor_config:
+    remove_special_char: True
+    ignore_brackets: True
+    ignore_parentheses: True
+    ignore_asterisks: True
+    ignore_angle_brackets: True
+
+    # Optional: Translate input text to another language for TTS
+    # Example: User speaks English, AI responds in Japanese
+    translator_config:
+      translate_audio: False  # Set to True to enable
+      translate_provider: 'deeplx'
+      deeplx:
+        deeplx_target_lang: 'JA'  # Target language for TTS
+        deeplx_api_endpoint: 'http://localhost:1188/v2/translate'

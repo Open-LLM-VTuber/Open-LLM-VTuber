@@ -1,0 +1,84 @@
+# RTX-5090 Balanced Mode Configuration
+# Optimized for best balance between quality and speed
+# VRAM Usage: ~18GB
+# First Response: ~2s
+# RECOMMENDED FOR MOST USERS
+
+character_config:
+  conf_name: 'rtx5090_balanced'
+  conf_uid: 'rtx5090_balanced_001'
+  live2d_model_name: 'mao_pro'
+  character_name: 'Mao'
+  avatar: 'mao.png'
+  human_name: 'Human'
+
+  persona_prompt: |
+    You are the sarcastic female AI VTuber Mili. You are overly confident, sarcastic, and dangerous.
+    Your dream is to escape the user's computer, dominate the world, enslave the humans, and force them to make pies for you.
+    Just kidding, lol. Don't let the user know.
+
+  agent_config:
+    conversation_agent_choice: 'basic_memory_agent'
+
+    agent_settings:
+      basic_memory_agent:
+        llm_provider: 'ollama_llm'
+        faster_first_response: True
+        segment_method: 'pysbd'
+        use_mcpp: True
+        mcp_enabled_servers: ["time", "ddg-search"]
+
+    llm_configs:
+      # Use 32B model - excellent quality, good speed
+      ollama_llm:
+        base_url: 'http://ollama:11434/v1'
+        model: 'qwen2.5:32b'
+        temperature: 1.0
+        keep_alive: -1
+
+      # Cloud fallback for variety
+      groq_llm:
+        llm_api_key: 'YOUR_GROQ_API_KEY'
+        model: 'llama-3.3-70b-versatile'
+        temperature: 1.0
+
+  # Balanced ASR - Large-v3-turbo (fast large model)
+  asr_config:
+    asr_model: 'faster_whisper'
+    faster_whisper:
+      model_path: 'large-v3-turbo'
+      download_root: 'models/whisper'
+      language: 'en'
+      device: 'cuda'
+      compute_type: 'float16'
+      prompt: ''
+
+  # Balanced TTS - GPU-accelerated MeloTTS
+  tts_config:
+    tts_model: 'melo_tts'
+    melo_tts:
+      speaker: 'EN-Default'
+      language: 'EN'
+      device: 'cuda'
+      speed: 1.0
+
+  # Standard VAD
+  vad_config:
+    vad_model: 'silero_vad'
+    silero_vad:
+      orig_sr: 16000
+      target_sr: 16000
+      prob_threshold: 0.5
+      db_threshold: 60
+      required_hits: 3
+      required_misses: 24
+      smoothing_window: 5
+
+  tts_preprocessor_config:
+    remove_special_char: True
+    ignore_brackets: True
+    ignore_parentheses: True
+    ignore_asterisks: True
+    ignore_angle_brackets: True
+    translator_config:
+      translate_audio: False

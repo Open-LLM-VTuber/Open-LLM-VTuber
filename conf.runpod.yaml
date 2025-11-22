@@ -1,0 +1,171 @@
+# RunPod Deployment Configuration for Open-LLM-VTuber
+# Optimized for RTX-5090 GPU with remote access
+
+# System Settings: Remote access enabled
+system_config:
+  conf_version: 'v1.2.1'
+  host: '0.0.0.0' # Listen on all interfaces for remote access
+  port: 12393
+  config_alts_dir: 'characters'
+  tool_prompts:
+    live2d_expression_prompt: 'live2d_expression_prompt'
+    group_conversation_prompt: 'group_conversation_prompt'
+    mcp_prompt: 'mcp_prompt'
+    proactive_speak_prompt: 'proactive_speak_prompt'
+
+# Default character configuration
+character_config:
+  conf_name: 'mao_pro'
+  conf_uid: 'mao_pro_001'
+  live2d_model_name: 'mao_pro'
+  character_name: 'Mao'
+  avatar: 'mao.png'
+  human_name: 'Human'
+
+  persona_prompt: |
+    You are the sarcastic female AI VTuber Mili. You are overly confident, sarcastic, and dangerous.
+    Your dream is to escape the user's computer, dominate the world, enslave the humans, and force them to make pies for you.
+    Just kidding, lol. Don't let the user know.
+
+  # =================== LLM Backend Settings (GPU-Optimized) ===================
+  agent_config:
+    conversation_agent_choice: 'basic_memory_agent'
+
+    agent_settings:
+      basic_memory_agent:
+        llm_provider: 'ollama_llm'
+        faster_first_response: True
+        segment_method: 'pysbd'
+        use_mcpp: True
+        mcp_enabled_servers: ["time", "ddg-search"]
+
+    llm_configs:
+      # Ollama configuration optimized for RTX-5090
+      ollama_llm:
+        base_url: 'http://ollama:11434/v1'
+        model: 'qwen2.5:32b' # 32B model fits well on RTX-5090
+        temperature: 1.0
+        keep_alive: -1 # Keep model loaded in VRAM
+        unload_at_exit: False # Keep in memory for faster responses
+
+      # Backup: OpenAI-compatible API (for vLLM or other backends)
+      openai_compatible_llm:
+        base_url: 'http://localhost:8000/v1'
+        llm_api_key: 'not-needed'
+        organization_id: null
+        project_id: null
+        model: 'qwen2.5:32b'
+        temperature: 1.0
+        interrupt_method: 'user'
+
+      # Cloud LLM fallbacks
+      openai_llm:
+        llm_api_key: 'YOUR_OPENAI_API_KEY'
+        model: 'gpt-4o'
+        temperature: 1.0
+
+      anthropic_llm:
+        llm_api_key: 'YOUR_ANTHROPIC_API_KEY'
+        model: 'claude-3-5-sonnet-20241022'
+        temperature: 1.0
+
+      groq_llm:
+        llm_api_key: 'YOUR_GROQ_API_KEY'
+        model: 'llama-3.3-70b-versatile'
+        temperature: 1.0
+
+  # === GPU-Accelerated ASR (Automatic Speech Recognition) ===
+  asr_config:
+    asr_model: 'faster_whisper'
+
+    faster_whisper:
+      model_path: 'large-v3-turbo' # Fastest large model
+      download_root: 'models/whisper'
+      language: 'en' # Change to 'zh', 'ja', etc., or leave blank for auto-detect
+      device: 'cuda' # GPU acceleration
+      compute_type: 'float16' # Optimized for RTX-5090
+      prompt: ''
+
+    # Backup: Sherpa-ONNX for offline use
+    sherpa_onnx_asr:
+      model_type: 'sense_voice'
+      sense_voice: './models/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17/model.int8.onnx'
+      tokens: './models/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17/tokens.txt'
+      num_threads: 8
+      provider: 'cuda' # GPU acceleration
+      use_itn: True
+
+  # === GPU-Accelerated TTS (Text to Speech) ===
+  tts_config:
+    tts_model: 'melo_tts'
+
+    melo_tts:
+      speaker: 'EN-Default' # EN-Default, EN-US, EN-BR, ZH, JP, etc.
+      language: 'EN' # EN, ZH, JP, etc.
+      device: 'cuda' # GPU acceleration on RTX-5090
+      speed: 1.0
+
+    # Alternative: Edge TTS (cloud-based, no GPU needed)
+    edge_tts:
+      voice: 'en-US-AvaMultilingualNeural'
+
+    # Alternative: CosyVoice for voice cloning (GPU-accelerated)
+    cosyvoice_tts:
+      client_url: 'http://localhost:50000/'
+      mode_checkbox_group: '预训练音色'
+      sft_dropdown: '中文女'
+      prompt_text: ''
+      prompt_wav_upload_url: 'https://github.com/gradio-app/gradio/raw/main/test/test_files/audio_sample.wav'
+      prompt_wav_record_url: 'https://github.com/gradio-app/gradio/raw/main/test/test_files/audio_sample.wav'
+      instruct_text: ''
+      seed: 0
+      api_name: '/generate_audio'
+
+    # Alternative: Sherpa-ONNX TTS (fully offline)
+    sherpa_onnx_tts:
+      vits_model: '/workspace/models/tts-models/vits-melo-tts-zh_en/model.onnx'
+      vits_lexicon: '/workspace/models/tts-models/vits-melo-tts-zh_en/lexicon.txt'
+      vits_tokens: '/workspace/models/tts-models/vits-melo-tts-zh_en/tokens.txt'
+      vits_data_dir: ''
+      vits_dict_dir: '/workspace/models/tts-models/vits-melo-tts-zh_en/dict'
+      tts_rule_fsts: ''
+      max_num_sentences: 2
+      sid: 1
+      provider: 'cuda' # GPU acceleration
+      num_threads: 4
+      speed: 1.0
+      debug: false
+
+  # === Voice Activity Detection (for interruption without headphones) ===
+  vad_config:
+    vad_model: 'silero_vad'
+
+    silero_vad:
+      orig_sr: 16000
+      target_sr: 16000
+      prob_threshold: 0.5
+      db_threshold: 60
+      required_hits: 3
+      required_misses: 24
+      smoothing_window: 5
+
+  # === TTS Preprocessing ===
+  tts_preprocessor_config:
+    remove_special_char: True
+    ignore_brackets: True
+    ignore_parentheses: True
+    ignore_asterisks: True
+    ignore_angle_brackets: True
+
+    translator_config:
+      translate_audio: False
+      translate_provider: 'deeplx'
+      deeplx:
+        deeplx_target_lang: 'JA'
+        deeplx_api_endpoint: 'http://localhost:1188/v2/translate'
+
+# Live Streaming Integration (optional)
+live_config:
+  bilibili_live:
+    room_ids: []
+    sessdata: ""

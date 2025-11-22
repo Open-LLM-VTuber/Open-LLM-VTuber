@@ -1,0 +1,112 @@
+# Git files
+.git
+.gitignore
+.gitmodules
+.github
+
+# Python cache
+__pycache__
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs and cache
+logs/
+*.log
+cache/
+*.cache
+
+# Models (will be downloaded in container or mounted)
+models/
+*.gguf
+*.bin
+*.safetensors
+*.onnx
+*.pth
+*.pt
+
+# Chat history and user data
+chat_history/
+*.db
+*.sqlite
+
+# Documentation
+*.md
+!README.md
+docs/
+
+# Test files
+tests/
+test_*.py
+*_test.py
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+
+# Docker files (prevent recursion)
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# RunPod specific
+.runpod/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Large media files
+*.mp4
+*.avi
+*.mov
+*.mkv
+*.wav
+*.mp3
+*.flac
+
+# Jupyter notebooks
+*.ipynb
+.ipynb_checkpoints/
+
+# Coverage reports
+htmlcov/
+.coverage
+.coverage.*
+
+# Environment files with secrets
+.env
+.env.*
+!.env.example
+
+# Backup files
+*.bak
+*.backup
+*~
+
+# Large background images (if not needed)
+# backgrounds/*.jpg
+# backgrounds/*.png
+
+# Node modules (if any)
+node_modules/

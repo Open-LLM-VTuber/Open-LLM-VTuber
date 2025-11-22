@@ -1,0 +1,62 @@
+{
+  "name": "Open-LLM-VTuber RTX-5090",
+  "description": "Voice-interactive AI VTuber with Live2D avatar, optimized for RTX-5090. Runs completely offline with GPU-accelerated LLM, ASR, and TTS.",
+  "dockerImage": "your-dockerhub-username/open-llm-vtuber:latest",
+  "containerDiskInGb": 50,
+  "volumeInGb": 100,
+  "volumeMountPath": "/workspace",
+  "ports": [
+    {
+      "publicPort": 12393,
+      "containerPort": 12393,
+      "protocol": "http"
+    }
+  ],
+  "env": [
+    {
+      "key": "OLLAMA_MODEL",
+      "value": "qwen2.5:32b",
+      "description": "LLM model to use (qwen2.5:32b, llama3.3:70b-q4, etc.)"
+    },
+    {
+      "key": "HF_HOME",
+      "value": "/workspace/models",
+      "description": "HuggingFace cache directory"
+    },
+    {
+      "key": "MODELSCOPE_CACHE",
+      "value": "/workspace/models",
+      "description": "ModelScope cache directory"
+    },
+    {
+      "key": "API_KEY",
+      "value": "",
+      "description": "Optional: API key for authentication (leave empty to disable)"
+    },
+    {
+      "key": "OPENAI_API_KEY",
+      "value": "",
+      "description": "Optional: OpenAI API key for cloud LLM fallback"
+    },
+    {
+      "key": "ANTHROPIC_API_KEY",
+      "value": "",
+      "description": "Optional: Anthropic API key for Claude fallback"
+    },
+    {
+      "key": "GROQ_API_KEY",
+      "value": "",
+      "description": "Optional: Groq API key for fast cloud inference"
+    }
+  ],
+  "startScript": "/workspace/start.sh",
+  "category": "AI",
+  "readme": "# Open-LLM-VTuber on RunPod\n\nVoice-interactive AI companion with Live2D avatar support.\n\n## Features\n- Real-time voice conversations\n- GPU-accelerated LLM inference (Ollama)\n- Fast ASR with Faster-Whisper\n- Natural TTS with MeloTTS\n- Live2D character animations\n\n## Access\nAfter deployment, access via:\n- WebSocket: wss://[POD-ID]-12393.proxy.runpod.net/client-ws\n- HTTP: https://[POD-ID]-12393.proxy.runpod.net\n\n## Default Model\n- LLM: Qwen2.5-32B (optimized for RTX-5090)\n- ASR: Faster-Whisper Large-v3-turbo\n- TTS: MeloTTS (GPU-accelerated)\n\n## First Run\nFirst startup will download models (~20-40GB). This may take 10-30 minutes.\n\n## Configuration\nModify `/workspace/conf.yaml` to customize settings.\n\n## Support\nGitHub: https://github.com/t41372/Open-LLM-VTuber",
+  "gpuType": "NVIDIA RTX 5090",
+  "minGpuCount": 1,
+  "maxGpuCount": 1,
+  "minMemoryInGb": 32,
+  "minVcpuCount": 8,
+  "isPublic": false,
+  "imageName": "Open-LLM-VTuber"
+}

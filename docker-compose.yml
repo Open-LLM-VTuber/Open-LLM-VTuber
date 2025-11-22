@@ -1,0 +1,96 @@
+version: '3.8'
+
+services:
+  # Ollama service for local LLM inference
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama
+    restart: unless-stopped
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_models:/root/.ollama
+    environment:
+      - OLLAMA_HOST=0.0.0.0:11434
+      - OLLAMA_KEEP_ALIVE=-1
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # Main Open-LLM-VTuber application
+  open-llm-vtuber:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: open-llm-vtuber
+    restart: unless-stopped
+    ports:
+      - "12393:12393"
+    volumes:
+      # Persistent storage for models and data
+      - models:/workspace/models
+      - chat_history:/workspace/chat_history
+      - cache:/workspace/cache
+      - logs:/workspace/logs
+      # Mount configuration (can be overridden)
+      - ./conf.runpod.yaml:/workspace/conf.yaml:ro
+      # Mount characters directory
+      - ./characters:/workspace/characters:ro
+      # Mount Live2D models
+      - ./live2d-models:/workspace/live2d-models:ro
+      - ./backgrounds:/workspace/backgrounds:ro
+      - ./avatars:/workspace/avatars:ro
+    environment:
+      # HuggingFace cache directory
+      - HF_HOME=/workspace/models
+      - MODELSCOPE_CACHE=/workspace/models
+      # Ollama endpoint
+      - OLLAMA_BASE_URL=http://ollama:11434
+      # Optional: API keys (set via .env file)
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - GROQ_API_KEY=${GROQ_API_KEY:-}
+      # Security: API key for authentication (optional)
+      - API_KEY=${API_KEY:-}
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    depends_on:
+      ollama:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:12393/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+volumes:
+  ollama_models:
+    driver: local
+  models:
+    driver: local
+  chat_history:
+    driver: local
+  cache:
+    driver: local
+  logs:
+    driver: local
+
+networks:
+  default:
+    name: vtuber-network
