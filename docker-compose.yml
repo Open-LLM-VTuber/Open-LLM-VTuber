@@ -43,9 +43,9 @@ services:
       - cache:/workspace/cache
       - logs:/workspace/logs
       # Mount configuration (can be overridden)
-      - ./conf.runpod.yaml:/workspace/conf.yaml:ro
+      - ./runpod/conf.yaml:/workspace/conf.yaml:ro
       # Mount characters directory
-      - ./characters:/workspace/characters:ro
+      - ./runpod/characters:/workspace/characters:ro
       # Mount Live2D models
       - ./live2d-models:/workspace/live2d-models:ro
       - ./backgrounds:/workspace/backgrounds:ro

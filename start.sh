@@ -85,9 +85,9 @@ fi
 
 # Set up configuration
 if [ ! -f "conf.yaml" ]; then
-    if [ -f "conf.runpod.yaml" ]; then
+    if [ -f "runpod/conf.yaml" ]; then
         log_info "Using RunPod configuration..."
-        cp conf.runpod.yaml conf.yaml
+        cp runpod/conf.yaml conf.yaml
     else
         log_warn "No configuration found! Using default..."
         cp config_templates/conf.default.yaml conf.yaml
