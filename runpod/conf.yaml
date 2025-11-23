@@ -41,8 +41,10 @@ character_config:
 
     llm_configs:
       # Ollama configuration optimized for RTX-5090
+      # Uses localhost for RunPod (single container)
+      # Override with OLLAMA_BASE_URL env var for docker-compose
       ollama_llm:
-        base_url: 'http://ollama:11434/v1'
+        base_url: 'http://localhost:11434/v1'
         model: 'qwen2.5:32b' # 32B model fits well on RTX-5090
         temperature: 1.0
         keep_alive: -1 # Keep model loaded in VRAM
