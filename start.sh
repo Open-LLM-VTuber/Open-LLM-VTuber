@@ -114,6 +114,25 @@ fi
 log_info "========================================="
 log_info ""
 
+# Install missing dependencies if needed
+log_info "Checking dependencies..."
+
+# Check and install faster-whisper (commonly missing)
+if ! python -c "import faster_whisper" 2>/dev/null; then
+    log_warn "faster-whisper not found, installing..."
+    uv pip install faster-whisper ctranslate2 || pip install faster-whisper ctranslate2
+fi
+
+# Check and install other common missing packages
+for pkg in soundfile sounddevice; do
+    if ! python -c "import $pkg" 2>/dev/null; then
+        log_warn "$pkg not found, installing..."
+        uv pip install $pkg || pip install $pkg
+    fi
+done
+
+log_info "Dependencies check complete!"
+
 # Start the Open-LLM-VTuber server
 log_info "Starting Open-LLM-VTuber server..."
 
