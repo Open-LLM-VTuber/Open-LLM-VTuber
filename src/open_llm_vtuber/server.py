@@ -17,6 +17,7 @@ from starlette.staticfiles import StaticFiles as StarletteStaticFiles
 from .routes import init_client_ws_route, init_webtool_routes, init_proxy_route
 from .service_context import ServiceContext
 from .config_manager.utils import Config
+from .file_manager import router as file_manager_router
 
 
 # Create a custom StaticFiles class that adds CORS headers
@@ -107,6 +108,9 @@ class WebSocketServer:
             self.app.include_router(
                 init_proxy_route(server_url=server_url),
             )
+
+        # Include file manager API routes
+        self.app.include_router(file_manager_router)
 
         # Mount cache directory first (to ensure audio file access)
         if not os.path.exists("cache"):
