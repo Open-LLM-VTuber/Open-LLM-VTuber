@@ -27,6 +27,13 @@ class BasicMemoryAgentConfig(I18nMixin, BaseModel):
         "deepseek_llm",
         "groq_llm",
         "mistral_llm",
+        "siliconflow_llm",
+        "aliyun_bailian_llm",
+        "moonshot_llm",
+        "openrouter_llm",
+        "minimax_llm",
+        "steepspeed_llm",
+        "volcengine_llm",
     ] = Field(..., alias="llm_provider")
 
     faster_first_response: Optional[bool] = Field(True, alias="faster_first_response")
