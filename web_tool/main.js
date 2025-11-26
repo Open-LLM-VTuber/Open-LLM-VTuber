@@ -396,3 +396,165 @@ async function fetchWithRetry(url, maxRetries = 3, retryDelay = 1000) {
         }
     }
 }
+
+// ========================
+// Direct Control UI logic
+// ========================
+
+// Elements
+const dcSessionSelect = document.getElementById('dcSessionSelect');
+const dcRefreshSessions = document.getElementById('dcRefreshSessions');
+const dcApplyAll = document.getElementById('dcApplyAll');
+
+const dcTabSpeak = document.getElementById('dcTabSpeak');
+const dcTabSystem = document.getElementById('dcTabSystem');
+const dcTabRespond = document.getElementById('dcTabRespond');
+
+const dcSpeakPanel = document.getElementById('dcSpeakPanel');
+const dcSystemPanel = document.getElementById('dcSystemPanel');
+const dcRespondPanel = document.getElementById('dcRespondPanel');
+
+const dcSpeakText = document.getElementById('dcSpeakText');
+const dcSpeakBtn = document.getElementById('dcSpeakBtn');
+const dcSpeakStatus = document.getElementById('dcSpeakStatus');
+
+const dcSystemText = document.getElementById('dcSystemText');
+const dcSystemMode = document.getElementById('dcSystemMode');
+const dcSystemBtn = document.getElementById('dcSystemBtn');
+const dcSystemStatus = document.getElementById('dcSystemStatus');
+
+const dcRespondText = document.getElementById('dcRespondText');
+const dcRespondBtn = document.getElementById('dcRespondBtn');
+const dcRespondStatus = document.getElementById('dcRespondStatus');
+
+function switchDcTab(target) {
+    dcSpeakPanel.style.display = target === 'speak' ? 'block' : 'none';
+    dcSystemPanel.style.display = target === 'system' ? 'block' : 'none';
+    dcRespondPanel.style.display = target === 'respond' ? 'block' : 'none';
+}
+
+async function loadSessions() {
+    try {
+        const res = await fetch(`${API_BASE_URL}/v1/sessions`);
+        if (!res.ok) throw new Error('Failed to load sessions');
+        const sessions = await res.json();
+        dcSessionSelect.innerHTML = '';
+        if (!sessions || sessions.length === 0) {
+            const opt = document.createElement('option');
+            opt.value = '';
+            opt.textContent = 'No sessions';
+            dcSessionSelect.appendChild(opt);
+            return;
+        }
+        for (const uid of sessions) {
+            const opt = document.createElement('option');
+            opt.value = uid;
+            opt.textContent = uid;
+            dcSessionSelect.appendChild(opt);
+        }
+    } catch (e) {
+        // keep select as-is
+    }
+}
+
+function buildTargetingPayload() {
+    const payload = {};
+    if (dcApplyAll.checked) {
+        payload.apply_to_all = true;
+    } else {
+        const uid = dcSessionSelect.value;
+        if (uid) payload.client_uid = uid;
+    }
+    return payload;
+}
+
+dcRefreshSessions.addEventListener('click', () => {
+    loadSessions();
+});
+
+dcTabSpeak.addEventListener('click', () => switchDcTab('speak'));
+dcTabSystem.addEventListener('click', () => switchDcTab('system'));
+dcTabRespond.addEventListener('click', () => switchDcTab('respond'));
+
+dcSpeakBtn.addEventListener('click', async () => {
+    const text = (dcSpeakText.value || '').trim();
+    if (!text) {
+        dcSpeakStatus.textContent = 'Please enter text to speak';
+        dcSpeakStatus.className = 'status error';
+        return;
+    }
+    try {
+        dcSpeakStatus.textContent = 'Sending...';
+        dcSpeakStatus.className = 'status';
+        const body = { text, ...buildTargetingPayload() };
+        const res = await fetch(`${API_BASE_URL}/v1/control/speak`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || 'Speak request failed');
+        dcSpeakStatus.textContent = `OK: ${data.message}`;
+        dcSpeakStatus.className = 'status success';
+    } catch (e) {
+        dcSpeakStatus.textContent = 'Error: ' + e.message;
+        dcSpeakStatus.className = 'status error';
+    }
+});
+
+dcSystemBtn.addEventListener('click', async () => {
+    const text = (dcSystemText.value || '').trim();
+    const mode = (dcSystemMode.value || 'append');
+    if (!text && mode !== 'reset') {
+        dcSystemStatus.textContent = 'Please enter system instruction or choose reset';
+        dcSystemStatus.className = 'status error';
+        return;
+    }
+    try {
+        dcSystemStatus.textContent = 'Applying...';
+        dcSystemStatus.className = 'status';
+        const body = { text, mode, ...buildTargetingPayload() };
+        const res = await fetch(`${API_BASE_URL}/v1/control/system`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || 'System request failed');
+        dcSystemStatus.textContent = `OK: ${data.message}`;
+        dcSystemStatus.className = 'status success';
+    } catch (e) {
+        dcSystemStatus.textContent = 'Error: ' + e.message;
+        dcSystemStatus.className = 'status error';
+    }
+});
+
+dcRespondBtn.addEventListener('click', async () => {
+    const text = (dcRespondText.value || '').trim();
+    if (!text) {
+        dcRespondStatus.textContent = 'Please enter message text';
+        dcRespondStatus.className = 'status error';
+        return;
+    }
+    try {
+        dcRespondStatus.textContent = 'Triggering...';
+        dcRespondStatus.className = 'status';
+        const body = { text, ...buildTargetingPayload() };
+        const res = await fetch(`${API_BASE_URL}/v1/control/respond`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || 'Respond request failed');
+        dcRespondStatus.textContent = `OK: ${data.message}`;
+        dcRespondStatus.className = 'status success';
+    } catch (e) {
+        dcRespondStatus.textContent = 'Error: ' + e.message;
+        dcRespondStatus.className = 'status error';
+    }
+});
+
+// Initialize sessions and default tab
+loadSessions();
+switchDcTab('speak');
