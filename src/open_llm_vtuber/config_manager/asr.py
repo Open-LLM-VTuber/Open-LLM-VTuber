@@ -56,8 +56,9 @@ class FasterWhisperConfig(I18nMixin):
             zh="模型的计算类型（int8、float16 或 float32）",
         ),
         "prompt": Description(
-            en="An initial prompt to provide context or guide the transcription. Language of the prompt should match the audio language.", zh="用于提供上下文或引导转录的初始提示词。提示词应与音频语言匹配。"
-        )
+            en="An initial prompt to provide context or guide the transcription. Language of the prompt should match the audio language.",
+            zh="用于提供上下文或引导转录的初始提示词。提示词应与音频语言匹配。",
+        ),
     }
 
 
@@ -87,8 +88,9 @@ class WhisperCPPConfig(I18nMixin):
             en="Language code (e.g., auto, en, zh)", zh="语言代码（如 auto、en、zh）"
         ),
         "prompt": Description(
-            en="An initial prompt to provide context or guide the transcription. Language of the prompt should match the audio language.", zh="用于提供上下文或引导转录的初始提示词。提示词应与音频语言匹配。"
-        )
+            en="An initial prompt to provide context or guide the transcription. Language of the prompt should match the audio language.",
+            zh="用于提供上下文或引导转录的初始提示词。提示词应与音频语言匹配。",
+        ),
     }
 
 
@@ -108,9 +110,11 @@ class WhisperConfig(I18nMixin):
             en="Device to use for inference (cpu or cuda)", zh="推理设备（cpu 或 cuda）"
         ),
         "prompt": Description(
-            en="An initial prompt to provide context or guide the transcription. Language of the prompt should match the audio language.", zh="用于提供上下文或引导转录的初始提示词。提示词应与音频语言匹配。"
-        )
+            en="An initial prompt to provide context or guide the transcription. Language of the prompt should match the audio language.",
+            zh="用于提供上下文或引导转录的初始提示词。提示词应与音频语言匹配。",
+        ),
     }
+
 
 class FunASRConfig(I18nMixin):
     """Configuration for FunASR."""

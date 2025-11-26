@@ -17,7 +17,7 @@
 
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/Open-LLM-VTuber/Open-LLM-VTuber)
 
-English README | [中文README](https://github.com/t41372/Open-LLM-VTuber/blob/main/README.CN.md)
+ENGLISH README | [中文 README](https://github.com/t41372/Open-LLM-VTuber/blob/main/README.CN.md) | [한국어 README](https://github.com/t41372/Open-LLM-VTuber/blob/main/README.KR.md) | [日本語 README](https://github.com/t41372/Open-LLM-VTuber/blob/main/README.JP.md)
 
 [Documentation](https://open-llm-vtuber.github.io/docs/quick-start) | [![Roadmap](https://img.shields.io/badge/Roadmap-GitHub_Project-yellow)](https://github.com/orgs/Open-LLM-VTuber/projects/2)
 

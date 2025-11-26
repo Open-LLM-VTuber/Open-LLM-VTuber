@@ -53,7 +53,9 @@ class TTSEngine(TTSInterface):
         elif "pcm" in output_format:
             self.file_extension = "wav"
         else:
-            logger.warning(f"Unknown output format '{output_format}', defaulting to mp3 extension.")
+            logger.warning(
+                f"Unknown output format '{output_format}', defaulting to mp3 extension."
+            )
             self.file_extension = "mp3"  # Default to mp3
 
         try:
@@ -65,7 +67,9 @@ class TTSEngine(TTSInterface):
             self.client = None
             raise e
 
-    def generate_audio(self, text: str, file_name_no_ext: str | None = None) -> str | None:
+    def generate_audio(
+        self, text: str, file_name_no_ext: str | None = None
+    ) -> str | None:
         """
         Generate speech audio file using ElevenLabs TTS.
 

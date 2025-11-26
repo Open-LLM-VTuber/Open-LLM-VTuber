@@ -8,6 +8,7 @@ dependencies = [
     "anthropic>=0.40.0",
     "azure-cognitiveservices-speech>=1.41.1",
     "chardet>=5.2.0",
+    "cartesia>=2.0.0", 
     "edge-tts>=7.0.0",
     "elevenlabs>=1.0.0",
     "fastapi[standard]>=0.115.8",
@@ -43,9 +44,9 @@ dependencies = [
 
 [project.optional-dependencies]
 bilibili = [
-    "aiohttp~=3.9.0",
+    "aiohttp>=3.10.0",
     "Brotli~=1.1.0",
-    "yarl~=1.9.3",
+    "yarl>=1.12.0,<2.0"
 ]
 
 [tool.pixi.project]

@@ -15,7 +15,7 @@
 [![BuyMeACoffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-ffdd00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://www.buymeacoffee.com/yi.ting)
 [![](https://dcbadge.limes.pink/api/server/3UDA8YFDXx)](https://discord.gg/3UDA8YFDXx)
 
-[英文 README](https://github.com/t41372/Open-LLM-VTuber/blob/main/README.md) | 中文 README
+[ENGLISH README](https://github.com/t41372/Open-LLM-VTuber/blob/main/README.md) | 中文 README | [한국어 README](https://github.com/t41372/Open-LLM-VTuber/blob/main/README.KR.md) | [日本語 README](https://github.com/t41372/Open-LLM-VTuber/blob/main/README.JP.md)
 
 [使用文档](https://open-llm-vtuber.github.io/docs/quick-start) | | [![项目路线图](https://img.shields.io/badge/项目路线图-GitHub_Project-yellow)](https://github.com/orgs/Open-LLM-VTuber/projects/2)
 

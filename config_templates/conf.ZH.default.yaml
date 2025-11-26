@@ -269,9 +269,9 @@ character_config:
     tts_model: 'edge_tts' # 使用的文本转语音模型
     # 文本转语音模型选项：
     #   'azure_tts', 'pyttsx3_tts', 'edge_tts', 'bark_tts',
-    #   'cosyvoice_tts', 'melo_tts', 'coqui_tts',
+    #   'cosyvoice_tts', 'melo_tts', 'coqui_tts', 'piper_tts',
     #   'fish_api_tts', 'x_tts', 'gpt_sovits_tts', 'sherpa_onnx_tts'
-    #   'minimax_tts', 'elevenlabs_tts'
+    #   'minimax_tts', 'elevenlabs_tts', 'cartesia_tts'
 
     siliconflow_tts:
       api_url: "https://api.siliconflow.cn/v1/audio/speech"
@@ -300,6 +300,16 @@ character_config:
       voice: zh-CN-XiaoxiaoNeural # 'en-US-AvaMultilingualNeural' #'zh-CN-XiaoxiaoNeural' # 'ja-JP-NanamiNeural'
 
     # pyttsx3_tts 没有任何配置。
+
+    piper_tts:
+      model_path: 'models/piper/zh_CN-huayan-medium.onnx' # 模型文件路径（.onnx 文件）
+      speaker_id: 0             # 说话人 ID（多说话人模型使用，单说话人模型保持 0）
+      length_scale: 1.0         # 语速控制（0.5 = 快一倍，1.0 = 正常，2.0 = 慢一倍）
+      noise_scale: 0.667        # 音频变化程度（0.0-1.0，越高音频越丰富多变，推荐 0.667）
+      noise_w: 0.8              # 说话风格变化（0.0-1.0，越高说话风格越多样，推荐 0.8）
+      volume: 1.0               # 音量（0.0-1.0，1.0 为正常音量）
+      normalize_audio: true     # 是否归一化音频（推荐启用，使音量更稳定）
+      use_cuda: false           # 是否使用 GPU 加速（需要安装 onnxruntime-gpu）
 
     cosyvoice_tts: # Cosy Voice TTS 连接到 gradio webui
       # 查看他们的文档以了解部署和以下配置的含义
@@ -424,6 +434,16 @@ character_config:
       similarity_boost: 0.5 # 语音相似度增强（0.0 到 1.0）
       style: 0.0 # 语音风格夸张度（0.0 到 1.0）
       use_speaker_boost: true # 启用说话人增强以获得更好的质量
+
+    cartesia_tts:
+      api_key: ''
+      voice_id: '' # 来自 Cartesia 的语音 ID
+      model_id: 'sonic-3' # 模型 ID（如 sonic-3）
+      output_format: 'wav' # 输出音频格式（如 wav）
+      language: 'en' # 输出语音的语言（如 en）
+      emotion: 'neutral' # 情感指导
+      volume: 1.0 # 语音音量（0.5 到 2.0）
+      speed: 1.0 # 语音速度（0.6 到 1.5）
 
   # =================== Voice Activity Detection ===================
   vad_config:

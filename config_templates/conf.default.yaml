@@ -272,9 +272,9 @@ character_config:
     tts_model: 'edge_tts'
     # text to speech model options:
     #   'azure_tts', 'pyttsx3_tts', 'edge_tts', 'bark_tts',
-    #   'cosyvoice_tts', 'melo_tts', 'coqui_tts',
+    #   'cosyvoice_tts', 'melo_tts', 'coqui_tts', 'piper_tts',
     #   'fish_api_tts', 'x_tts', 'gpt_sovits_tts', 'sherpa_onnx_tts'
-    #   'minimax_tts', 'elevenlabs_tts'
+    #   'minimax_tts', 'elevenlabs_tts', 'cartesia_tts'
 
     azure_tts:
       api_key: 'azure-api-key'
@@ -292,6 +292,16 @@ character_config:
       voice: 'en-US-AvaMultilingualNeural' # 'en-US-AvaMultilingualNeural' #'zh-CN-XiaoxiaoNeural' # 'ja-JP-NanamiNeural'
 
     # pyttsx3_tts doesn't have any config.
+
+    piper_tts:
+      model_path: 'models/piper/zh_CN-huayan-medium.onnx'  # Path to the model file (.onnx)
+      speaker_id: 0             # Speaker ID (for multi-speaker models; keep 0 for single-speaker models)
+      length_scale: 1.0         # Speech speed control (0.5 = 2x faster, 1.0 = normal, 2.0 = 2x slower)
+      noise_scale: 0.667        # Degree of audio variation (0.0–1.0; higher = richer, more varied; recommended 0.667)
+      noise_w: 0.8              # Speaking style variation (0.0–1.0; higher = more expressive; recommended 0.8)
+      volume: 1.0               # Volume level (0.0–1.0; 1.0 = normal)
+      normalize_audio: true     # Whether to normalize audio (recommended: true, for more consistent volume)
+      use_cuda: false           # Whether to use GPU acceleration (requires onnxruntime-gpu)
 
     cosyvoice_tts: # Cosy Voice TTS connects to the gradio webui
       # Check their documentation for deployment and the meaning of the following configurations
@@ -429,6 +439,16 @@ character_config:
       similarity_boost: 0.5 # Voice similarity boost (0.0 to 1.0)
       style: 0.0 # Voice style exaggeration (0.0 to 1.0)
       use_speaker_boost: true # Enable speaker boost for better quality
+    
+    cartesia_tts:
+      api_key: ''
+      voice_id: '' # Voice ID from Cartesia
+      model_id: 'sonic-3' # Model ID (e.g., sonic-3)
+      output_format: 'wav' # Output audio format (e.g., wav)
+      language: 'en' # Output language of voice (e.g., en)
+      emotion: 'neutral' # Emotional guidance
+      volume: 1.0 # Voice volume (0.5 to 2.0)
+      speed: 1.0 # Voice speed (0.6 to 1.5)
 
   # =================== Voice Activity Detection ===================
   vad_config:
