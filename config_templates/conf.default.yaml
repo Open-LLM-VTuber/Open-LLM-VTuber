@@ -222,7 +222,7 @@ character_config:
     # documentation: https://k2-fsa.github.io/sherpa/onnx/index.html
     # ASR models download: https://github.com/k2-fsa/sherpa-onnx/releases/tag/asr-models
     sherpa_onnx_asr:
-      model_type: 'sense_voice' # 'transducer', 'paraformer', 'nemo_ctc', 'wenet_ctc', 'whisper', 'tdnn_ctc'
+      model_type: 'sense_voice' # 'transducer', 'paraformer', 'nemo_ctc', 'wenet_ctc', 'whisper', 'tdnn_ctc', 'sense_voice', 'fire_red_asr'
       #  Choose only ONE of the following, depending on the model_type:
       # --- For model_type: 'transducer' ---
       # encoder: ''        # Path to the encoder model (e.g., 'path/to/encoder.onnx')
@@ -230,6 +230,9 @@ character_config:
       # joiner: ''         # Path to the joiner model (e.g., 'path/to/joiner.onnx')
       # --- For model_type: 'paraformer' ---
       # paraformer: ''     # Path to the paraformer model (e.g., 'path/to/model.onnx')
+      # --- For model_type: 'fire_red_asr' (FireredASR - High-performance Chinese & English ASR with dialect support) ---
+      # fire_red_asr_encoder: ''    # Path to the encoder model (e.g., 'path/to/encoder.onnx')
+      # fire_red_asr_decoder: ''    # Path to the decoder model (e.g., 'path/to/decoder.onnx')
       # --- For model_type: 'nemo_ctc' ---
       # nemo_ctc: ''        # Path to the NeMo CTC model (e.g., 'path/to/model.onnx')
       # --- For model_type: 'wenet_ctc' ---

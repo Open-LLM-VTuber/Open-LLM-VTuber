@@ -192,6 +192,7 @@ class SherpaOnnxASRConfig(I18nMixin):
         "whisper",
         "tdnn_ctc",
         "sense_voice",
+        "fire_red_asr",
     ] = Field(..., alias="model_type")
     encoder: Optional[str] = Field(None, alias="encoder")
     decoder: Optional[str] = Field(None, alias="decoder")
@@ -203,6 +204,8 @@ class SherpaOnnxASRConfig(I18nMixin):
     whisper_encoder: Optional[str] = Field(None, alias="whisper_encoder")
     whisper_decoder: Optional[str] = Field(None, alias="whisper_decoder")
     sense_voice: Optional[str] = Field(None, alias="sense_voice")
+    fire_red_asr_encoder: Optional[str] = Field(None, alias="fire_red_asr_encoder")
+    fire_red_asr_decoder: Optional[str] = Field(None, alias="fire_red_asr_decoder")
     tokens: str = Field(..., alias="tokens")
     num_threads: int = Field(4, alias="num_threads")
     use_itn: bool = Field(True, alias="use_itn")
@@ -238,6 +241,12 @@ class SherpaOnnxASRConfig(I18nMixin):
         ),
         "sense_voice": Description(
             en="Path to SenseVoice model", zh="SenseVoice 模型路径"
+        ),
+        "fire_red_asr_encoder": Description(
+            en="Path to FireredASR encoder model", zh="FireredASR 编码器模型路径"
+        ),
+        "fire_red_asr_decoder": Description(
+            en="Path to FireredASR decoder model", zh="FireredASR 解码器模型路径"
         ),
         "tokens": Description(en="Path to tokens file", zh="词元文件路径"),
         "num_threads": Description(en="Number of threads to use", zh="使用的线程数"),
@@ -288,6 +297,11 @@ class SherpaOnnxASRConfig(I18nMixin):
             if not all([values.sense_voice, values.tokens]):
                 raise ValueError(
                     "sense_voice and tokens must be provided for sense_voice model type"
+                )
+        elif model_type == "fire_red_asr":
+            if not all([values.fire_red_asr_encoder, values.fire_red_asr_decoder, values.tokens]):
+                raise ValueError(
+                    "fire_red_asr_encoder, fire_red_asr_decoder, and tokens must be provided for fire_red_asr model type"
                 )
 
         return values
