@@ -4,6 +4,8 @@ anthropic==0.68.1
     # via open-llm-vtuber (pyproject.toml)
 azure-cognitiveservices-speech==1.46.0
     # via open-llm-vtuber (pyproject.toml)
+cartesia==2.0.17
+    # via open-llm-vtuber (pyproject.toml)
 chardet==5.2.0
     # via open-llm-vtuber (pyproject.toml)
 duckduckgo-mcp-server==0.1.1
