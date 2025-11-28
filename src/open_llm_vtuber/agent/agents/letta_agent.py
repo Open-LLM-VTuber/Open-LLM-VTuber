@@ -10,6 +10,7 @@ from ..transformers import (
 from ...config_manager import TTSPreprocessorConfig
 from ..input_types import BatchInput, TextSource
 from letta_client import Letta
+from loguru import logger
 
 
 class LettaAgent(AgentInterface):
@@ -110,19 +111,55 @@ class LettaAgent(AgentInterface):
         return "\n".join(message_parts)
 
     def _to_messages(self, input_data: BatchInput) -> List[Dict[str, Any]]:
-        """
-        Prepare messages list without image support.
-        """
         messages = []
-
         if input_data.images:
             content = []
             text_content = self._to_text_prompt(input_data)
+
+            image_added = False
+
+            # Iterate through each image in the input
+            for img_data in input_data.images:
+                if isinstance(img_data.data, str) and img_data.data.startswith(
+                    "data:image"
+                ):
+                    try:
+                        # Strip header → keep only base64 data
+                        _, base64_data = img_data.data.split(",", 1)
+                    except ValueError:
+                        logger.error(
+                            "Malformed Data URI. Could not split header and base64 content. Skipping image."
+                        )
+                        continue
+                    content.append(
+                        {
+                            "type": "image",
+                            "source": {
+                                "type": "base64",
+                                "media_type": img_data.mime_type,
+                                "data": base64_data,
+                            },
+                        }
+                    )
+                    image_added = True
+                else:
+                    logger.error(
+                        f"Invalid image data format: {type(img_data.data)}. Skipping image."
+                    )
+
+            if not image_added:
+                logger.warning(
+                    "User input contains images but none could be processed."
+                )
+
             content.append({"type": "text", "text": text_content})
             user_message = {"role": "user", "content": content}
+
         else:
+            # No images → only text
             user_message = {"role": "user", "content": self._to_text_prompt(input_data)}
 
         messages.append(user_message)
 
         return messages
+
