@@ -60,3 +60,10 @@ docker buildx imagetools inspect openllmvtuber/open-llm-vtuber:latest
 linux/amd64
 linux/arm64
 ```
+
+---
+
+## 清空数据
+```
+docker system prune -a --volumes
+```

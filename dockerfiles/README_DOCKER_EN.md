@@ -62,3 +62,10 @@ Expected output includes both:
 linux/amd64
 linux/arm64
 ```
+
+---
+
+## Clear all data
+```
+docker system prune -a --volumes
+```
