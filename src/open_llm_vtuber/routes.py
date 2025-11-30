@@ -1,15 +1,134 @@
 import os
+import re
 import json
+from pathlib import Path
 from uuid import uuid4
-import numpy as np
 from datetime import datetime
-from fastapi import APIRouter, WebSocket, UploadFile, File, Response
+from typing import Optional, List
+
+import numpy as np
+import yaml
+from fastapi import (
+    APIRouter,
+    WebSocket,
+    UploadFile,
+    File,
+    Response,
+    HTTPException,
+    Form,
+)
+from pydantic import BaseModel
 from starlette.responses import JSONResponse
 from starlette.websockets import WebSocketDisconnect
 from loguru import logger
+
 from .service_context import ServiceContext
 from .websocket_handler import WebSocketHandler
 from .proxy_handler import ProxyHandler
+from .config_manager.utils import read_yaml
+
+
+SAFE_NAME_PATTERN = re.compile(r"[^a-z0-9_-]+")
+
+
+def _sanitize_name(value: str, fallback: str = "character") -> str:
+    """
+    Sanitize a string to create a filesystem-safe, lowercase identifier.
+    Allowed characters: a-z, 0-9, hyphen, underscore.
+    """
+    if value is None:
+        value = ""
+    sanitized = SAFE_NAME_PATTERN.sub("-", value.lower()).strip("-_")
+    sanitized = re.sub(r"-{2,}", "-", sanitized)
+    if not sanitized:
+        return fallback
+    return sanitized
+
+
+def _ensure_unique_basename(base: str, directory: Path, extension: str) -> str:
+    """
+    Ensure the basename is unique within the directory by appending numeric suffixes.
+    Returns the basename without extension.
+    """
+    candidate = base
+    counter = 2
+    while (directory / f"{candidate}{extension}").exists():
+        candidate = f"{base}-{counter}"
+        counter += 1
+    return candidate
+
+
+def _load_model_dict(path: Path) -> List[dict]:
+    if not path.exists():
+        raise FileNotFoundError("model_dict.json not found")
+
+    try:
+        with path.open("r", encoding="utf-8") as fh:
+            data = json.load(fh)
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"Invalid JSON in {path}") from exc
+
+    if not isinstance(data, list):
+        raise ValueError("model_dict.json must contain a list")
+    return data
+
+
+def _collect_existing_conf_uids(characters_dir: Path) -> set:
+    """
+    Collect existing conf_uid values from conf.yaml and characters directory.
+    """
+    conf_uids = set()
+    candidate_files: List[Path] = []
+    root_conf = Path("conf.yaml")
+    if root_conf.exists():
+        candidate_files.append(root_conf)
+    candidate_files.extend(characters_dir.glob("*.yaml"))
+
+    for file_path in candidate_files:
+        try:
+            config = read_yaml(str(file_path))
+            uid = (
+                config.get("character_config", {})
+                if isinstance(config, dict)
+                else {}
+            ).get("conf_uid")
+            if uid:
+                conf_uids.add(str(uid))
+        except Exception as exc:  # pragma: no cover - defensive
+            logger.warning(f"Failed to read config '{file_path}': {exc}")
+    return conf_uids
+
+
+def _generate_conf_uid(conf_name: str, characters_dir: Path) -> str:
+    """
+    Generate a unique conf_uid in the format <conf_name>_<NNN>.
+    """
+    existing = _collect_existing_conf_uids(characters_dir)
+    counter = 1
+    while True:
+        candidate = f"{conf_name}_{counter:03d}"
+        if candidate not in existing:
+            return candidate
+        counter += 1
+
+
+def _validate_model_name(model_name: str, model_dict_path: Path) -> None:
+    models = _load_model_dict(model_dict_path)
+    available_names = {entry.get("name") for entry in models}
+    if model_name not in available_names:
+        raise ValueError(
+            f"Model '{model_name}' not found in model_dict.json. "
+            f"Available models: {', '.join(sorted(filter(None, available_names)))}"
+        )
+
+
+class CharacterCreatePayload(BaseModel):
+    character_name: Optional[str] = None
+    persona_prompt: str
+    live2d_model_name: str
+    avatar: Optional[str] = ""
+    human_name: Optional[str] = "Human"
+
 
 
 def init_client_ws_route(default_context_cache: ServiceContext) -> APIRouter:
@@ -137,6 +256,132 @@ def init_webtool_routes(default_context_cache: ServiceContext) -> APIRouter:
                 "characters": valid_characters,
             }
         )
+
+    @router.get("/api/live2d/models")
+    async def get_live2d_models():
+        """Return the entries defined in model_dict.json"""
+        model_dict_path = Path("model_dict.json")
+        try:
+            models = _load_model_dict(model_dict_path)
+        except FileNotFoundError:
+            raise HTTPException(status_code=404, detail="model_dict.json not found")
+        except ValueError as exc:
+            raise HTTPException(status_code=500, detail=str(exc))
+        return {"models": models}
+
+    @router.post("/api/avatars/upload")
+    async def upload_avatar(
+        file: UploadFile = File(...),
+        base_name: Optional[str] = Form(None),
+    ):
+        """Save an uploaded PNG avatar to the avatars directory."""
+        if file.content_type not in {"image/png"}:
+            raise HTTPException(
+                status_code=400, detail="Only PNG avatar uploads are supported"
+            )
+
+        avatars_dir = Path("avatars")
+        avatars_dir.mkdir(parents=True, exist_ok=True)
+
+        suggested_base = base_name or Path(file.filename or "").stem or "avatar"
+        sanitized_base = _sanitize_name(suggested_base, fallback="avatar")
+        unique_base = _ensure_unique_basename(sanitized_base, avatars_dir, ".png")
+        target_path = avatars_dir / f"{unique_base}.png"
+
+        contents = await file.read()
+        if not contents:
+            raise HTTPException(status_code=400, detail="Uploaded avatar is empty")
+
+        try:
+            with target_path.open("wb") as avatar_file:
+                avatar_file.write(contents)
+        except OSError as exc:
+            logger.error(f"Failed to save avatar: {exc}")
+            raise HTTPException(
+                status_code=500, detail="Failed to save avatar file"
+            ) from exc
+
+        return {"filename": target_path.name}
+
+    @router.post("/api/characters/create")
+    async def create_character(payload: CharacterCreatePayload):
+        """Create a new character YAML configuration file."""
+        if not payload.persona_prompt or not payload.persona_prompt.strip():
+            raise HTTPException(status_code=400, detail="persona_prompt is required")
+
+        if not payload.live2d_model_name:
+            raise HTTPException(
+                status_code=400, detail="live2d_model_name is required"
+            )
+
+        model_dict_path = Path("model_dict.json")
+        try:
+            _validate_model_name(payload.live2d_model_name, model_dict_path)
+        except (FileNotFoundError, ValueError) as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
+
+        characters_dir = Path("characters")
+        characters_dir.mkdir(parents=True, exist_ok=True)
+
+        suggested_name = payload.character_name or ""
+        sanitized_name = _sanitize_name(suggested_name, fallback="character")
+        unique_base = _ensure_unique_basename(sanitized_name, characters_dir, ".yaml")
+        conf_name = unique_base
+
+        conf_uid = _generate_conf_uid(conf_name, characters_dir)
+
+        avatar_filename = (payload.avatar or "").strip()
+        if avatar_filename:
+            avatar_path = Path("avatars") / avatar_filename
+            if not avatar_path.exists():
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Avatar '{avatar_filename}' not found in avatars directory",
+                )
+
+        persona_prompt = payload.persona_prompt.rstrip()
+        character_name = payload.character_name or conf_name
+        human_name = payload.human_name or "Human"
+
+        yaml_payload = {
+            "character_config": {
+                "conf_name": conf_name,
+                "conf_uid": conf_uid,
+                "live2d_model_name": payload.live2d_model_name,
+                "character_name": character_name,
+                "avatar": avatar_filename,
+                "human_name": human_name,
+                "persona_prompt": persona_prompt,
+            }
+        }
+
+        target_path = characters_dir / f"{unique_base}.yaml"
+        try:
+            with target_path.open("w", encoding="utf-8") as yaml_file:
+                yaml.safe_dump(
+                    yaml_payload,
+                    yaml_file,
+                    allow_unicode=True,
+                    sort_keys=False,
+                    width=80,
+                )
+        except yaml.YAMLError as exc:
+            logger.error(f"Failed to serialize character YAML: {exc}")
+            raise HTTPException(
+                status_code=500, detail="Failed to serialize character YAML"
+            ) from exc
+        except OSError as exc:
+            logger.error(f"Failed to write character YAML: {exc}")
+            raise HTTPException(
+                status_code=500, detail="Failed to write character file"
+            ) from exc
+
+        return {
+            "ok": True,
+            "filename": target_path.name,
+            "conf_name": conf_name,
+            "conf_uid": conf_uid,
+        }
 
     @router.post("/asr")
     async def transcribe_audio(file: UploadFile = File(...)):
