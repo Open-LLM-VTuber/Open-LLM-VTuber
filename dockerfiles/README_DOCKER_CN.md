@@ -3,10 +3,23 @@
 ## 关于我们的docker团队
 我们在 docker hub 成立了[openllmvtuber团队](https://hub.docker.com/orgs/openllmvtuber/members)，目前docker镜像由[@Harry_Y](https://github.com/Harry-Yu-Shuhang)维护。
 
-## 📁 构建目录
-进入 Docker 构建目录：
+## 📁 进入构建目录
+连接到您的Linux服务器并git clone
+```
+git clone https://github.com/Open-LLM-VTuber/Open-LLM-VTuber.git
+```
+
+然后进入 Docker 构建目录：
 ```
 cd dockerfiles
+```
+
+---
+
+## 准备工作
+```
+chmod +x setup_config_cn.sh
+sudo ./setup_config_cn.sh
 ```
 
 ---
@@ -47,7 +60,6 @@ docker push openllmvtuber/open-llm-vtuber:latest
 ## 🚀 一步构建并推送（推荐, 可以打包跨平台镜像，仅限 Docker Hub 组织成员）
 > 该命令同时构建 amd64 与 arm64 架构镜像，并直接推送到 Docker Hub。
 ```
-cd dockerfiles
 docker buildx build --platform linux/amd64,linux/arm64 -t openllmvtuber/open-llm-vtuber:1.2.1 -f dockerfile ../ --push
 ```
 建议推送到版本号的tag，用户只需拉取latest。

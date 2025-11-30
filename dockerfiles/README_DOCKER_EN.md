@@ -5,9 +5,22 @@ We have established the [openllmvtuber team](https://hub.docker.com/orgs/openllm
 The Docker images are currently maintained by [@Harry_Y](https://github.com/Harry-Yu-Shuhang).  
 
 ## 📁 Build Context
+Connect to your Linux server and git clone the repository:
+```
+git clone https://github.com/Open-LLM-VTuber/Open-LLM-VTuber.git
+```
+
 Enter the Docker build directory:
 ```
 cd dockerfiles
+```
+
+---
+
+## Preparations
+```
+chmod +x setup_config_en.sh
+sudo ./setup_config_en.sh
 ```
 
 ---
