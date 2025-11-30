@@ -1,0 +1,36 @@
+aiohttp==3.9.5
+anthropic==0.68.1
+azure-cognitiveservices-speech==1.46.0
+brotli==1.1.0
+chardet==5.2.0
+duckduckgo-mcp-server==0.1.1
+edge-tts==7.2.3
+fastapi==0.118.0
+groq==0.32.0
+httpx==0.28.1
+langdetect==1.0.9
+letta-client==0.1.324
+loguru==0.7.3
+mcp==1.15.0
+numpy==1.26.4
+onnxruntime==1.23.0
+openai==1.109.1
+pre-commit==4.3.0
+pydub==0.25.1
+pysbd==0.3.4
+pyttsx3==2.99
+pyyaml==6.0.3
+requests==2.32.5
+ruamel-yaml==0.18.15
+ruff==0.13.2
+scipy==1.15.3 ; python_full_version < '3.11'
+scipy==1.16.2 ; python_full_version >= '3.11'
+sherpa-onnx==1.12.14
+soundfile==0.13.1
+tomli==2.2.1
+torch==2.2.2 ; platform_machine == 'x86_64' and sys_platform == 'darwin'
+torch==2.8.0 ; platform_machine == 'arm64' or sys_platform != 'darwin'
+tqdm==4.67.1
+uvicorn==0.37.0
+websocket-client==1.8.0
+yarl==1.9.11

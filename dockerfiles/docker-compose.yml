@@ -1,0 +1,18 @@
+version: "3.9"
+services:
+  open-llm-vtuber:
+    image: openllmvtuber/open-llm-vtuber:latest
+    ports:
+      - "12393:12393"
+    environment:
+      ## Optional: Specify the model to be automatically downloaded at startup by default
+      ## For example, deepseek-r1:8b
+      - OLLAMA_DEFAULT_MODEL=deepseek-r1:8b
+    volumes:
+      - ollama_data:/root/.ollama
+      - models_data:/app/models
+    restart: unless-stopped
+
+volumes:
+  ollama_data:
+  models_data:

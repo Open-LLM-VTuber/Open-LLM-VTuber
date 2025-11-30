@@ -1,0 +1,79 @@
+# User config & backup
+/conf.yaml
+# Avatars
+# avatars/*
+# Backgrounds
+# backgrounds/*
+
+/conf.yaml.backup
+
+# Default templates retained
+!/config_templates/**
+
+# Live2D models - ignore non-defaults
+live2d-models/*
+!live2d-models/mao_pro/**
+!live2d-models/shizuku/**
+
+# Characters
+characters/*
+# All default characters tracked via git
+
+
+
+# System files
+.DS_Store
+
+# Python cache
+__pycache__/
+*.pyc
+
+# IDE & local files
+/.idea/
+lab.py
+
+# Virtual envs
+.venv/
+.conda/
+conda/
+
+# API keys, secrets
+.env
+api_keys.py
+src/open_llm_vtuber/llm/user_credentials.json
+
+# Database
+memory.db*
+mem.json
+
+# Logs
+server.log
+logs/*
+
+# Cache & models
+cache/*
+asset/
+models/*
+!models/piper_voice/**
+src/open_llm_vtuber/tts/asset/
+src/open_llm_vtuber/tts/config/
+src/open_llm_vtuber/asr/models/*
+!src/open_llm_vtuber/asr/models/silero_vad.onnx
+
+# Misc
+tmp/
+private/
+legacy/
+chat_history/
+knowledge_base/
+submodules/MeloTTS
+openapi_*.json
+
+# Windows builds
+*.exe
+
+# Packaging artifacts
+*.egg-info/
+build/
+dist/
+.cache/

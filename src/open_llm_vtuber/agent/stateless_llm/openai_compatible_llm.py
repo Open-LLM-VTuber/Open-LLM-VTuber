@@ -111,6 +111,10 @@ class AsyncLLM(StatelessLLMInterface):
             )
 
             async for chunk in stream:
+                # Guard against chunks with missing choices field (e.g., from OpenWebUI)
+                if not chunk.choices:
+                    continue
+
                 if self.support_tools:
                     has_tool_calls = (
                         hasattr(chunk.choices[0].delta, "tool_calls")
