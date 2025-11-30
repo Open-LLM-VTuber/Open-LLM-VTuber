@@ -28,7 +28,11 @@ docker buildx build --platform linux/amd64,linux/arm64 -t <你的DockerHub用户
 
 示例：
 ```
-docker buildx build --platform linux/amd64,linux/arm64 -t openllmvtuber/open-llm-vtuber:latest -f dockerfile ../ --load
+docker buildx build \
+  --platform linux/amd64 \
+  -t openllmvtuber/open-llm-vtuber:latest \
+  -f dockerfile ../ \
+  --load
 ```
 
 ---
@@ -40,12 +44,13 @@ docker push openllmvtuber/open-llm-vtuber:latest
 
 ---
 
-## 🚀 一步构建并推送（推荐, 仅限 Docker Hub 组织成员）
+## 🚀 一步构建并推送（推荐, 可以打包跨平台镜像，仅限 Docker Hub 组织成员）
 > 该命令同时构建 amd64 与 arm64 架构镜像，并直接推送到 Docker Hub。
 ```
 cd dockerfiles
-docker buildx build --platform linux/amd64,linux/arm64 -t openllmvtuber/open-llm-vtuber:latest -f dockerfile ../ --push
+docker buildx build --platform linux/amd64,linux/arm64 -t openllmvtuber/open-llm-vtuber:1.2.1 -f dockerfile ../ --push
 ```
+建议推送到版本号的tag，用户只需拉取latest。
 
 ---
 
