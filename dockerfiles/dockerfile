@@ -83,11 +83,35 @@ RUN printf '%s\n' \
   '  cp -r /app/config_templates/characters /app/characters' \
   'fi' \
   '' \
-  '# 5) Start Ollama (internal only)' \
+  '# 5) Handle avatars (optional directory)' \
+  'if [ -d "/app/conf/avatars" ]; then' \
+  '  echo "Using user-provided avatars"' \
+  '  rm -rf /app/avatars && ln -s /app/conf/avatars /app/avatars' \
+  'elif [ -d "/app/config_templates/avatars" ]; then' \
+  '  cp -r /app/config_templates/avatars /app/avatars' \
+  'fi' \
+  '' \
+  '# 6) Handle backgrounds (optional directory)' \
+  'if [ -d "/app/conf/backgrounds" ]; then' \
+  '  echo "Using user-provided backgrounds"' \
+  '  rm -rf /app/backgrounds && ln -s /app/conf/backgrounds /app/backgrounds' \
+  'elif [ -d "/app/config_templates/backgrounds" ]; then' \
+  '  cp -r /app/config_templates/backgrounds /app/backgrounds' \
+  'fi' \
+  '' \
+  '# 7) Handle models (optional directory)' \
+  'if [ -d "/app/conf/models" ]; then' \
+  '  echo "Using user-provided models"' \
+  '  rm -rf /app/models && ln -s /app/conf/models /app/models' \
+  'elif [ -d "/app/config_templates/models" ]; then' \
+  '  cp -r /app/config_templates/models /app/models' \
+  'fi' \
+  '' \
+  '# 8) Start Ollama (internal only)' \
   'export OLLAMA_HOST="${OLLAMA_HOST:-127.0.0.1:11434}"' \
   'ollama serve >/var/log/ollama.log 2>&1 &' \
   '' \
-  '# 6) Wait for Ollama ready (max 60s)' \
+  '# 9) Wait for Ollama ready (max 60s)' \
   'for i in $(seq 1 60); do' \
   '  if curl -fsS "http://127.0.0.1:11434/v1/models" >/dev/null 2>&1; then' \
   '    echo "Ollama ready"' \
@@ -100,12 +124,12 @@ RUN printf '%s\n' \
   '  fi' \
   'done' \
   '' \
-  '# 7) Optional: pre-pull default model' \
+  '# 10) Optional: pre-pull default model' \
   'if [ -n "${OLLAMA_DEFAULT_MODEL:-}" ]; then' \
   '  ollama list | grep -q "^${OLLAMA_DEFAULT_MODEL} " || ollama pull "$OLLAMA_DEFAULT_MODEL" || true' \
   'fi' \
   '' \
-  '# 8) Start app' \
+  '# 11) Start app' \
   'exec uv run run_server.py' \
   > /usr/local/bin/start-all && chmod +x /usr/local/bin/start-all
 
