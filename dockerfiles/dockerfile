@@ -99,19 +99,11 @@ RUN printf '%s\n' \
   '  cp -r /app/config_templates/backgrounds /app/backgrounds' \
   'fi' \
   '' \
-  '# 7) Handle models (optional directory)' \
-  'if [ -d "/app/conf/models" ]; then' \
-  '  echo "Using user-provided models"' \
-  '  rm -rf /app/models && ln -s /app/conf/models /app/models' \
-  'elif [ -d "/app/config_templates/models" ]; then' \
-  '  cp -r /app/config_templates/models /app/models' \
-  'fi' \
-  '' \
-  '# 8) Start Ollama (internal only)' \
+  '# 7) Start Ollama (internal only)' \
   'export OLLAMA_HOST="${OLLAMA_HOST:-127.0.0.1:11434}"' \
   'ollama serve >/var/log/ollama.log 2>&1 &' \
   '' \
-  '# 9) Wait for Ollama ready (max 60s)' \
+  '# 8) Wait for Ollama ready (max 60s)' \
   'for i in $(seq 1 60); do' \
   '  if curl -fsS "http://127.0.0.1:11434/v1/models" >/dev/null 2>&1; then' \
   '    echo "Ollama ready"' \
@@ -124,17 +116,17 @@ RUN printf '%s\n' \
   '  fi' \
   'done' \
   '' \
-  '# 10) Optional: pre-pull default model' \
+  '# 9) Optional: pre-pull default model' \
   'if [ -n "${OLLAMA_DEFAULT_MODEL:-}" ]; then' \
   '  ollama list | grep -q "^${OLLAMA_DEFAULT_MODEL} " || ollama pull "$OLLAMA_DEFAULT_MODEL" || true' \
   'fi' \
   '' \
-  '# 11) Start app' \
+  '# 10) Start app' \
   'exec uv run run_server.py' \
   > /usr/local/bin/start-all && chmod +x /usr/local/bin/start-all
 
 # Volumes: ollama cache, models, and unified config mount (conf.yaml + live2d-models + characters)
-VOLUME ["/root/.ollama", "/app/models", "/app/conf"]
+VOLUME ["/root/.ollama", "/app/conf"]
 
 # ✅ Only expose the app port (Ollama is not exposed externally)
 EXPOSE 12393
