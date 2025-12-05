@@ -1,0 +1,33 @@
+# 데이터 폴더 (크롤링 결과물)
+origin_json/
+cleaned_json/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.py[cod]
+*$py.class
+*.so
+
+# 가상환경
+venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# 환경 변수
+.env
+.env.local
+
+# OS
+.DS_Store
+Thumbs.db
+
