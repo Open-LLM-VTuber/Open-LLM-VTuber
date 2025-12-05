@@ -1,0 +1,67 @@
+SYSTEM_CONFIG:
+  CONF_NAME: "sherpaASR_sense_voice"
+  CONF_UID: "sherpaASR_sense_voice"
+
+#  ============== Voice Interaction Settings ==============
+
+# === Automatic Speech Recognition ===
+VOICE_INPUT_ON: True
+# Put your mic in the browser or in the terminal? (would increase latency)
+MIC_IN_BROWSER: False # Deprecated and useless now. Do not enable it. Bad things will happen.
+
+# speech to text model options: "Faster-Whisper", "WhisperCPP", "Whisper", "AzureASR", "FunASR", "GroqWhisperASR", "SherpaOnnxASR"
+ASR_MODEL: "SherpaOnnxASR"
+
+# pip install sherpa-onnx
+# documentation: https://k2-fsa.github.io/sherpa/onnx/index.html
+# ASR models download: https://github.com/k2-fsa/sherpa-onnx/releases/tag/asr-models
+SherpaOnnxASR:
+  model_type: "sense_voice" # "transducer", "paraformer", "nemo_ctc", "wenet_ctc", "whisper", "tdnn_ctc"
+  #  Choose only ONE of the following, depending on the model_type:
+  # --- For model_type: "transducer" ---
+  # encoder: ""        # Path to the encoder model (e.g., "path/to/encoder.onnx")
+  # decoder: ""        # Path to the decoder model (e.g., "path/to/decoder.onnx")
+  # joiner: ""         # Path to the joiner model (e.g., "path/to/joiner.onnx")
+  # --- For model_type: "paraformer" ---
+  # paraformer: ""     # Path to the paraformer model (e.g., "path/to/model.onnx")
+  # --- For model_type: "nemo_ctc" ---
+  # nemo_ctc: ""        # Path to the NeMo CTC model (e.g., "path/to/model.onnx")
+  # --- For model_type: "wenet_ctc" ---
+  # wenet_ctc: ""       # Path to the WeNet CTC model (e.g., "path/to/model.onnx")
+  # --- For model_type: "tdnn_ctc" ---
+  # tdnn_model: ""      # Path to the TDNN CTC model (e.g., "path/to/model.onnx")
+  # --- For model_type: "whisper" ---
+  # whisper_encoder: "" # Path to the Whisper encoder model (e.g., "path/to/encoder.onnx")
+  # whisper_decoder: "" # Path to the Whisper decoder model (e.g., "path/to/decoder.onnx")
+  # --- For model_type: "sense_voice" ---
+  sense_voice: "/path/to/asr-models/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17/model.onnx" # Path to the SenseVoice model (e.g., "path/to/model.onnx")
+  tokens: "/path/to/asr-models/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17/tokens.txt" # Path to tokens.txt (required for all model types)
+  # --- Optional parameters (with defaults shown) ---
+  # hotwords_file: ""     # Path to hotwords file (if using hotwords)
+  # hotwords_score: 1.5   # Score for hotwords
+  # modeling_unit: ""     # Modeling unit for hotwords (if applicable)
+  # bpe_vocab: ""         # Path to BPE vocabulary (if applicable)
+  num_threads: 2 # Number of threads
+  # whisper_language: "" # Language for Whisper models (e.g., "en", "zh", etc. - if using Whisper)
+  # whisper_task: "transcribe"  # Task for Whisper models ("transcribe" or "translate" - if using Whisper)
+  # whisper_tail_paddings: -1   # Tail padding for Whisper models (if using Whisper)
+  # blank_penalty: 0.0    # Penalty for blank symbol
+  # decoding_method: "greedy_search"  # "greedy_search" or "modified_beam_search"
+  # debug: False # Enable debug mode
+  # sample_rate: 16000 # Sample rate (should match the model's expected sample rate)
+  # feature_dim: 80       # Feature dimension (should match the model's expected feature dimension)
+  use_itn: True # Enable ITN for SenseVoice models (should set to False if not using SenseVoice models)
+
+# ============== Text to Speech ==============
+TTS_MODEL: "edgeTTS"
+# text to speech model options: 
+#   "AzureTTS", "pyttsx3TTS", "edgeTTS", "barkTTS", 
+#   "cosyvoiceTTS", "meloTTS", "piperTTS", "coquiTTS",
+#   "fishAPITTS"
+
+
+edgeTTS:
+  # Check out doc at https://github.com/rany2/edge-tts
+  # Use `edge-tts --list-voices` to list all available voices
+  voice: "en-US-AvaMultilingualNeural" #"zh-CN-XiaoxiaoNeural" # "ja-JP-NanamiNeural"
+

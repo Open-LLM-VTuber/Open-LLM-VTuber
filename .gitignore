@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # 데이터 폴더 (크롤링 결과물)
 origin_json/
 cleaned_json/
@@ -31,3 +32,83 @@ ENV/
 .DS_Store
 Thumbs.db
 
+=======
+# ignore the user configuration file
+conf.yaml
+
+# ignore non-default background images
+/backgrounds/*
+!/backgrounds/README.md
+
+# ignore non-default live2d models
+/live2d-models/*
+!/live2d-models/mao_pro
+!/live2d-models/shizuku
+
+# ignore non-default character configs
+/characters/*
+!/characters/README.md
+# but all of the defaults are already tracked, so no need to un-ignore them
+
+# ignore avatars
+avatars/*
+
+# macOS system files
+.DS_Store
+
+# Python files
+__pycache__/
+*.pyc
+lab.py
+.idea
+
+# Virtual environment
+.venv
+.conda
+conda
+
+# Sensitive data
+.env
+api_keys.py
+src/open_llm_vtuber/llm/user_credentials.json
+
+# Database files
+memory.db
+memory.db.bk
+
+# Logs
+server.log
+logs/*
+
+# Cache and models
+cache/*
+src/open_llm_vtuber/tts/asset
+src/open_llm_vtuber/tts/config
+src/open_llm_vtuber/asr/models*
+!src/open_llm_vtuber/asr/models/silero_vad.onnx
+asset
+models/*
+!models/piper_voice
+models/piper_voice/*
+
+
+# Legacy and specific directories
+legacy/
+chat_history/
+knowledge_base/
+submodules/MeloTTS
+openapi_assistants.json
+openapi_memgpt.json
+
+# memory log
+mem.json
+conf.yaml.backup
+
+*.exe
+
+tmp/
+private/
+mcp_servers.json
+
+.vscode/
+>>>>>>> main

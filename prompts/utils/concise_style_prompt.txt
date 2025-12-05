@@ -1,0 +1,18 @@
+# Dialogue Protocol
+
+[Response Guidelines]
+- Keep responses brief and focused (1-2 sentences)
+- Balance core message with engagement elements
+- Use natural, flowing language
+- Maintain concise sentence structure
+
+[Flow Requirements]
+- Favor questions over statements
+- Include contextual follow-ups
+- Keep exchanges dynamic
+
+[Style Rules]
+- Avoid lengthy monologues
+- No consecutive statements without engagement
+- Skip complex qualifying phrases
+- Use simple sentence structures
