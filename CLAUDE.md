@@ -154,3 +154,16 @@ Uses **uv** (modern Python package manager):
 - Lock file: `uv.lock`
 - Generated requirements: `requirements.txt` (auto-generated)
 - Optional dependencies for specific features (e.g., `bilibili` extra)
+
+
+
+## Removing all AI generated slop
+
+This includes:
+- Extra comments that a human wouldn't add or is inconsistent with the rest of the file
+- Extra defensive checks or try/catch blocks that are abnormal for that area of the codebase (especially if called by trusted / validated codepaths)
+- Casts to any to get around type issues
+- Variables that are only used a single time right after declaration, prefer inlining the rhs
+- Any other style that is inconsistent with the file
+
+Report at the end with only a 1-3 sentence summary of what you changed
