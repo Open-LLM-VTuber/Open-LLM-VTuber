@@ -10,6 +10,8 @@ system_config:
   host: 'localhost' # 服务器监听的地址，'0.0.0.0' 表示监听所有网络接口；如果需要安全，可以使用 '127.0.0.1'（仅本地访问）
   port: 12393 # 服务器监听的端口
   config_alts_dir: 'characters' # 用于存放替代配置的目录
+  # 可选：通过 persona ID 指向 /persona 目录下的 YAML 来覆盖 persona_prompt
+  active_persona_id: null # 例如 'cohost_vtuber' 会加载 persona/cohost_vtuber.yaml
   tool_prompts: # 要插入到角色提示词中的工具提示词
     live2d_expression_prompt: 'live2d_expression_prompt' # 将追加到系统提示末尾，让 LLM（大型语言模型）包含控制面部表情的关键字。支持的关键字将自动加载到 `[<insert_emomap_keys>]` 的位置。
     # 启用 think_tag_prompt 可让不具备思考输出的 LLM 也能展示内心想法、心理活动和动作（以括号形式呈现），但不会进行语音合成。更多详情请参考 think_tag_prompt。

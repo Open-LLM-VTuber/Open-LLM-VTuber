@@ -36,6 +36,7 @@ from .config_manager import (
     read_yaml,
     validate_config,
 )
+from .utils.persona_loader import load_persona_prompt_by_id
 
 
 class ServiceContext:
@@ -296,11 +297,28 @@ class ServiceContext:
             config.character_config.agent_config.agent_settings.basic_memory_agent.mcp_enabled_servers,
         )
 
+        persona_override = config.system_config.active_persona_id
+        persona_prompt = config.character_config.persona_prompt
+
+        if persona_override:
+            try:
+                persona_prompt = load_persona_prompt_by_id(persona_override)
+                logger.info(
+                    f"Loaded persona prompt from ID '{persona_override}' in persona directory"
+                )
+            except Exception as e:
+                logger.warning(
+                    f"Failed to load persona '{persona_override}', using configured persona prompt instead. Error: {e}"
+                )
+
         # init agent from character config
         await self.init_agent(
             config.character_config.agent_config,
-            config.character_config.persona_prompt,
+            persona_prompt,
         )
+
+        # keep the resolved persona prompt for any later reloads/inspections
+        self.character_config.persona_prompt = persona_prompt
 
         self.init_translate(
             config.character_config.tts_preprocessor_config.translator_config

@@ -5,6 +5,8 @@ system_config:
   port: 12393
   # New setting for alternative configurations
   config_alts_dir: 'characters'
+  # Optional: override the persona prompt by selecting a persona YAML from /persona
+  active_persona_id: null # e.g., 'cohost_vtuber' to load persona/cohost_vtuber.yaml
   # Tool prompts that will be appended to the persona prompt
   tool_prompts:
     # This will be appended to the end of system prompt to let LLM include keywords to control facial expressions.

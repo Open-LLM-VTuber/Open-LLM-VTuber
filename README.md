@@ -121,6 +121,13 @@ Please refer to the [Quick Start](https://open-llm-vtuber.github.io/docs/quick-s
 6. Send “Agora responda em japonês” to receive a Japanese reply, keeping the voice output flowing through the same session.
 
 
+### Activating the Akira Cohost Persona (optional)
+
+1. Confirm `persona/cohost_vtuber.yaml` is present (it ships with the repo).
+2. In `conf.yaml`, set `system_config.active_persona_id: ${ACTIVE_PERSONA_ID}` and export `ACTIVE_PERSONA_ID=cohost_vtuber` (or hardcode `cohost_vtuber`).
+3. Start the server normally; if no ID is set the existing persona remains unchanged.
+
+
 
 ## Configuration Touchpoints (Where to Set Keys, Models, Audio, Language, Persona)
 
@@ -128,6 +135,7 @@ Please refer to the [Quick Start](https://open-llm-vtuber.github.io/docs/quick-s
 | --- | --- | --- |
 | `conf.yaml` (from `config_templates/conf.default.yaml` or `conf.ZH.default.yaml`) and overrides in `characters/*.yaml` | `character_config.agent_config.llm_configs.<provider>.(llm_api_key/base_url/model)` | Loaded via `ServiceContext.init_agent`, then passed into `AgentFactory.create_agent` to build the active LLM client (keys, endpoints, and model identifiers). |
 | `conf.yaml` or `characters/*.yaml` | `character_config.persona_prompt` plus `system_config.tool_prompts` | Combined into the system prompt by `ServiceContext.construct_system_prompt`, which appends tool prompts (Live2D, MCP, etc.) before the agent starts. |
+| `conf.yaml` | `system_config.active_persona_id` | `ServiceContext.load_from_config` + `utils.persona_loader` | Optional override to pick a persona YAML from `/persona` (e.g., `cohost_vtuber`). Leave `null` to keep existing persona behavior. |
 | `conf.yaml` | `character_config.asr_config.asr_model` and the matching engine block (e.g., `groq_whisper_asr.api_key/model/lang`, `faster_whisper.model_path/language/prompt`) | Initialized by `ServiceContext.init_asr`, which calls `ASRFactory.get_asr_system` with the chosen model and credentials to decode microphone audio. |
 | `conf.yaml` | `character_config.tts_config.tts_model` and its engine section (voices, `api_key`, `model`, speed/volume knobs) | Wired through `ServiceContext.init_tts` to `TTSFactory.get_tts_engine`, controlling synthesized voice output parameters and credentials. |
 | `conf.yaml` | `character_config.vad_config` (e.g., `vad_model`, thresholds) | Passed to `ServiceContext.init_vad` to enable/disable voice-activity gating on the captured microphone stream. |
