@@ -104,6 +104,122 @@ This project underwent code refactoring after version `v1.0.0` and is currently 
 Please refer to the [Quick Start](https://open-llm-vtuber.github.io/docs/quick-start) section in our documentation for installation.
 
 
+## Running Open-LLM-VTuber in Web Mode
+
+- **Command to start the web server:** `uv run run_server.py` (append `--verbose` for debug-level console logs).
+- **Local URL:** http://localhost:12393 by default, derived from `system_config.host` and `system_config.port` in `conf.yaml` (generated from `config_templates/conf.default.yaml`).
+- **Microphone availability:** The browser microphone works only on `https` origins or `localhost`; remote access requires configuring HTTPS (for example, via a reverse proxy).
+- **Log files:** Runtime logs are written to `logs/debug_<date>.log` with daily rotation; console logs mirror the selected log level (`INFO` by default or `DEBUG` when `--verbose` is used).
+
+## Demo Walkthrough (No Extra Code)
+
+1. Start the backend with your valid `conf.yaml` (LLM/ASR/TTS keys set) using `uv run run_server.py --verbose` so you can see live logs.
+2. Open `http://localhost:12393` in a desktop browser on the same machine as the server.
+3. When prompted, allow microphone access (use the default input; there is no device picker) and wait for the connection indicator to show you are connected.
+4. If the mic is idle, click the microphone button, then say “Oi, tudo bem?” to send a Portuguese voice message and hear the spoken reply.
+5. In the text box, type “Responda em inglês” and send to get an English answer from the agent.
+6. Send “Agora responda em japonês” to receive a Japanese reply, keeping the voice output flowing through the same session.
+
+
+### Activating the Akira Cohost Persona (optional)
+
+1. Confirm `persona/cohost_vtuber.yaml` is present (it ships with the repo).
+2. In `conf.yaml`, set `system_config.active_persona_id: ${ACTIVE_PERSONA_ID}` and export `ACTIVE_PERSONA_ID=cohost_vtuber` (or hardcode `cohost_vtuber`).
+3. Start the server normally; if no ID is set the existing persona remains unchanged.
+
+
+
+## Configuration Touchpoints (Where to Set Keys, Models, Audio, Language, Persona)
+
+| File (examples) | Field / Path | Function / How It Is Used |
+| --- | --- | --- |
+| `conf.yaml` (from `config_templates/conf.default.yaml` or `conf.ZH.default.yaml`) and overrides in `characters/*.yaml` | `character_config.agent_config.llm_configs.<provider>.(llm_api_key/base_url/model)` | Loaded via `ServiceContext.init_agent`, then passed into `AgentFactory.create_agent` to build the active LLM client (keys, endpoints, and model identifiers). |
+| `conf.yaml` or `characters/*.yaml` | `character_config.persona_prompt` plus `system_config.tool_prompts` | Combined into the system prompt by `ServiceContext.construct_system_prompt`, which appends tool prompts (Live2D, MCP, etc.) before the agent starts. |
+| `conf.yaml` | `system_config.active_persona_id` | `ServiceContext.load_from_config` + `utils.persona_loader` | Optional override to pick a persona YAML from `/persona` (e.g., `cohost_vtuber`). Leave `null` to keep existing persona behavior. |
+| `conf.yaml` | `character_config.asr_config.asr_model` and the matching engine block (e.g., `groq_whisper_asr.api_key/model/lang`, `faster_whisper.model_path/language/prompt`) | Initialized by `ServiceContext.init_asr`, which calls `ASRFactory.get_asr_system` with the chosen model and credentials to decode microphone audio. |
+| `conf.yaml` | `character_config.tts_config.tts_model` and its engine section (voices, `api_key`, `model`, speed/volume knobs) | Wired through `ServiceContext.init_tts` to `TTSFactory.get_tts_engine`, controlling synthesized voice output parameters and credentials. |
+| `conf.yaml` | `character_config.vad_config` (e.g., `vad_model`, thresholds) | Passed to `ServiceContext.init_vad` to enable/disable voice-activity gating on the captured microphone stream. |
+| `conf.yaml` | `character_config.tts_preprocessor_config.translator_config` (e.g., `translate_audio`, `deeplx_target_lang`, provider API settings) | Routed by `ServiceContext.init_translate` to `TranslateFactory.get_translator` to handle language conversion before TTS. |
+| `config_manager/utils.py` | Environment variables referenced as `${VAR}` inside YAML values | Substituted by `read_yaml`, allowing keys like `${GROQ_API_KEY}` to be injected without hardcoding secrets. |
+
+
+## Configuring Groq as the LLM (OpenAI-Compatible)
+
+- **Where to configure:** `conf.yaml` (generated from `config_templates/conf.default.yaml` or `config_templates/conf.ZH.default.yaml`) under `character_config -> agent_config`. The active agent points to an entry in `llm_configs`, which holds provider credentials and endpoints.
+- **Required fields for Groq:** `base_url`, `llm_api_key`, and `model` in the `groq_llm` block. `base_url` must remain `https://api.groq.com/openai/v1` for OpenAI-compatible requests.
+- **Safe example (uses environment variables):**
+
+```yaml
+character_config:
+  agent_config:
+    agent_settings:
+      basic_memory_agent:
+        llm_provider: 'groq_llm'
+    llm_configs:
+      groq_llm:
+        base_url: 'https://api.groq.com/openai/v1'
+        llm_api_key: '${GROQ_API_KEY}'
+        model: 'llama-3.1-70b-versatile'
+        temperature: 1.0
+```
+
+
+## Speech-to-Text (ASR) – Known Good Setup
+
+- **Supported engines:** Select one of `faster_whisper`, `whisper_cpp`, `whisper`, `azure_asr`, `fun_asr`, `groq_whisper_asr`, or `sherpa_onnx_asr` via `character_config -> asr_config -> asr_model` in `conf.yaml`. Each engine’s configuration block (API keys, model paths, language hints, etc.) sits under `character_config -> asr_config`.
+- **Simple Windows setup:** For a minimal, no-extra-download option, set `asr_model` to `groq_whisper_asr` and provide `GROQ_API_KEY` as an environment variable; the service calls Groq’s hosted Whisper model without local dependencies:
+
+  ```yaml
+  character_config:
+    asr_config:
+      asr_model: 'groq_whisper_asr'
+      groq_whisper_asr:
+        api_key: '${GROQ_API_KEY}'
+        model: 'whisper-large-v3-turbo'
+        lang: ''  # leave blank for auto
+  ```
+
+- **Microphone selection:** The web client starts the default browser microphone automatically (no per-device selector in the current UI) when the backend sends a `start-mic` control message on connection.
+- **Where audio is captured:** The browser uses `navigator.mediaDevices.getUserMedia` with a mono 16 kHz stream; audio chunks are recorded via `MediaRecorder` and converted to WAV before upload.
+
+
+## Text-to-Speech (TTS) Configuration
+
+- **Supported engines:** Choose any of the engines exposed by `tts_config.tts_model` in `conf.yaml`: `azure_tts`, `bark_tts`, `edge_tts`, `pyttsx3_tts`, `cosyvoice_tts`, `cosyvoice2_tts`, `melo_tts`, `x_tts`, `gpt_sovits_tts`, `siliconflow_tts`, `coqui_tts`, `fish_api_tts`, `minimax_tts`, `sherpa_onnx_tts`, `openai_tts`, `spark_tts`, `elevenlabs_tts`, `cartesia_tts`, or `piper_tts`. The factory at runtime loads the matching block from `character_config -> tts_config` and initializes the corresponding engine.
+- **Where to configure:** `conf.yaml` (from `config_templates/conf.default.yaml` or `config_templates/conf.ZH.default.yaml`) under `character_config -> tts_config`. Each engine has its own nested block for credentials, URLs, and voice/model choices; the server binds them through `service_context.init_tts`.
+- **Local model / voice paths:** Examples in the template show local paths where you place downloads: Piper expects an ONNX model such as `models/piper/zh_CN-huayan-medium.onnx`; Sherpa-ONNX uses explicit paths for `vits_model`, `vits_tokens`, and `vits_lexicon`; Coqui can reference local speaker WAVs; GPT-SoVITS can point `ref_audio_path` to a prompt clip. Update those paths to where you store models on disk.
+- **Tuning voice, speed, and volume:** Adjust per-engine fields in `conf.yaml`:
+  - Azure: `voice`, `pitch`, and `rate`.
+  - Edge: `voice` selection.
+  - Piper: `length_scale` (speed), `noise_scale`/`noise_w` (style), and `volume`.
+  - CosyVoice2/Melo/Cartesia/SiliconFlow: `speed` plus voice or emotion fields; Cartesia also supports `volume`.
+  - OpenAI-compatible and Minimax: choose `voice`/`voice_id` and `model` values expected by the provider.
+- **Safe example (Edge TTS, no API keys):**
+
+  ```yaml
+  character_config:
+    tts_config:
+      tts_model: 'edge_tts'
+      edge_tts:
+        voice: 'en-US-AvaMultilingualNeural'
+  ```
+
+
+## Memory, History and Persistence
+
+- **Where history is stored:** Each conversation is written as JSON under `chat_history/<conf_uid>/<history_uid>.json` (created on demand), so transcripts persist across restarts unless the files are removed manually.
+- **User/persona preferences:** The active persona, prompts, model choices, and identifiers live in `conf.yaml` (see `character_config.conf_uid` and `persona_prompt`) and can be overridden per persona via the `characters/` YAML files referenced by `system_config.config_alts_dir`.
+- **Viewing/clearing history from the UI:** The WebSocket backend exposes `history-list`, `history-data`, `new-history-created`, and `history-deleted` message types so a frontend can list, load, create, or delete histories; the shipped code does not bundle a standalone UI panel in this repo, but any compatible client can call these actions.
+- **Long-term memory:** No vector or database-backed long-term memory is implemented; the agent rebuilds its working memory from the selected chat history file at session start and otherwise retains messages in-memory only for the current run.
+
+
+## Live2D Setup (Web Mode)
+
+- **Browser support:** The web server mounts the `live2d-models` directory and sends the selected model metadata (`set-model-and-conf` with `model_info`) as soon as the WebSocket client connects, so a Live2D-capable frontend can load the model in the browser.
+- **Where to place assets:** Drop each Live2D model folder under the project root `live2d-models/` with a matching `<name>/<name>.model3.json` (and optional `<name>.png` avatar). The `/live2d-models/info` endpoint enumerates these folders for the UI.
+- **Choosing the active model:** Set `character_config.live2d_model_name` in `conf.yaml` (default `mao_pro` in the template). The backend looks up that name in `model_dict.json` to find the model URL, scale, and emotion map pushed to the client.
+- **How the avatar reacts:** During generation, the backend extracts emotion tags into `actions.expressions` and attaches per-chunk normalized volume data in each audio payload. A Live2D frontend can consume those cues for expressions or lip sync; the backend does not render Live2D itself.
+
 
 ## ☝ Update
 > :warning: `v1.0.0` has breaking changes and requires re-deployment. You *may* still update via the method below, but the `conf.yaml` file is incompatible and most of the dependencies needs to be reinstalled with `uv`. For those who came from versions before `v1.0.0`, I recommend deploy this project again with the [latest deployment guide](https://open-llm-vtuber.github.io/docs/quick-start).

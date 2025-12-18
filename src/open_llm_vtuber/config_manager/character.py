@@ -1,5 +1,5 @@
 # config_manager/character.py
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, model_validator
 from typing import Dict, ClassVar
 from .i18n import I18nMixin, Description
 from .asr import ASRConfig
@@ -8,6 +8,7 @@ from .vad import VADConfig
 from .tts_preprocessor import TTSPreprocessorConfig
 
 from .agent import AgentConfig
+from .utils import load_persona_prompt
 
 
 class CharacterConfig(I18nMixin):
@@ -19,7 +20,8 @@ class CharacterConfig(I18nMixin):
     character_name: str = Field(default="", alias="character_name")
     human_name: str = Field(default="Human", alias="human_name")
     avatar: str = Field(default="", alias="avatar")
-    persona_prompt: str = Field(..., alias="persona_prompt")
+    persona_prompt: str = Field("", alias="persona_prompt")
+    persona_prompt_file: str | None = Field(default=None, alias="persona_prompt_file")
     agent_config: AgentConfig = Field(..., alias="agent_config")
     asr_config: ASRConfig = Field(..., alias="asr_config")
     tts_config: TTSConfig = Field(..., alias="tts_config")
@@ -45,6 +47,10 @@ class CharacterConfig(I18nMixin):
         "persona_prompt": Description(
             en="Persona prompt. The persona of your character.", zh="角色人设提示词"
         ),
+        "persona_prompt_file": Description(
+            en="Optional persona definition file to override persona_prompt",
+            zh="可选的角色设定文件，将覆盖 persona_prompt",
+        ),
         "agent_config": Description(
             en="Configuration for the conversation agent", zh="对话代理配置"
         ),
@@ -69,13 +75,17 @@ class CharacterConfig(I18nMixin):
         ),
     }
 
-    @field_validator("persona_prompt")
-    def check_default_persona_prompt(cls, v):
-        if not v:
+    @model_validator(mode="after")
+    def ensure_persona_prompt(self):
+        if self.persona_prompt_file:
+            self.persona_prompt = load_persona_prompt(self.persona_prompt_file)
+
+        if not self.persona_prompt:
             raise ValueError(
                 "Persona_prompt cannot be empty. Please provide a persona prompt."
             )
-        return v
+
+        return self
 
     @field_validator("character_name")
     def set_default_character_name(cls, v, values):

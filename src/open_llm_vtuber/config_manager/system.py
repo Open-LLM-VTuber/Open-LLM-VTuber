@@ -11,6 +11,7 @@ class SystemConfig(I18nMixin):
     host: str = Field(..., alias="host")
     port: int = Field(..., alias="port")
     config_alts_dir: str = Field(..., alias="config_alts_dir")
+    active_persona_id: str | None = Field(None, alias="active_persona_id")
     tool_prompts: Dict[str, str] = Field(..., alias="tool_prompts")
     enable_proxy: bool = Field(False, alias="enable_proxy")
 
@@ -20,6 +21,9 @@ class SystemConfig(I18nMixin):
         "port": Description(en="Server port number", zh="服务器端口号"),
         "config_alts_dir": Description(
             en="Directory for alternative configurations", zh="备用配置目录"
+        ),
+        "active_persona_id": Description(
+            en="Optional persona ID to override the system prompt", zh="用于覆盖系统提示词的可选人设 ID",
         ),
         "tool_prompts": Description(
             en="Tool prompts to be inserted into persona prompt",
