@@ -165,8 +165,9 @@ character_config:
         temperature: 1.0 # 温度，介于 0 到 2 之间
 
       groq_llm:
-        llm_api_key: 'your groq API key' # Groq API 密钥
-        model: 'llama-3.3-70b-versatile' # 使用的模型
+        base_url: 'https://api.groq.com/openai/v1'
+        llm_api_key: '${GROQ_API_KEY}' # Groq API 密钥
+        model: 'llama-3.1-70b-versatile' # 使用的模型
         temperature: 1.0 # 温度，介于 0 到 2 之间
 
   # === 自动语音识别 ===

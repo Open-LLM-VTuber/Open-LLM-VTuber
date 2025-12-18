@@ -57,10 +57,12 @@ character_config:
   agent_config:
     agent_settings:
       basic_memory_agent:
-        llm_provider: 'openai_llm' # Specify OpenAI for this character
+        llm_provider: 'groq_llm' # Use Groq's OpenAI-compatible endpoint
     llm_configs:
-      openai_llm:
-        model: 'gpt-4o-mini' # Use a faster model
+      groq_llm:
+        base_url: 'https://api.groq.com/openai/v1'
+        llm_api_key: '${GROQ_API_KEY}' # Load from environment for safety
+        model: 'llama-3.1-70b-versatile'
         temperature: 0.5
 ```
 

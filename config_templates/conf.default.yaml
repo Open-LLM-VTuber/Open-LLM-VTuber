@@ -166,8 +166,9 @@ character_config:
         temperature: 1.0 # value between 0 to 2
 
       groq_llm:
-        llm_api_key: 'your groq API key'
-        model: 'llama-3.3-70b-versatile'
+        base_url: 'https://api.groq.com/openai/v1'
+        llm_api_key: '${GROQ_API_KEY}'
+        model: 'llama-3.1-70b-versatile'
         temperature: 1.0 # value between 0 to 2
 
   # === Automatic Speech Recognition ===
