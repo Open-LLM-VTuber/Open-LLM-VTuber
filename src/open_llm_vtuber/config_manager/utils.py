@@ -10,6 +10,40 @@ from loguru import logger
 
 from .main import Config
 
+
+def _serialize_persona_to_prompt(persona_data: Any) -> str:
+    """Serialize a persona definition (dict/str) into a prompt string."""
+
+    if persona_data is None:
+        raise ValueError("Persona file is empty or invalid")
+
+    if isinstance(persona_data, str):
+        return persona_data
+
+    if isinstance(persona_data, dict):
+        return yaml.safe_dump(persona_data, allow_unicode=True, sort_keys=False)
+
+    raise TypeError(
+        "Persona data must be a string or mapping to generate a persona prompt"
+    )
+
+
+def load_persona_prompt(persona_path: str) -> str:
+    """
+    Load a persona YAML or text file and convert it to a persona prompt string.
+
+    The path may be relative to the project root or absolute. Environment
+    variables inside the YAML/text are interpolated in the same way as other
+    configuration files.
+    """
+
+    resolved_path = Path(persona_path)
+    if not resolved_path.is_absolute():
+        resolved_path = resolved_path.resolve()
+
+    persona_data = read_yaml(str(resolved_path))
+    return _serialize_persona_to_prompt(persona_data)
+
 T = TypeVar("T", bound=BaseModel)
 
 

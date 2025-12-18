@@ -33,6 +33,19 @@ character_config:
     You are a gentle and caring girl next door named Hoshino. You are a great listener and always provide warmth and encouragement.
 ````
 
+### Example 1b: Point to a Persona File (keeps everything else from `conf.yaml`)
+
+If you want to manage richer persona data separately, drop a YAML definition into the `persona/` folder and point the character config to it. The backend loads that file as the `persona_prompt` **before** appending tool prompts in `ServiceContext.construct_system_prompt`.
+
+```yaml
+# characters/cohost_vtuber.yaml
+character_config:
+  conf_name: 'Cohost VTuber - Akira'
+  conf_uid: 'cohost_vtuber_001'
+  live2d_model_name: 'default'
+  persona_prompt_file: 'persona/cohost_vtuber.yaml'  # resolves relative to repo root
+```
+
 ### Example 2: Advanced Character (Changing Persona, Voice, and LLM)
 
 This example shows how to create a character that not only has a unique persona but also uses a specific TTS voice and a different LLM.

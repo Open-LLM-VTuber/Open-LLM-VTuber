@@ -1,0 +1,5 @@
+character_config:
+  conf_name: 'Cohost VTuber - Akira'
+  conf_uid: 'cohost_vtuber_001'
+  live2d_model_name: 'default'
+  persona_prompt_file: 'persona/cohost_vtuber.yaml'
