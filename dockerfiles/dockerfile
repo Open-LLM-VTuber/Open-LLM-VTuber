@@ -23,7 +23,7 @@ RUN apt-get update -o Acquire::Retries=5 \
  && rm -rf /var/lib/apt/lists/*
 
 # ------------------------------------------------
-# uv binary
+# uv
 # ------------------------------------------------
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
 
@@ -38,9 +38,6 @@ COPY --from=ollama/ollama:latest /bin/ollama /usr/local/bin/ollama
 COPY pyproject.toml uv.lock ./
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-dev
-
-# Install PyYAML for YAML parsing
-RUN uv pip install pyyaml
 
 # ------------------------------------------------
 # App code
@@ -64,6 +61,7 @@ if [ ! -f "/app/conf/conf.yaml" ]; then
   echo "[ERROR] /app/conf/conf.yaml is required" >&2
   exit 1
 fi
+
 ln -sf /app/conf/conf.yaml /app/conf.yaml
 
 # Optional model_dict.json
