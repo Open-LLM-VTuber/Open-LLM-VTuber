@@ -1,131 +1,179 @@
 # ================================
 # All-in-one: Ollama + App
 # ================================
-FROM ollama/ollama:latest AS ollama-src
-FROM python:3.10-slim AS base
+
+FROM python:3.10-slim
 
 ENV DEBIAN_FRONTEND=noninteractive \
     PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
     UV_LINK_MODE=copy \
-    CONFIG_FILE=/app/conf/conf.yaml
+    CONFIG_FILE=/app/conf/conf.yaml \
+    OLLAMA_HOST=127.0.0.1:11434
 
 WORKDIR /app
 
-# Base dependencies
+# ------------------------------------------------
+# System deps
+# ------------------------------------------------
 RUN apt-get update -o Acquire::Retries=5 \
  && apt-get install -y --no-install-recommends \
       ffmpeg git curl ca-certificates \
  && rm -rf /var/lib/apt/lists/*
 
-# Install uv
+# ------------------------------------------------
+# uv
+# ------------------------------------------------
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
 
-# Install Ollama
+# ------------------------------------------------
+# Ollama binary
+# ------------------------------------------------
 COPY --from=ollama/ollama:latest /bin/ollama /usr/local/bin/ollama
 
-# Pre-install dependencies (leverage cache)
+# ------------------------------------------------
+# Python deps (cached)
+# ------------------------------------------------
 COPY pyproject.toml uv.lock ./
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-dev
 
-# Copy source code and install project (without re-installing deps)
+# ------------------------------------------------
+# App code
+# ------------------------------------------------
 COPY . /app
 RUN uv pip install --no-deps .
 
-RUN printf '%s\n' \
-  '#!/usr/bin/env sh' \
-  'set -eu' \
-  '' \
-  '# 0) Ensure unified mount dir exists' \
-  'mkdir -p /app/conf' \
-  '' \
-  '# 1) Handle conf.yaml: MUST be provided by user — no default allowed!' \
-  'if [ -f "/app/conf/conf.yaml" ]; then' \
-  '  echo "Using user-provided conf.yaml"' \
-  '  ln -sf /app/conf/conf.yaml /app/conf.yaml' \
-  'else' \
-  '  echo "ERROR: Missing required configuration file!" >&2' \
-  '  echo "Please mount your config directory to /app/conf containing \"conf.yaml\"." >&2' \
-  '  echo "Example: -v \$(pwd)/my-config:/app/conf" >&2' \
-  '  echo "The directory must contain: conf.yaml (required), and optionally model_dict.json, live2d-models/, characters/." >&2' \
-  '  exit 1' \
-  'fi' \
-  '' \
-  '# 2) Handle model_dict.json (optional)' \
-  'if [ -f "/app/conf/model_dict.json" ]; then' \
-  '  echo "Using user-provided model_dict.json"' \
-  '  ln -sf /app/conf/model_dict.json /app/model_dict.json' \
-  'elif [ -f "/app/config_templates/model_dict.json" ]; then' \
-  '  cp /app/config_templates/model_dict.json /app/model_dict.json' \
-  'fi' \
-  '' \
-  '# 3) Handle live2d-models (optional directory)' \
-  'if [ -d "/app/conf/live2d-models" ]; then' \
-  '  echo "Using user-provided live2d-models"' \
-  '  rm -rf /app/live2d-models && ln -s /app/conf/live2d-models /app/live2d-models' \
-  'elif [ -d "/app/config_templates/live2d-models" ]; then' \
-  '  cp -r /app/config_templates/live2d-models /app/live2d-models' \
-  'fi' \
-  '' \
-  '# 4) Handle characters (optional directory)' \
-  'if [ -d "/app/conf/characters" ]; then' \
-  '  echo "Using user-provided characters"' \
-  '  rm -rf /app/characters && ln -s /app/conf/characters /app/characters' \
-  'elif [ -d "/app/config_templates/characters" ]; then' \
-  '  cp -r /app/config_templates/characters /app/characters' \
-  'fi' \
-  '' \
-  '# 5) Handle avatars (optional directory)' \
-  'if [ -d "/app/conf/avatars" ]; then' \
-  '  echo "Using user-provided avatars"' \
-  '  rm -rf /app/avatars && ln -s /app/conf/avatars /app/avatars' \
-  'elif [ -d "/app/config_templates/avatars" ]; then' \
-  '  cp -r /app/config_templates/avatars /app/avatars' \
-  'fi' \
-  '' \
-  '# 6) Handle backgrounds (optional directory)' \
-  'if [ -d "/app/conf/backgrounds" ]; then' \
-  '  echo "Using user-provided backgrounds"' \
-  '  rm -rf /app/backgrounds && ln -s /app/conf/backgrounds /app/backgrounds' \
-  'elif [ -d "/app/config_templates/backgrounds" ]; then' \
-  '  cp -r /app/config_templates/backgrounds /app/backgrounds' \
-  'fi' \
-  '' \
-  '# 7) Start Ollama (internal only)' \
-  'export OLLAMA_HOST="${OLLAMA_HOST:-127.0.0.1:11434}"' \
-  'ollama serve >/var/log/ollama.log 2>&1 &' \
-  '' \
-  '# 8) Wait for Ollama ready (max 60s)' \
-  'for i in $(seq 1 60); do' \
-  '  if curl -fsS "http://127.0.0.1:11434/v1/models" >/dev/null 2>&1; then' \
-  '    echo "Ollama ready"' \
-  '    break' \
-  '  fi' \
-  '  sleep 1' \
-  '  if [ "$i" -eq 60 ]; then' \
-  '    echo "ERROR: Ollama did not become ready within 60s" >&2' \
-  '    exit 1' \
-  '  fi' \
-  'done' \
-  '' \
-  '# 9) Optional: pre-pull default model' \
-  'if [ -n "${OLLAMA_DEFAULT_MODEL:-}" ]; then' \
-  '  ollama list | grep -q "^${OLLAMA_DEFAULT_MODEL} " || ollama pull "$OLLAMA_DEFAULT_MODEL" || true' \
-  'fi' \
-  '' \
-  '# 10) Start app' \
-  'exec uv run run_server.py' \
-  > /usr/local/bin/start-all && chmod +x /usr/local/bin/start-all
+# ------------------------------------------------
+# Entrypoint
+# ------------------------------------------------
+RUN cat > /usr/local/bin/start-all <<'EOF'
+#!/usr/bin/env sh
+set -eu
 
-# Volumes: ollama cache, models, and unified config mount (conf.yaml + live2d-models + characters)
+echo "[BOOT] Starting container"
+
+# ------------------------------------------------
+# 0) Config
+# ------------------------------------------------
+if [ ! -f "/app/conf/conf.yaml" ]; then
+  echo "[ERROR] /app/conf/conf.yaml is required" >&2
+  exit 1
+fi
+
+ln -sf /app/conf/conf.yaml /app/conf.yaml
+
+# Optional model_dict.json
+if [ -f "/app/conf/model_dict.json" ]; then
+  ln -sf /app/conf/model_dict.json /app/model_dict.json
+elif [ -f "/app/config_templates/model_dict.json" ]; then
+  cp /app/config_templates/model_dict.json /app/model_dict.json
+fi
+
+# Optional resource dirs
+for d in live2d-models characters avatars backgrounds; do
+  if [ -d "/app/conf/$d" ]; then
+    rm -rf "/app/$d"
+    ln -s "/app/conf/$d" "/app/$d"
+  elif [ -d "/app/config_templates/$d" ]; then
+    cp -r "/app/config_templates/$d" "/app/$d"
+  fi
+done
+
+# ------------------------------------------------
+# 1) Start Ollama
+# ------------------------------------------------
+echo "[BOOT] Starting Ollama..."
+ollama serve >/var/log/ollama.log 2>&1 &
+
+# Wait until ready
+for i in $(seq 1 60); do
+  if curl -fsS http://127.0.0.1:11434/api/tags >/dev/null 2>&1; then
+    echo "[BOOT] Ollama ready"
+    break
+  fi
+  sleep 1
+  if [ "$i" -eq 60 ]; then
+    echo "[ERROR] Ollama failed to start" >&2
+    exit 1
+  fi
+done
+
+# ------------------------------------------------
+# 2) Read YAML (STRICT PATH)
+# ------------------------------------------------
+eval "$(
+python - <<'PY'
+import yaml
+
+with open("/app/conf/conf.yaml", "r") as f:
+    cfg = yaml.safe_load(f) or {}
+
+agent_cfg = cfg.get("character_config", {}).get("agent_config", {})
+provider = agent_cfg.get("agent_settings", {}) \
+                    .get("basic_memory_agent", {}) \
+                    .get("llm_provider", "")
+
+model = agent_cfg.get("llm_configs", {}) \
+                 .get(provider, {}) \
+                 .get("model", "")
+
+print(f'LLM_PROVIDER="{provider}"')
+print(f'LLM_MODEL="{model}"')
+PY
+)"
+
+echo "[CONF] LLM_PROVIDER=$LLM_PROVIDER"
+echo "[CONF] LLM_MODEL=$LLM_MODEL"
+
+# ------------------------------------------------
+# 3) Ollama bootstrap
+# ------------------------------------------------
+if [ "$LLM_PROVIDER" = "ollama_llm" ]; then
+  if [ -z "$LLM_MODEL" ]; then
+    echo "[ERROR] ollama_llm requires model" >&2
+    exit 1
+  fi
+
+  echo "[OLLAMA] Keep model: $LLM_MODEL"
+
+  # Remove other models only
+  ollama list 2>/dev/null | awk 'NR>1 {print $1}' | while read -r m; do
+    if [ "$m" != "$LLM_MODEL" ]; then
+      echo "[OLLAMA] Removing unused model: $m"
+      ollama rm "$m" || true
+    fi
+  done
+
+  if ! ollama list | awk 'NR>1 {print $1}' | grep -qx "$LLM_MODEL"; then
+    echo "[OLLAMA] Pulling model: $LLM_MODEL"
+    ollama pull "$LLM_MODEL"
+  else
+    echo "[OLLAMA] Model already cached"
+  fi
+
+  echo "[OLLAMA] Warming up model"
+  ollama run "$LLM_MODEL" </dev/null || true
+else
+  echo "[OLLAMA] Provider is not ollama, skip"
+fi
+
+# ------------------------------------------------
+# 4) Start app
+# ------------------------------------------------
+echo "[BOOT] Starting application"
+exec uv run run_server.py
+EOF
+
+RUN chmod +x /usr/local/bin/start-all
+
+# ------------------------------------------------
+# Volumes
+# ------------------------------------------------
 VOLUME ["/root/.ollama", "/app/conf"]
 
-# ✅ Only expose the app port (Ollama is not exposed externally)
+# App port
 EXPOSE 12393
-
-ARG OLLAMA_DEFAULT_MODEL=
-ENV OLLAMA_DEFAULT_MODEL=${OLLAMA_DEFAULT_MODEL}
 
 CMD ["/usr/local/bin/start-all"]
