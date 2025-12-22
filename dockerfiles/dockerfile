@@ -136,8 +136,8 @@ if [ "$LLM_PROVIDER" = "ollama_llm" ]; then
   echo "[OLLAMA] Keep model: $LLM_MODEL"
 
   # Remove other models only
-  ollama list 2>/dev/null | awk '{print $1}' | grep -v '^Name$' | while read -r m; do
-    if [ "$m" != "$LLM_MODEL" ]; then
+  ollama list 2>/dev/null | awk 'NR>1 {print $1}' | while read -r m; do
+    if [ -n "$m" ] && [ "$m" != "$LLM_MODEL" ]; then
       echo "[OLLAMA] Removing unused model: $m"
       ollama rm "$m" || true
     fi
