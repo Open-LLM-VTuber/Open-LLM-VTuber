@@ -23,7 +23,7 @@ RUN apt-get update -o Acquire::Retries=5 \
  && rm -rf /var/lib/apt/lists/*
 
 # ------------------------------------------------
-# uv
+# uv binary
 # ------------------------------------------------
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
 
@@ -38,6 +38,9 @@ COPY --from=ollama/ollama:latest /bin/ollama /usr/local/bin/ollama
 COPY pyproject.toml uv.lock ./
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-dev
+
+# Install PyYAML for YAML parsing
+RUN uv pip install pyyaml
 
 # ------------------------------------------------
 # App code
@@ -61,7 +64,6 @@ if [ ! -f "/app/conf/conf.yaml" ]; then
   echo "[ERROR] /app/conf/conf.yaml is required" >&2
   exit 1
 fi
-
 ln -sf /app/conf/conf.yaml /app/conf.yaml
 
 # Optional model_dict.json
@@ -89,7 +91,7 @@ ollama serve >/var/log/ollama.log 2>&1 &
 
 # Wait until ready
 for i in $(seq 1 60); do
-  if curl -fsS http://127.0.0.1:11434/api/tags >/dev/null 2>&1; then
+  if curl -fsS http://127.0.0.1:11434/v1/models >/dev/null 2>&1; then
     echo "[BOOT] Ollama ready"
     break
   fi
@@ -101,7 +103,7 @@ for i in $(seq 1 60); do
 done
 
 # ------------------------------------------------
-# 2) Read YAML (STRICT PATH)
+# 2) Read YAML config
 # ------------------------------------------------
 eval "$(
 python - <<'PY'
@@ -139,14 +141,14 @@ if [ "$LLM_PROVIDER" = "ollama_llm" ]; then
   echo "[OLLAMA] Keep model: $LLM_MODEL"
 
   # Remove other models only
-  ollama list 2>/dev/null | awk 'NR>1 {print $1}' | while read -r m; do
+  ollama list 2>/dev/null | awk '{print $1}' | grep -v '^Name$' | while read -r m; do
     if [ "$m" != "$LLM_MODEL" ]; then
       echo "[OLLAMA] Removing unused model: $m"
       ollama rm "$m" || true
     fi
   done
 
-  if ! ollama list | awk 'NR>1 {print $1}' | grep -qx "$LLM_MODEL"; then
+  if ! ollama list 2>/dev/null | awk '{print $1}' | grep -qx "$LLM_MODEL"; then
     echo "[OLLAMA] Pulling model: $LLM_MODEL"
     ollama pull "$LLM_MODEL"
   else
@@ -156,7 +158,7 @@ if [ "$LLM_PROVIDER" = "ollama_llm" ]; then
   echo "[OLLAMA] Warming up model"
   ollama run "$LLM_MODEL" </dev/null || true
 else
-  echo "[OLLAMA] Provider is not ollama, skip"
+  echo "[OLLAMA] Provider is not ollama, skipping bootstrap"
 fi
 
 # ------------------------------------------------
@@ -166,7 +168,9 @@ echo "[BOOT] Starting application"
 exec uv run run_server.py
 EOF
 
-RUN chmod +x /usr/local/bin/start-all
+# Fix line endings and permissions
+RUN sed -i 's/\r$//' /usr/local/bin/start-all \
+    && chmod +x /usr/local/bin/start-all
 
 # ------------------------------------------------
 # Volumes
