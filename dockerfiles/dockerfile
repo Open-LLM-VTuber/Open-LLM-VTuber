@@ -23,7 +23,7 @@ RUN apt-get update -o Acquire::Retries=5 \
  && rm -rf /var/lib/apt/lists/*
 
 # ------------------------------------------------
-# uv
+# uv binary
 # ------------------------------------------------
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
 
@@ -101,23 +101,20 @@ for i in $(seq 1 60); do
 done
 
 # ------------------------------------------------
-# 2) Read YAML config
+# 2) Read YAML config using uv run
 # ------------------------------------------------
+LLM_PROVIDER=""
+LLM_MODEL=""
 eval "$(
-python - <<'PY'
+uv run - <<'PY'
 import yaml
 
 with open("/app/conf/conf.yaml", "r") as f:
     cfg = yaml.safe_load(f) or {}
 
 agent_cfg = cfg.get("character_config", {}).get("agent_config", {})
-provider = agent_cfg.get("agent_settings", {}) \
-                    .get("basic_memory_agent", {}) \
-                    .get("llm_provider", "")
-
-model = agent_cfg.get("llm_configs", {}) \
-                 .get(provider, {}) \
-                 .get("model", "")
+provider = agent_cfg.get("agent_settings", {}).get("basic_memory_agent", {}).get("llm_provider", "")
+model = agent_cfg.get("llm_configs", {}).get(provider, {}).get("model", "")
 
 print(f'LLM_PROVIDER="{provider}"')
 print(f'LLM_MODEL="{model}"')
