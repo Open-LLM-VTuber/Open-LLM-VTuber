@@ -1,5 +1,5 @@
 # ================================
-# All-in-one: Ollama + App
+# All-in-one: App (+ optional Ollama)
 # ================================
 
 FROM python:3.10-slim
@@ -9,8 +9,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
     UV_LINK_MODE=copy \
-    CONFIG_FILE=/app/conf/conf.yaml \
-    OLLAMA_HOST=127.0.0.1:11434
+    CONFIG_FILE=/app/conf/conf.yaml
 
 WORKDIR /app
 
@@ -28,7 +27,7 @@ RUN apt-get update -o Acquire::Retries=5 \
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
 
 # ------------------------------------------------
-# Ollama binary
+# Ollama binary (only binary, no daemon yet)
 # ------------------------------------------------
 COPY --from=ollama/ollama:latest /bin/ollama /usr/local/bin/ollama
 
@@ -55,7 +54,7 @@ set -eu
 echo "[BOOT] Starting container"
 
 # ------------------------------------------------
-# 0) Config
+# 0) Config check
 # ------------------------------------------------
 if [ ! -f "/app/conf/conf.yaml" ]; then
   echo "[ERROR] /app/conf/conf.yaml is required" >&2
@@ -64,47 +63,23 @@ fi
 
 ln -sf /app/conf/conf.yaml /app/conf.yaml
 
-# Optional model_dict.json
-if [ -f "/app/conf/model_dict.json" ]; then
-  ln -sf /app/conf/model_dict.json /app/model_dict.json
-elif [ -f "/app/config_templates/model_dict.json" ]; then
-  cp /app/config_templates/model_dict.json /app/model_dict.json
-fi
-
-# Optional resource dirs
+# ------------------------------------------------
+# 1) Resource directories (ONLY from conf)
+# ------------------------------------------------
 for d in live2d-models characters avatars backgrounds; do
   if [ -d "/app/conf/$d" ]; then
     rm -rf "/app/$d"
     ln -s "/app/conf/$d" "/app/$d"
-  elif [ -d "/app/config_templates/$d" ]; then
-    cp -r "/app/config_templates/$d" "/app/$d"
+    echo "[CONF] Linked $d"
   fi
 done
 
 # ------------------------------------------------
-# 1) Start Ollama
-# ------------------------------------------------
-echo "[BOOT] Starting Ollama..."
-ollama serve >/var/log/ollama.log 2>&1 &
-
-# Wait until ready
-for i in $(seq 1 60); do
-  if curl -fsS http://127.0.0.1:11434/v1/models >/dev/null 2>&1; then
-    echo "[BOOT] Ollama ready"
-    break
-  fi
-  sleep 1
-  if [ "$i" -eq 60 ]; then
-    echo "[ERROR] Ollama failed to start" >&2
-    exit 1
-  fi
-done
-
-# ------------------------------------------------
-# 2) Read YAML config using uv run
+# 2) Read YAML config
 # ------------------------------------------------
 LLM_PROVIDER=""
 LLM_MODEL=""
+
 eval "$(
 uv run - <<'PY'
 import yaml
@@ -113,8 +88,13 @@ with open("/app/conf/conf.yaml", "r") as f:
     cfg = yaml.safe_load(f) or {}
 
 agent_cfg = cfg.get("character_config", {}).get("agent_config", {})
-provider = agent_cfg.get("agent_settings", {}).get("basic_memory_agent", {}).get("llm_provider", "")
-model = agent_cfg.get("llm_configs", {}).get(provider, {}).get("model", "")
+provider = agent_cfg.get("agent_settings", {}) \
+                    .get("basic_memory_agent", {}) \
+                    .get("llm_provider", "")
+
+model = agent_cfg.get("llm_configs", {}) \
+                 .get(provider, {}) \
+                 .get("model", "")
 
 print(f'LLM_PROVIDER="{provider}"')
 print(f'LLM_MODEL="{model}"')
@@ -125,35 +105,28 @@ echo "[CONF] LLM_PROVIDER=$LLM_PROVIDER"
 echo "[CONF] LLM_MODEL=$LLM_MODEL"
 
 # ------------------------------------------------
-# 3) Ollama bootstrap
+# 3) Start Ollama ONLY if needed
 # ------------------------------------------------
 if [ "$LLM_PROVIDER" = "ollama_llm" ]; then
-  if [ -z "$LLM_MODEL" ]; then
-    echo "[ERROR] ollama_llm requires model" >&2
-    exit 1
-  fi
+  echo "[BOOT] Starting Ollama (serve only)..."
 
-  echo "[OLLAMA] Keep model: $LLM_MODEL"
+  ollama serve >/var/log/ollama.log 2>&1 &
 
-  # Remove other models only
-  ollama list 2>/dev/null | awk 'NR>1 {print $1}' | while read -r m; do
-    if [ -n "$m" ] && [ "$m" != "$LLM_MODEL" ]; then
-      echo "[OLLAMA] Removing unused model: $m"
-      ollama rm "$m" || true
+  for i in $(seq 1 60); do
+    if curl -fsS http://127.0.0.1:11434/api/tags >/dev/null 2>&1; then
+      echo "[BOOT] Ollama ready"
+      break
+    fi
+    sleep 1
+    if [ "$i" -eq 60 ]; then
+      echo "[ERROR] Ollama failed to start" >&2
+      exit 1
     fi
   done
 
-  if ! ollama list 2>/dev/null | awk '{print $1}' | grep -qx "$LLM_MODEL"; then
-    echo "[OLLAMA] Pulling model: $LLM_MODEL"
-    ollama pull "$LLM_MODEL"
-  else
-    echo "[OLLAMA] Model already cached"
-  fi
-
-  echo "[OLLAMA] Warming up model"
-  ollama run "$LLM_MODEL" </dev/null || true
+  echo "[OLLAMA] No model warmup (delegated to app)"
 else
-  echo "[OLLAMA] Provider is not ollama, skipping bootstrap"
+  echo "[BOOT] LLM provider is $LLM_PROVIDER, skipping Ollama"
 fi
 
 # ------------------------------------------------
@@ -163,16 +136,15 @@ echo "[BOOT] Starting application"
 exec uv run run_server.py
 EOF
 
-# Fix line endings and permissions
+# Fix CRLF + permissions
 RUN sed -i 's/\r$//' /usr/local/bin/start-all \
-    && chmod +x /usr/local/bin/start-all
+ && chmod +x /usr/local/bin/start-all
 
 # ------------------------------------------------
 # Volumes
 # ------------------------------------------------
 VOLUME ["/root/.ollama", "/app/conf"]
 
-# App port
 EXPOSE 12393
 
 CMD ["/usr/local/bin/start-all"]
