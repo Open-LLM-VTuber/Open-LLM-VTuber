@@ -6,8 +6,7 @@ services:
       - "12393:12393"
     environment:
       ## Optional: Specify the model to be automatically downloaded at startup by default
-      ## For example, deepseek-r1:8b
-      - OLLAMA_DEFAULT_MODEL=deepseek-r1:8b
+      - OLLAMA_DEFAULT_MODEL=qwen2.5:latest
     volumes:
       - ollama_data:/root/.ollama
       - models_data:/app/models
