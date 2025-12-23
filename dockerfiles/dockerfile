@@ -108,10 +108,15 @@ echo "[CONF] LLM_MODEL=$LLM_MODEL"
 # 3) Start Ollama ONLY if needed
 # ------------------------------------------------
 if [ "$LLM_PROVIDER" = "ollama_llm" ]; then
-  echo "[BOOT] Starting Ollama (serve only)..."
+  if [ -z "$LLM_MODEL" ]; then
+    echo "[ERROR] LLM_PROVIDER=ollama_llm but model is empty" >&2
+    exit 1
+  fi
 
+  echo "[BOOT] Starting Ollama (serve only)..."
   ollama serve >/var/log/ollama.log 2>&1 &
 
+  # Wait for Ollama API
   for i in $(seq 1 60); do
     if curl -fsS http://127.0.0.1:11434/api/tags >/dev/null 2>&1; then
       echo "[BOOT] Ollama ready"
@@ -124,7 +129,12 @@ if [ "$LLM_PROVIDER" = "ollama_llm" ]; then
     fi
   done
 
-  echo "[OLLAMA] No model warmup (delegated to app)"
+  # ----------------------------------------------
+  # Pull model (REQUIRED even if we don't run it)
+  # ----------------------------------------------
+  echo "[BOOT] Ensuring Ollama model exists: $LLM_MODEL"
+  ollama pull "$LLM_MODEL"
+
 else
   echo "[BOOT] LLM provider is $LLM_PROVIDER, skipping Ollama"
 fi
