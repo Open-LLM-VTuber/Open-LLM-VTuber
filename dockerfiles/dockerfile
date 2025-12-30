@@ -9,7 +9,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
 
 WORKDIR /app
 
-# Base dependencies (README: ffmpeg required)
+# Base dependencies
 RUN apt-get update -o Acquire::Retries=5 \
  && apt-get install -y --no-install-recommends \
       ffmpeg git curl ca-certificates \
@@ -27,12 +27,12 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 COPY . /app
 RUN uv pip install --no-deps .
 
-# Startup script (volume-based, no Ollama)
+# Startup script
 RUN printf '%s\n' \
   '#!/usr/bin/env sh' \
   'set -eu' \
   '' \
-  'mkdir -p /app/conf' \
+  'mkdir -p /app/conf /app/models' \
   '' \
   '# 1) conf.yaml (required)' \
   'if [ -f "/app/conf/conf.yaml" ]; then' \
@@ -69,17 +69,12 @@ RUN printf '%s\n' \
   '  rm -rf /app/backgrounds && ln -s /app/conf/backgrounds /app/backgrounds' \
   'fi' \
   '' \
-  '# 7) models (local models, optional)' \
-  'if [ -d "/app/conf/models" ]; then' \
-  '  rm -rf /app/models && ln -s /app/conf/models /app/models' \
-  'fi' \
-  '' \
-  '# 8) start app (Ollama via host)' \
+  '# 7) start app' \
   'exec uv run run_server.py' \
   > /usr/local/bin/start-app && chmod +x /usr/local/bin/start-app
 
-# Unified config & assets volume
-VOLUME ["/app/conf"]
+# Volumes
+VOLUME ["/app/conf", "/app/models"]
 
 EXPOSE 12393
 
