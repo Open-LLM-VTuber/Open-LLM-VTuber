@@ -41,18 +41,20 @@ docker buildx build --platform linux/amd64,linux/arm64 -t <你的DockerHub用户
 
 示例：
 ```
-docker buildx build \
-  --platform linux/amd64 \
-  -t openllmvtuber/open-llm-vtuber:latest \
-  -f dockerfile ../ \
-  --load
+docker buildx build --platform linux/amd64,linux/arm64 -t openllmvtuber/open-llm-vtuber:1.2.1 -f dockerfile ../ --load
+```
+
+然后用docker compose启动
+
+```
+docker-compose up -d
 ```
 
 ---
 
 ## ☁️ 推送镜像（仅限 Docker Hub 组织成员）
 ```
-docker push openllmvtuber/open-llm-vtuber:latest
+docker push openllmvtuber/open-llm-vtuber:1.2.1
 ```
 
 ---

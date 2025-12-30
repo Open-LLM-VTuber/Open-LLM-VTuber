@@ -1,17 +1,18 @@
 version: "3.9"
+
 services:
   open-llm-vtuber:
     image: openllmvtuber/open-llm-vtuber:latest
+    container_name: open-llm-vtuber
     ports:
       - "12393:12393"
-    environment:
-      ## Optional: Specify the model to be automatically downloaded at startup by default
-      - OLLAMA_DEFAULT_MODEL=qwen2.5:latest
-    volumes:
-      - ollama_data:/root/.ollama
-      - models_data:/app/models
-    restart: unless-stopped
 
-volumes:
-  ollama_data:
-  models_data:
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+    volumes:
+      - ./conf:/app/conf
+
+      - ./models:/app/models
+
+    restart: unless-stopped
