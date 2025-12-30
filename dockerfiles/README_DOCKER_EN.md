@@ -41,11 +41,15 @@ Replace:
 - `<your_dockerhub_username>` → your Docker Hub username or organization name  
 - `<your_image_name>` → your preferred image name  
 
-Example:
+Example：
 ```
-docker buildx build --platform linux/amd64,linux/arm64 -t openllmvtuber/open-llm-vtuber:latest -f dockerfile ../ --load
+docker buildx build --platform linux/amd64,linux/arm64 -t openllmvtuber/open-llm-vtuber:localtest -f dockerfile ../ --load
 ```
 
+And then start with `docker compose`
+```
+docker-compose up -d
+```
 ---
 
 ## ☁️ Push (Only for Docker Hub Members)
