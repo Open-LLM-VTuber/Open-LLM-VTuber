@@ -2,7 +2,7 @@ version: "3.9"
 
 services:
   open-llm-vtuber:
-    image: openllmvtuber/open-llm-vtuber:latest
+    image: openllmvtuber/open-llm-vtuber:localtest
     container_name: open-llm-vtuber
     ports:
       - "12393:12393"
