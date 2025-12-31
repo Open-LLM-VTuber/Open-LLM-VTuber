@@ -2,13 +2,10 @@ version: "3.9"
 
 services:
   open-llm-vtuber:
-    image: openllmvtuber/open-llm-vtuber:localtest
-    container_name: open-llm-vtuber-localtest
+    image: openllmvtuber/open-llm-vtuber:latest
+    container_name: open-llm-vtuber-latest
     ports:
       - "12393:12393"
-
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
 
     volumes:
       - D:\OLV-Docker-Config:/app/conf
