@@ -18,8 +18,8 @@ cd dockerfiles
 
 ## 准备工作
 ```
-chmod +x setup_config_cn.sh
-sudo ./setup_config_cn.sh
+chmod +x server_config_cn.sh
+sudo ./server_config_cn.sh
 ```
 
 ---

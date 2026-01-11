@@ -19,8 +19,8 @@ cd dockerfiles
 
 ## Preparations
 ```
-chmod +x setup_config_en.sh
-sudo ./setup_config_en.sh
+chmod +x server_config_cn.sh
+sudo ./server_config_cn.sh
 ```
 
 ---
