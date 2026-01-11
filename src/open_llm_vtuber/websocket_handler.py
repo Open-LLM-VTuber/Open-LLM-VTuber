@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional, Callable, TypedDict
+﻿from typing import Dict, List, Optional, Callable, TypedDict
 from fastapi import WebSocket, WebSocketDisconnect
 import asyncio
 import json
@@ -215,6 +215,8 @@ class WebSocketHandler:
             while True:
                 try:
                     data = await websocket.receive_json()
+                    # Track last active client on any incoming message
+                    self.last_active_client_uid = client_uid
                     message_handler.handle_message(client_uid, data)
                     await self._route_message(websocket, client_uid, data)
                 except WebSocketDisconnect:

@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ASR & TTS Tool</title>
+    <title>ASR · TTS · Direct Control</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -134,6 +134,45 @@
         <div id="ttsStatus" class="status"></div>
         <audio id="audioPlayer" controls></audio>
         <button id="downloadAudio" class="button" disabled>Download Audio</button>
+    </div>
+
+    <div class="section">
+        <h2>Direct Control</h2>
+        <div class="controls">
+            <div class="record-controls">
+                <label for="dcSessionSelect">Session:</label>
+                <select id="dcSessionSelect"></select>
+                <button id="dcRefreshSessions" class="button">Refresh Sessions</button>
+            </div>
+            <div class="upload-controls">
+                <label><input type="checkbox" id="dcApplyAll"> Apply to all</label>
+            </div>
+        </div>
+        <div class="controls">
+            <button id="dcTabSpeak" class="button">Speak</button>
+            <button id="dcTabSystem" class="button">System</button>
+            <button id="dcTabRespond" class="button">Respond</button>
+        </div>
+        <div id="dcSpeakPanel">
+            <textarea id="dcSpeakText" placeholder="Text to speak..."></textarea>
+            <button id="dcSpeakBtn" class="button">Send Speak</button>
+            <div id="dcSpeakStatus" class="status"></div>
+        </div>
+        <div id="dcSystemPanel" style="display: none;">
+            <textarea id="dcSystemText" placeholder="System instruction..."></textarea>
+            <select id="dcSystemMode">
+                <option value="append">append</option>
+                <option value="prepend">prepend</option>
+                <option value="reset">reset</option>
+            </select>
+            <button id="dcSystemBtn" class="button">Apply System</button>
+            <div id="dcSystemStatus" class="status"></div>
+        </div>
+        <div id="dcRespondPanel" style="display: none;">
+            <textarea id="dcRespondText" placeholder="User message..."></textarea>
+            <button id="dcRespondBtn" class="button">Trigger Respond</button>
+            <div id="dcRespondStatus" class="status"></div>
+        </div>
     </div>
 
     <script src="recorder.js"></script>
