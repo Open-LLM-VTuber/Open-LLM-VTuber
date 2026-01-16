@@ -59,6 +59,8 @@ class LLMFactory:
                 temperature=kwargs.get("temperature"),
                 keep_alive=kwargs.get("keep_alive"),
                 unload_at_exit=kwargs.get("unload_at_exit"),
+                repeat_penalty=kwargs.get("repeat_penalty"),
+                top_p=kwargs.get("top_p"),
             )
 
         elif llm_provider == "llama_cpp_llm":

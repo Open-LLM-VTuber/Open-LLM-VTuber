@@ -134,6 +134,8 @@ character_config:
         # set to -1 to keep the model in memory forever (even after exiting open llm vtuber)
         keep_alive: -1
         unload_at_exit: True # unload the model from memory at exit
+        repeat_penalty: 1.0
+        top_p: 0.8
 
       lmstudio_llm:
         base_url: 'http://localhost:1234/v1'

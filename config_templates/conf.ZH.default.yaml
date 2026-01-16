@@ -133,6 +133,8 @@ character_config:
         # 设置为 -1 表示模型将永远保留在内存中（即使退出 open llm vtuber 之后也是）
         keep_alive: -1
         unload_at_exit: True # 退出时从内存中卸载模型
+        repeat_penalty: 1.0
+        top_p: 0.8
 
       lmstudio_llm:
         base_url: 'http://localhost:1234/v1'
@@ -266,12 +268,21 @@ character_config:
 
   # =================== 文本转语音 ===================
   tts_config:
-    tts_model: 'edge_tts' # 使用的文本转语音模型
-    # 文本转语音模型选项：
+    tts_model: 'voicevox'
+    # text to speech model options:
     #   'azure_tts', 'pyttsx3_tts', 'edge_tts', 'bark_tts',
     #   'cosyvoice_tts', 'melo_tts', 'coqui_tts',
     #   'fish_api_tts', 'x_tts', 'gpt_sovits_tts', 'sherpa_onnx_tts'
     #   'minimax_tts'
+    voicevox:
+      # Voicevox TTS connects to the local Voicevox server
+      # Check their documentation for deployment and the meaning of the following configurations
+      client_url: 'http://127.0.0.1:50021' # Voicevox local server url
+      voicevox_speaker_id: 8 # Speaker ID, check Voicevox for available speakers
+      pitch: 0.0 # Pitch adjustment, default is 0.0
+      speed: 1.0 # Speed adjustment, default is 1.0
+      intonation: 1.0 # Intonation adjustment, default is 1.0
+      volume: 1.0 # Volume adjustment, default is 1.0
 
     siliconflow_tts:
       api_url: "https://api.siliconflow.cn/v1/audio/speech"
