@@ -30,6 +30,8 @@ class AsyncLLM(StatelessLLMInterface):
         organization_id: str = "z",
         project_id: str = "z",
         temperature: float = 1.0,
+        repeat_penalty: float = None,
+        top_p: float = None,
     ):
         """
         Initializes an instance of the `AsyncLLM` class.
@@ -41,10 +43,14 @@ class AsyncLLM(StatelessLLMInterface):
         - project_id (str, optional): The project ID for the OpenAI API. Defaults to "z".
         - llm_api_key (str, optional): The API key for the OpenAI API. Defaults to "z".
         - temperature (float, optional): What sampling temperature to use, between 0 and 2. Defaults to 1.0.
+        - repeat_penalty (float, optional): Repeat penalty parameter for Ollama. Defaults to None.
+        - top_p (float, optional): Top P parameter for Ollama. Defaults to None.
         """
         self.base_url = base_url
         self.model = model
         self.temperature = temperature
+        self.repeat_penalty = repeat_penalty
+        self.top_p = top_p
         self.client = AsyncOpenAI(
             base_url=base_url,
             organization=organization_id,
@@ -97,15 +103,23 @@ class AsyncLLM(StatelessLLMInterface):
 
             available_tools = tools if self.support_tools else NOT_GIVEN
 
+            # Prepare kwargs for the API call
+            api_kwargs = {
+                "messages": messages_with_system,
+                "model": self.model,
+                "stream": True,
+                "temperature": self.temperature,
+                "tools": available_tools,
+            }
+            # Add optional parameters if they are set
+            if self.repeat_penalty is not None:
+                api_kwargs["repeat_penalty"] = self.repeat_penalty
+            if self.top_p is not None:
+                api_kwargs["top_p"] = self.top_p
+            
             stream: AsyncStream[
                 ChatCompletionChunk
-            ] = await self.client.chat.completions.create(
-                messages=messages_with_system,
-                model=self.model,
-                stream=True,
-                temperature=self.temperature,
-                tools=available_tools,
-            )
+            ] = await self.client.chat.completions.create(**api_kwargs)
             logger.debug(
                 f"Tool Support: {self.support_tools}, Available tools: {available_tools}"
             )
