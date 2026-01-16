@@ -269,12 +269,21 @@ character_config:
 
   # =================== Text to Speech ===================
   tts_config:
-    tts_model: 'edge_tts'
+    tts_model: 'voicevox'
     # text to speech model options:
     #   'azure_tts', 'pyttsx3_tts', 'edge_tts', 'bark_tts',
     #   'cosyvoice_tts', 'melo_tts', 'coqui_tts',
     #   'fish_api_tts', 'x_tts', 'gpt_sovits_tts', 'sherpa_onnx_tts'
     #   'minimax_tts'
+    voicevox:
+      # Voicevox TTS connects to the local Voicevox server
+      # Check their documentation for deployment and the meaning of the following configurations
+      client_url: 'http://127.0.0.1:50021' # Voicevox local server url
+      voicevox_speaker_id: 8 # Speaker ID, check Voicevox for available speakers
+      pitch: 0.0 # Pitch adjustment, default is 0.0
+      speed: 1.0 # Speed adjustment, default is 1.0
+      intonation: 1.0 # Intonation adjustment, default is 1.0
+      volume: 1.0 # Volume adjustment, default is 1.0
 
     azure_tts:
       api_key: 'azure-api-key'
