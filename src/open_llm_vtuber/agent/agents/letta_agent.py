@@ -26,10 +26,15 @@ class LettaAgent(AgentInterface):
         segment_method: str = "pysbd",
         host: str = "localhost",
         port: int = 8283,
+        api_key: str = "",
     ):
         super().__init__()
-        self.url = f"http://{host}:{port}"
-        self.client = Letta(base_url=self.url)
+        self.url = self._create_url(host, port)
+        self.api_key = api_key
+        self.client = Letta(
+            base_url=self.url,
+            api_key=self.api_key,
+        )
         self.id = id
         # Initialize decorator parameters
         self._tts_preprocessor_config = tts_preprocessor_config
@@ -64,10 +69,9 @@ class LettaAgent(AgentInterface):
     async def chat(self, input_data: BatchInput) -> AsyncIterator[SentenceOutput]:
         messages = self._to_messages(input_data)
         stream = self.generator_to_async(
-            self.client.agents.messages.create_stream(
+            self.client.agents.messages.stream(
                 agent_id=self.id,
                 messages=messages,
-                stream_tokens=True,
             )
         )
 
@@ -87,6 +91,21 @@ class LettaAgent(AgentInterface):
 
             yield token
             complete_response += token
+
+    def _create_url(self, host: str, port: int) -> str:
+        """
+        Create the full URL for the Letta server.
+
+        Args:
+            host: str - The host address
+            port: int - The port number
+        Returns:
+            str - The full URL
+        """
+        if host.startswith("http://") or host.startswith("https://"):
+            return f"{host}:{port}"
+        else:
+            return f"http://{host}:{port}"
 
     def _to_text_prompt(self, input_data: BatchInput) -> str:
         """

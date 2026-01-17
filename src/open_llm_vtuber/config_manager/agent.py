@@ -156,6 +156,7 @@ class LettaConfig(I18nMixin, BaseModel):
     id: str = Field(..., alias="id")
     faster_first_response: Optional[bool] = Field(True, alias="faster_first_response")
     segment_method: Literal["regex", "pysbd"] = Field("pysbd", alias="segment_method")
+    api_key: str = Field("", alias="api_key")
 
     DESCRIPTIONS: ClassVar[Dict[str, Description]] = {
         "host": Description(
