@@ -585,6 +585,59 @@ class PiperTTSConfig(I18nMixin):
     }
 
 
+class VoicevoxTTSConfig(I18nMixin):
+    """Configuration for VOICEVOX TTS."""
+
+    base_url: str = Field("http://localhost:50021", alias="base_url")
+    speaker_id: int = Field(1, alias="speaker_id")
+    speed_scale: float = Field(1.0, alias="speed_scale")
+    pitch_scale: float = Field(0.0, alias="pitch_scale")
+    intonation_scale: float = Field(1.0, alias="intonation_scale")
+    volume_scale: float = Field(1.0, alias="volume_scale")
+    pre_phoneme_length: float = Field(0.1, alias="pre_phoneme_length")
+    post_phoneme_length: float = Field(0.1, alias="post_phoneme_length")
+    timeout: int = Field(30, alias="timeout")
+
+    DESCRIPTIONS: ClassVar[Dict[str, Description]] = {
+        "base_url": Description(
+            en="Base URL of the VOICEVOX engine API (default: http://localhost:50021)",
+            zh="VOICEVOX 引擎 API 的基础 URL（默认：http://localhost:50021）",
+        ),
+        "speaker_id": Description(
+            en="Speaker ID (e.g., 0=四国めたん, 1=ずんだもん, 8=春日部つむぎ). Use /speakers endpoint to list all.",
+            zh="说话人 ID（如 0=四国めたん, 1=ずんだもん, 8=春日部つむぎ）。使用 /speakers 端点列出全部。",
+        ),
+        "speed_scale": Description(
+            en="Speech speed multiplier (default: 1.0)",
+            zh="语速倍数（默认：1.0）",
+        ),
+        "pitch_scale": Description(
+            en="Pitch adjustment in semitones (default: 0.0)",
+            zh="音高调整（半音单位，默认：0.0）",
+        ),
+        "intonation_scale": Description(
+            en="Intonation scale (default: 1.0)",
+            zh="语调比例（默认：1.0）",
+        ),
+        "volume_scale": Description(
+            en="Volume scale (default: 1.0)",
+            zh="音量比例（默认：1.0）",
+        ),
+        "pre_phoneme_length": Description(
+            en="Silence before speech in seconds (default: 0.1)",
+            zh="语音前静音时间（秒，默认：0.1）",
+        ),
+        "post_phoneme_length": Description(
+            en="Silence after speech in seconds (default: 0.1)",
+            zh="语音后静音时间（秒，默认：0.1）",
+        ),
+        "timeout": Description(
+            en="Request timeout in seconds (default: 30)",
+            zh="请求超时时间（秒，默认：30）",
+        ),
+    }
+
+
 class ElevenLabsTTSConfig(I18nMixin):
     """Configuration for ElevenLabs TTS."""
 
@@ -702,6 +755,7 @@ class TTSConfig(I18nMixin):
         "elevenlabs_tts",
         "cartesia_tts",
         "piper_tts",
+        "voicevox_tts",
     ] = Field(..., alias="tts_model")
 
     azure_tts: Optional[AzureTTSConfig] = Field(None, alias="azure_tts")
@@ -726,6 +780,7 @@ class TTSConfig(I18nMixin):
     elevenlabs_tts: ElevenLabsTTSConfig | None = Field(None, alias="elevenlabs_tts")
     cartesia_tts: CartesiaTTSConfig | None = Field(None, alias="cartesia_tts")
     piper_tts: Optional[PiperTTSConfig] = Field(None, alias="piper_tts")
+    voicevox_tts: Optional[VoicevoxTTSConfig] = Field(None, alias="voicevox_tts")
 
     DESCRIPTIONS: ClassVar[Dict[str, Description]] = {
         "tts_model": Description(
@@ -769,6 +824,9 @@ class TTSConfig(I18nMixin):
             en="Configuration for Cartesia TTS", zh="Cartesia TTS 配置"
         ),
         "piper_tts": Description(en="Configuration for Piper TTS", zh="Piper TTS 配置"),
+        "voicevox_tts": Description(
+            en="Configuration for VOICEVOX TTS", zh="VOICEVOX TTS 配置"
+        ),
     }
 
     @model_validator(mode="after")
@@ -813,4 +871,6 @@ class TTSConfig(I18nMixin):
 
         elif tts_model == "piper_tts" and values.piper_tts is not None:
             values.piper_tts.model_validate(values.piper_tts.model_dump())
+        elif tts_model == "voicevox_tts" and values.voicevox_tts is not None:
+            values.voicevox_tts.model_validate(values.voicevox_tts.model_dump())
         return values

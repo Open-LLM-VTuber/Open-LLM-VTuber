@@ -311,6 +311,18 @@ character_config:
       normalize_audio: true     # 是否归一化音频（推荐启用，使音量更稳定）
       use_cuda: false           # 是否使用 GPU 加速（需要安装 onnxruntime-gpu）
 
+    voicevox_tts:  # VOICEVOX - 免费日语 TTS 引擎 (https://voicevox.hiroshiba.jp/)
+      # 使用前请确保 VOICEVOX 引擎正在运行
+      base_url: 'http://localhost:50021'  # VOICEVOX 引擎 API URL
+      speaker_id: 1             # 说话人 ID（1=ずんだもん, 0=四国めたん, 8=春日部つむぎ 等）
+      speed_scale: 1.0          # 语速（1.0 = 正常）
+      pitch_scale: 0.0          # 音高调整（半音单位，0.0 = 正常）
+      intonation_scale: 1.0     # 语调强度（1.0 = 正常）
+      volume_scale: 1.0         # 音量（1.0 = 正常）
+      pre_phoneme_length: 0.1   # 语音前静音时间（秒）
+      post_phoneme_length: 0.1  # 语音后静音时间（秒）
+      timeout: 30               # API 请求超时时间（秒）
+
     cosyvoice_tts: # Cosy Voice TTS 连接到 gradio webui
       # 查看他们的文档以了解部署和以下配置的含义
       client_url: 'http://127.0.0.1:50000/' # CosyVoice gradio 演示 webui url

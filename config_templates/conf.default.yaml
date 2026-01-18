@@ -303,6 +303,18 @@ character_config:
       normalize_audio: true     # Whether to normalize audio (recommended: true, for more consistent volume)
       use_cuda: false           # Whether to use GPU acceleration (requires onnxruntime-gpu)
 
+    voicevox_tts:  # VOICEVOX - Free Japanese TTS engine (https://voicevox.hiroshiba.jp/)
+      # Make sure VOICEVOX engine is running before use
+      base_url: 'http://localhost:50021'  # VOICEVOX engine API URL
+      speaker_id: 1             # Speaker ID (1=ずんだもん, 0=四国めたん, 8=春日部つむぎ, etc.)
+      speed_scale: 1.0          # Speech speed (1.0 = normal)
+      pitch_scale: 0.0          # Pitch adjustment in semitones (0.0 = normal)
+      intonation_scale: 1.0     # Intonation intensity (1.0 = normal)
+      volume_scale: 1.0         # Volume (1.0 = normal)
+      pre_phoneme_length: 0.1   # Silence before speech (seconds)
+      post_phoneme_length: 0.1  # Silence after speech (seconds)
+      timeout: 30               # API request timeout (seconds)
+
     cosyvoice_tts: # Cosy Voice TTS connects to the gradio webui
       # Check their documentation for deployment and the meaning of the following configurations
       client_url: 'http://127.0.0.1:50000/' # CosyVoice gradio demo webui url
