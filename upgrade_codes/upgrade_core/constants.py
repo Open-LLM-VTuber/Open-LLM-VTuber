@@ -5,6 +5,7 @@ Constants for the upgrade system.
 REFACTORED: Now uses JSON-based i18n system via I18nManager.
 All upgrade texts are loaded from locales/{lang}/upgrade*.json files.
 """
+
 from ruamel.yaml import YAML
 from src.open_llm_vtuber.config_manager.utils import load_text_file_with_guess_encoding
 from src.open_llm_vtuber.i18n_manager import I18nManager
@@ -42,12 +43,7 @@ I18nManager.load_translations()
 
 
 # Helper functions to get translations from JSON files
-def _get_translated_text(
-    key: str,
-    namespace: str,
-    lang: str = "en",
-    **kwargs
-) -> str:
+def _get_translated_text(key: str, namespace: str, lang: str = "en", **kwargs) -> str:
     """
     Internal helper to get translated text from I18nManager.
 
@@ -122,11 +118,11 @@ class LanguageDict(dict):
         self.namespace = namespace
 
     def __getitem__(self, key: str) -> str:
-        text = I18nManager.get(key, lang=self.lang, namespace=self.namespace)
-        # Handle dynamic version insertion for welcome_message
-        if key == "welcome_message" and "{version}" in text:
-            text = text.format(version=CURRENT_SCRIPT_VERSION)
-        return text
+        kwargs = {}
+        if key == "welcome_message":
+            kwargs["version"] = CURRENT_SCRIPT_VERSION
+
+        return I18nManager.get(key, lang=self.lang, namespace=self.namespace, **kwargs)
 
     def __missing__(self, key):
         # If key not found, return the key itself as fallback

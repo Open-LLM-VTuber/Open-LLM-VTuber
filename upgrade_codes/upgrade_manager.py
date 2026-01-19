@@ -9,8 +9,14 @@ from upgrade_codes.upgrade_core.constants import USER_CONF, TEXTS
 
 
 class UpgradeManager:
-    def __init__(self):
-        self.lang = select_language()
+    def __init__(self, language: str | None = None):
+        """
+        Initialize UpgradeManager.
+
+        Args:
+            language: Language code (e.g., 'en', 'zh', 'ko'). If None, will prompt user to select.
+        """
+        self.lang = language if language else select_language()
         self._configure_logger()
         self.logger = logger
         self.upgrade_utils = UpgradeUtility(self.logger, self.lang)

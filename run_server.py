@@ -179,18 +179,8 @@ def main():
     """Main entry point for the server."""
     args = parse_args()
 
-    # If language is specified, inject it into sys.argv for UpgradeManager
-    if args.lang:
-        # Reconstruct sys.argv with language as first positional argument
-        # Keep all other arguments
-        new_argv = [sys.argv[0], args.lang]
-        for arg in sys.argv[1:]:
-            if arg not in ["en", "zh", "ko"]:  # Don't duplicate language arg
-                new_argv.append(arg)
-        sys.argv = new_argv
-
-    # Initialize upgrade_manager (after potentially setting language in sys.argv)
-    upgrade_manager = UpgradeManager()
+    # Initialize upgrade_manager with explicit language if provided
+    upgrade_manager = UpgradeManager(language=args.lang)
 
     console_log_level = "DEBUG" if args.verbose else "INFO"
     if args.verbose:
