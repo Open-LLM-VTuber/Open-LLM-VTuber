@@ -24,9 +24,13 @@ No parameters required.
 
 ```json
 {
-  "type": "api/languages",
+  "type": "available_languages",
   "count": 3,
-  "languages": ["en", "ko", "zh"]
+  "languages": [
+    { "code": "en", "label": "English" },
+    { "code": "ko", "label": "한국어" },
+    { "code": "zh", "label": "中文" }
+  ]
 }
 ```
 
@@ -42,9 +46,11 @@ No parameters required.
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `type` | string | Response type identifier: `"api/languages"` |
+| `type` | string | Response type identifier: `"available_languages"` |
 | `count` | integer | Number of available languages |
-| `languages` | array of strings | List of language codes (e.g., `["en", "ko", "zh"]`) |
+| `languages` | array of objects | List of language objects with `code` and `label` fields |
+| `languages[].code` | string | ISO 639-1 language code (e.g., `"en"`, `"ko"`, `"zh"`) |
+| `languages[].label` | string | Native language name (e.g., `"English"`, `"한국어"`, `"中文"`) |
 
 ## Language Codes
 
@@ -66,12 +72,14 @@ fetch('/api/languages')
   .then(response => response.json())
   .then(data => {
     console.log('Available languages:', data.languages);
+    // data.languages is now an array of {code, label} objects
+
     // Use data.languages to populate language selector UI
     const languageSelector = document.getElementById('language-selector');
     data.languages.forEach(lang => {
       const option = document.createElement('option');
-      option.value = lang;
-      option.textContent = lang.toUpperCase();
+      option.value = lang.code;           // Use language code as value
+      option.textContent = lang.label;    // Display native name
       languageSelector.appendChild(option);
     });
   })
@@ -86,7 +94,9 @@ import requests
 response = requests.get('http://localhost:12393/api/languages')
 if response.status_code == 200:
     data = response.json()
-    print(f"Available languages: {data['languages']}")
+    print(f"Available languages: {data['count']} languages")
+    for lang in data['languages']:
+        print(f"  {lang['code']}: {lang['label']}")
 else:
     print(f"Error: {response.status_code}")
 ```
@@ -109,11 +119,15 @@ The frontend currently uses a **hardcoded list** of languages. To integrate this
      try {
        const response = await fetch('/api/languages');
        const data = await response.json();
+       // data.languages is now [{code, label}, ...]
        return data.languages;
      } catch (error) {
        console.error('Error fetching languages:', error);
-       // Fallback to default languages
-       return ['en', 'zh'];
+       // Fallback to default languages with labels
+       return [
+         { code: 'en', label: 'English' },
+         { code: 'zh', label: '中文' }
+       ];
      }
    };
    ```

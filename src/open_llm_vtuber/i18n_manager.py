@@ -9,8 +9,15 @@ This follows the same pattern as the frontend (i18next) for consistency.
 
 import json
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, TypedDict
 from loguru import logger
+
+
+class LanguageInfo(TypedDict):
+    """Type definition for language information."""
+
+    code: str
+    label: str
 
 
 class I18nManager:
@@ -28,6 +35,48 @@ class I18nManager:
     _loaded: bool = False
     _default_lang: str = "en"
     _available_languages: List[str] = []
+
+    # Language code to native name mapping
+    # This provides user-friendly display names for each language
+    LANGUAGE_LABELS: Dict[str, str] = {
+        "en": "English",
+        "zh": "中文",
+        "ko": "한국어",
+        "ja": "日本語",
+        "es": "Español",
+        "fr": "Français",
+        "de": "Deutsch",
+        "ru": "Русский",
+        "pt": "Português",
+        "it": "Italiano",
+        "ar": "العربية",
+        "hi": "हिन्दी",
+        "nl": "Nederlands",
+        "pl": "Polski",
+        "tr": "Türkçe",
+        "vi": "Tiếng Việt",
+        "th": "ไทย",
+        "id": "Bahasa Indonesia",
+        "ms": "Bahasa Melayu",
+        "sv": "Svenska",
+        "da": "Dansk",
+        "no": "Norsk",
+        "fi": "Suomi",
+        "cs": "Čeština",
+        "hu": "Magyar",
+        "ro": "Română",
+        "el": "Ελληνικά",
+        "he": "עברית",
+        "uk": "Українська",
+        "bn": "বাংলা",
+        "ta": "தமிழ்",
+        "te": "తెలుగు",
+        "mr": "मराठी",
+        "gu": "ગુજરાતી",
+        "kn": "ಕನ್ನಡ",
+        "ml": "മലയാളം",
+        "pa": "ਪੰਜਾਬੀ",
+    }
 
     @classmethod
     def load_translations(cls, locales_dir: Optional[Path] = None) -> None:
@@ -82,11 +131,7 @@ class I18nManager:
 
     @classmethod
     def get(
-        cls,
-        key: str,
-        lang: str = "en",
-        namespace: str = "config",
-        **kwargs
+        cls, key: str, lang: str = "en", namespace: str = "config", **kwargs
     ) -> str:
         """
         Get a translation for the specified key.
@@ -111,20 +156,12 @@ class I18nManager:
             cls.load_translations()
 
         # Try requested language
-        translation = (
-            cls._translations
-            .get(lang, {})
-            .get(namespace, {})
-            .get(key)
-        )
+        translation = cls._translations.get(lang, {}).get(namespace, {}).get(key)
 
         # Fallback to default language (English)
         if translation is None and lang != cls._default_lang:
             translation = (
-                cls._translations
-                .get(cls._default_lang, {})
-                .get(namespace, {})
-                .get(key)
+                cls._translations.get(cls._default_lang, {}).get(namespace, {}).get(key)
             )
 
         # Last resort: return the key itself
@@ -187,3 +224,47 @@ class I18nManager:
             cls.load_translations()
 
         return cls._translations.get(lang, {}).get(namespace, {}).copy()
+
+    @classmethod
+    def get_language_label(cls, lang_code: str) -> str:
+        """
+        Get the native display name for a language code.
+
+        Args:
+            lang_code: Language code (e.g., "en", "zh", "ko")
+
+        Returns:
+            Native language name (e.g., "English", "中文", "한국어")
+            If not found in mapping, returns uppercased code (e.g., "PT")
+
+        Examples:
+            >>> I18nManager.get_language_label("ko")
+            "한국어"
+            >>> I18nManager.get_language_label("unknown")
+            "UNKNOWN"
+        """
+        return cls.LANGUAGE_LABELS.get(lang_code, lang_code.upper())
+
+    @classmethod
+    def get_available_languages_with_labels(cls) -> List[LanguageInfo]:
+        """
+        Get list of available languages with their display labels.
+
+        Returns:
+            List of dictionaries with 'code' and 'label' keys
+
+        Examples:
+            >>> I18nManager.get_available_languages_with_labels()
+            [
+                {"code": "en", "label": "English"},
+                {"code": "zh", "label": "中文"},
+                {"code": "ko", "label": "한국어"}
+            ]
+        """
+        if not cls._loaded:
+            cls.load_translations()
+
+        return [
+            {"code": lang_code, "label": cls.get_language_label(lang_code)}
+            for lang_code in cls._available_languages
+        ]

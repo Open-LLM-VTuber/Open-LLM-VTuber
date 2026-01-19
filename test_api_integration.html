@@ -91,18 +91,19 @@
             // Clear existing options
             selector.innerHTML = '';
 
-            // Add language options
+            // Add language options (languages is now an array of {code, label} objects)
             languages.forEach(lang => {
                 const option = document.createElement('option');
-                option.value = lang;
-                option.textContent = getLanguageName(lang);
+                option.value = lang.code;
+                option.textContent = lang.label;  // Use native label from API
                 selector.appendChild(option);
             });
 
             // Add change event listener
             selector.addEventListener('change', (e) => {
                 const selectedLang = document.getElementById('selectedLanguage');
-                selectedLang.innerHTML = `<strong>Selected:</strong> ${e.target.value} (${getLanguageName(e.target.value)})`;
+                const selected = languages.find(l => l.code === e.target.value);
+                selectedLang.innerHTML = `<strong>Selected:</strong> ${selected.code} (${selected.label})`;
             });
         }
 

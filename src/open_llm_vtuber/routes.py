@@ -96,21 +96,35 @@ def init_webtool_routes(default_context_cache: ServiceContext) -> APIRouter:
 
     @router.get("/api/languages")
     async def get_available_languages():
-        """Get list of available languages from i18n system"""
+        """
+        Get list of available languages from i18n system.
+
+        Returns language codes with their native display labels.
+
+        Example response:
+        {
+            "type": "available_languages",
+            "count": 3,
+            "languages": [
+                {"code": "en", "label": "English"},
+                {"code": "zh", "label": "中文"},
+                {"code": "ko", "label": "한국어"}
+            ]
+        }
+        """
         try:
-            languages = I18nManager.get_available_languages()
+            languages = I18nManager.get_available_languages_with_labels()
             return JSONResponse(
                 {
-                    "type": "api/languages",
+                    "type": "available_languages",
                     "count": len(languages),
-                    "languages": languages
+                    "languages": languages,
                 }
             )
         except Exception as e:
             logger.error(f"Error getting available languages: {e}")
             return JSONResponse(
-                {"error": "Failed to get available languages"},
-                status_code=500
+                {"error": "Failed to get available languages"}, status_code=500
             )
 
     @router.get("/live2d-models/info")

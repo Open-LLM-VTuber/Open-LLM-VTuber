@@ -19,9 +19,13 @@ Use the `/api/languages` endpoint to fetch available languages dynamically.
 **Response:**
 ```json
 {
-  "type": "api/languages",
+  "type": "available_languages",
   "count": 3,
-  "languages": ["en", "ko", "zh"]
+  "languages": [
+    { "code": "en", "label": "English" },
+    { "code": "ko", "label": "한국어" },
+    { "code": "zh", "label": "中文" }
+  ]
 }
 ```
 
@@ -37,18 +41,33 @@ Create a utility function to fetch languages from the backend:
 
 ```typescript
 // src/utils/languageApi.ts
-export async function fetchAvailableLanguages(): Promise<string[]> {
+
+export interface LanguageInfo {
+  code: string;
+  label: string;
+}
+
+export interface LanguageApiResponse {
+  type: string;
+  count: number;
+  languages: LanguageInfo[];
+}
+
+export async function fetchAvailableLanguages(): Promise<LanguageInfo[]> {
   try {
     const response = await fetch('/api/languages');
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
-    const data = await response.json();
+    const data: LanguageApiResponse = await response.json();
     return data.languages;
   } catch (error) {
     console.error('Error fetching languages:', error);
-    // Fallback to default languages
-    return ['en', 'zh'];
+    // Fallback to default languages with labels
+    return [
+      { code: 'en', label: 'English' },
+      { code: 'zh', label: '中文' }
+    ];
   }
 }
 ```
@@ -65,13 +84,15 @@ import { fetchAvailableLanguages } from '../utils/languageApi';
 
 export async function initializeI18n() {
   // Fetch available languages from backend
-  const availableLanguages = await fetchAvailableLanguages();
+  const languagesWithLabels = await fetchAvailableLanguages();
+  // Extract language codes for i18next
+  const languageCodes = languagesWithLabels.map(lang => lang.code);
 
   await i18n
     .use(initReactI18next)
     .init({
       // ... other config ...
-      supportedLngs: availableLanguages,  // Use dynamic list
+      supportedLngs: languageCodes,  // Use dynamic language codes
       fallbackLng: 'en',
       // ... other config ...
     });
@@ -88,19 +109,23 @@ Modify your language selector to use the dynamic list:
 // src/components/LanguageSelector.tsx
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { fetchAvailableLanguages } from '../utils/languageApi';
+import { fetchAvailableLanguages, LanguageInfo } from '../utils/languageApi';
 
 export const LanguageSelector: React.FC = () => {
   const { i18n } = useTranslation();
-  const [languages, setLanguages] = useState<string[]>(['en', 'zh']); // Default fallback
+  // Default fallback with labels
+  const [languages, setLanguages] = useState<LanguageInfo[]>([
+    { code: 'en', label: 'English' },
+    { code: 'zh', label: '中文' }
+  ]);
 
   useEffect(() => {
     // Fetch available languages on component mount
     fetchAvailableLanguages().then(setLanguages);
   }, []);
 
-  const handleLanguageChange = (lang: string) => {
-    i18n.changeLanguage(lang);
+  const handleLanguageChange = (code: string) => {
+    i18n.changeLanguage(code);
   };
 
   return (
@@ -109,8 +134,8 @@ export const LanguageSelector: React.FC = () => {
       onChange={(e) => handleLanguageChange(e.target.value)}
     >
       {languages.map((lang) => (
-        <option key={lang} value={lang}>
-          {lang.toUpperCase()}
+        <option key={lang.code} value={lang.code}>
+          {lang.label}  {/* Display native language name */}
         </option>
       ))}
     </select>
@@ -149,13 +174,14 @@ If you want a simpler approach without modifying i18next initialization:
 // Fetch languages and update selector only
 export const LanguageSelector: React.FC = () => {
   const { i18n } = useTranslation();
-  const [languages, setLanguages] = useState<string[]>([]);
+  const [languages, setLanguages] = useState<LanguageInfo[]>([]);
 
   useEffect(() => {
-    fetchAvailableLanguages().then((langs) => {
-      setLanguages(langs);
+    fetchAvailableLanguages().then((langsWithLabels) => {
+      setLanguages(langsWithLabels);
       // Optionally update i18next supportedLngs
-      i18n.options.supportedLngs = langs;
+      const codes = langsWithLabels.map(l => l.code);
+      i18n.options.supportedLngs = codes;
     });
   }, [i18n]);
 
@@ -186,9 +212,13 @@ curl http://localhost:12393/api/languages
 Expected output:
 ```json
 {
-  "type": "api/languages",
+  "type": "available_languages",
   "count": 3,
-  "languages": ["en", "ko", "zh"]
+  "languages": [
+    { "code": "en", "label": "English" },
+    { "code": "ko", "label": "한국어" },
+    { "code": "zh", "label": "中文" }
+  ]
 }
 ```
 
