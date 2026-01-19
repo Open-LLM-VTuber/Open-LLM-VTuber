@@ -1,0 +1,8 @@
+{
+  "conf_version": "配置文件版本",
+  "host": "服务器主机地址",
+  "port": "服务器端口号",
+  "config_alts_dir": "备用配置目录",
+  "tool_prompts": "要插入到角色提示词中的工具提示词",
+  "enable_proxy": "启用代理模式以支持多个客户端使用一个 ws 连接"
+}

@@ -1,0 +1,9 @@
+{
+  "model_dict_not_found": "⚠️ model_dict.json not found. Skipping upgrade.",
+  "model_dict_read_error": "❌ Failed to read model_dict.json: {error}",
+  "upgrade_success": "✅ model_dict.json upgraded to v1.2.1 format ({language} language)",
+  "already_latest": "model_dict.json already in latest format.",
+  "upgrade_error": "❌ Failed to upgrade model_dict.json: {error}",
+  "no_upgrade_routine": "No upgrade routine for version {version}",
+  "upgrading_path": "⬆️ Upgrading config: {from_version} → {to_version}"
+}

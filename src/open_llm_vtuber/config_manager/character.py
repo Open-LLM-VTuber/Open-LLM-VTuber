@@ -28,45 +28,24 @@ class CharacterConfig(I18nMixin):
         ..., alias="tts_preprocessor_config"
     )
 
-    DESCRIPTIONS: ClassVar[Dict[str, Description]] = {
-        "conf_name": Description(
-            en="Name of the character configuration", zh="角色配置名称"
-        ),
-        "conf_uid": Description(
-            en="Unique identifier for the character configuration",
-            zh="角色配置唯一标识符",
-        ),
-        "live2d_model_name": Description(
-            en="Name of the Live2D model to use", zh="使用的Live2D模型名称"
-        ),
-        "character_name": Description(
-            en="Name of the AI character in conversation", zh="对话中AI角色的名字"
-        ),
-        "persona_prompt": Description(
-            en="Persona prompt. The persona of your character.", zh="角色人设提示词"
-        ),
-        "agent_config": Description(
-            en="Configuration for the conversation agent", zh="对话代理配置"
-        ),
-        "asr_config": Description(
-            en="Configuration for Automatic Speech Recognition", zh="语音识别配置"
-        ),
-        "tts_config": Description(
-            en="Configuration for Text-to-Speech", zh="语音合成配置"
-        ),
-        "vad_config": Description(
-            en="Configuration for Voice Activity Detection", zh="语音活动检测配置"
-        ),
-        "tts_preprocessor_config": Description(
-            en="Configuration for Text-to-Speech Preprocessor",
-            zh="语音合成预处理器配置",
-        ),
-        "human_name": Description(
-            en="Name of the human user in conversation", zh="对话中人类用户的名字"
-        ),
-        "avatar": Description(
-            en="Avatar image path for the character", zh="角色头像图片路径"
-        ),
+    # Specify namespace for this config class
+    I18N_NAMESPACE: ClassVar[str] = "character"
+
+    # Simplified DESCRIPTIONS using translation keys only
+    # Translation files: locales/{en,zh,ko}/character.json
+    DESCRIPTIONS: ClassVar[Dict[str, str]] = {
+        "conf_name": "conf_name",
+        "conf_uid": "conf_uid",
+        "live2d_model_name": "live2d_model_name",
+        "character_name": "character_name",
+        "human_name": "human_name",
+        "avatar": "avatar",
+        "persona_prompt": "persona_prompt",
+        "agent_config": "agent_config",
+        "asr_config": "asr_config",
+        "tts_config": "tts_config",
+        "vad_config": "vad_config",
+        "tts_preprocessor_config": "tts_preprocessor_config",
     }
 
     @field_validator("persona_prompt")

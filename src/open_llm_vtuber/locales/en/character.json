@@ -1,0 +1,14 @@
+{
+  "conf_name": "Name of the character configuration",
+  "conf_uid": "Unique identifier for the character configuration",
+  "live2d_model_name": "Name of the Live2D model to use",
+  "character_name": "Name of the AI character in conversation",
+  "human_name": "Name of the human user in conversation",
+  "avatar": "Avatar image path for the character",
+  "persona_prompt": "Persona prompt. The persona of your character.",
+  "agent_config": "Configuration for the conversation agent",
+  "asr_config": "Configuration for Automatic Speech Recognition",
+  "tts_config": "Configuration for Text-to-Speech",
+  "vad_config": "Configuration for Voice Activity Detection",
+  "tts_preprocessor_config": "Configuration for Text-to-Speech Preprocessor"
+}

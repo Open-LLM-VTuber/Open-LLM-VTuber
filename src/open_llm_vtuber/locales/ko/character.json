@@ -1,0 +1,14 @@
+{
+  "conf_name": "캐릭터 설정 이름",
+  "conf_uid": "캐릭터 설정 고유 식별자",
+  "live2d_model_name": "사용할 Live2D 모델 이름",
+  "character_name": "대화에서 AI 캐릭터의 이름",
+  "human_name": "대화에서 사용자의 이름",
+  "avatar": "캐릭터 아바타 이미지 경로",
+  "persona_prompt": "페르소나 프롬프트. 캐릭터의 성격 설정",
+  "agent_config": "대화 에이전트 설정",
+  "asr_config": "음성 인식 설정",
+  "tts_config": "음성 합성 설정",
+  "vad_config": "음성 활동 감지 설정",
+  "tts_preprocessor_config": "음성 합성 전처리기 설정"
+}

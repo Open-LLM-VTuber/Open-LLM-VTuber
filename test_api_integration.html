@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Languages API Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        .result {
+            background: #f5f5f5;
+            padding: 20px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        select {
+            padding: 10px;
+            font-size: 16px;
+            margin: 10px 0;
+            width: 200px;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        .success {
+            color: green;
+        }
+        .error {
+            color: red;
+        }
+    </style>
+</head>
+<body>
+    <h1>Languages API Integration Test</h1>
+
+    <div>
+        <button onclick="fetchLanguages()">Fetch Languages from API</button>
+    </div>
+
+    <div class="result">
+        <h2>API Response:</h2>
+        <pre id="apiResponse">Click the button to fetch languages...</pre>
+    </div>
+
+    <div class="result">
+        <h2>Language Selector (Dynamic):</h2>
+        <p>This selector is populated from the API:</p>
+        <select id="languageSelector">
+            <option value="">Loading...</option>
+        </select>
+        <p id="selectedLanguage"></p>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:12393/api/languages';
+
+        async function fetchLanguages() {
+            const responseDiv = document.getElementById('apiResponse');
+            const selector = document.getElementById('languageSelector');
+
+            try {
+                responseDiv.textContent = 'Fetching...';
+
+                const response = await fetch(API_URL);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+
+                // Display raw API response
+                responseDiv.innerHTML = `<span class="success">✓ Success!</span>\n${JSON.stringify(data, null, 2)}`;
+
+                // Populate language selector
+                populateSelector(data.languages);
+
+            } catch (error) {
+                responseDiv.innerHTML = `<span class="error">✗ Error:</span>\n${error.message}\n\nMake sure the server is running:\nuv run run_server.py`;
+            }
+        }
+
+        function populateSelector(languages) {
+            const selector = document.getElementById('languageSelector');
+
+            // Clear existing options
+            selector.innerHTML = '';
+
+            // Add language options
+            languages.forEach(lang => {
+                const option = document.createElement('option');
+                option.value = lang;
+                option.textContent = getLanguageName(lang);
+                selector.appendChild(option);
+            });
+
+            // Add change event listener
+            selector.addEventListener('change', (e) => {
+                const selectedLang = document.getElementById('selectedLanguage');
+                selectedLang.innerHTML = `<strong>Selected:</strong> ${e.target.value} (${getLanguageName(e.target.value)})`;
+            });
+        }
+
+        function getLanguageName(code) {
+            const names = {
+                'en': 'English',
+                'zh': '中文 (Chinese)',
+                'ko': '한국어 (Korean)',
+                'ja': '日本語 (Japanese)',
+                'es': 'Español (Spanish)',
+                'fr': 'Français (French)',
+                'de': 'Deutsch (German)'
+            };
+            return names[code] || code.toUpperCase();
+        }
+
+        // Auto-fetch on page load
+        window.addEventListener('load', fetchLanguages);
+    </script>
+</body>
+</html>

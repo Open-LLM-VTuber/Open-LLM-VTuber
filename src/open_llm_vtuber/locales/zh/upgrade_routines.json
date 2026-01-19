@@ -1,0 +1,9 @@
+{
+  "model_dict_not_found": "⚠️ 未找到 model_dict.json，跳过升级。",
+  "model_dict_read_error": "❌ 读取 model_dict.json 失败: {error}",
+  "upgrade_success": "✅ model_dict.json 已成功升级至 v1.2.1 格式 ({language} 语言)",
+  "already_latest": "model_dict.json 已是最新格式。",
+  "upgrade_error": "❌ 升级 model_dict.json 失败: {error}",
+  "no_upgrade_routine": "没有适用于版本 {version} 的升级程序",
+  "upgrading_path": "⬆️ 正在升级配置: {from_version} → {to_version}"
+}

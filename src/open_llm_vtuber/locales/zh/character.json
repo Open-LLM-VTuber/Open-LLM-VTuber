@@ -1,0 +1,14 @@
+{
+  "conf_name": "角色配置名称",
+  "conf_uid": "角色配置唯一标识符",
+  "live2d_model_name": "使用的Live2D模型名称",
+  "character_name": "对话中AI角色的名字",
+  "human_name": "对话中人类用户的名字",
+  "avatar": "角色头像图片路径",
+  "persona_prompt": "角色人设提示词",
+  "agent_config": "对话代理配置",
+  "asr_config": "语音识别配置",
+  "tts_config": "语音合成配置",
+  "vad_config": "语音活动检测配置",
+  "tts_preprocessor_config": "语音合成预处理器配置"
+}

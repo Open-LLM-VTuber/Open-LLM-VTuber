@@ -1,0 +1,8 @@
+{
+  "conf_version": "Configuration version",
+  "host": "Server host address",
+  "port": "Server port number",
+  "config_alts_dir": "Directory for alternative configurations",
+  "tool_prompts": "Tool prompts to be inserted into persona prompt",
+  "enable_proxy": "Enable proxy mode for multiple clients"
+}

@@ -21,6 +21,8 @@ def get_system_language():
                 lang = lang_code.split("_")[0]
                 if lang.startswith("zh"):
                     return "zh"
+                elif lang.startswith("ko"):
+                    return "ko"
         except Exception:
             pass
 
@@ -35,6 +37,8 @@ def get_system_language():
             lang = result.stdout.strip().split("_")[0]
             if lang.startswith("zh"):
                 return "zh"
+            elif lang.startswith("ko"):
+                return "ko"
         except Exception:
             pass
 
@@ -45,6 +49,8 @@ def get_system_language():
             lang = lang.split("_")[0]
             if lang.startswith("zh"):
                 return "zh"
+            elif lang.startswith("ko"):
+                return "ko"
 
     # Fallback to using locale.getpreferredencoding()
     encoding = locale.getpreferredencoding()
@@ -56,6 +62,6 @@ def get_system_language():
 
 def select_language():
     """Select language based on command-line argument or system language"""
-    if len(sys.argv) > 1 and sys.argv[1].lower() in ["zh", "en"]:
+    if len(sys.argv) > 1 and sys.argv[1].lower() in ["zh", "en", "ko"]:
         return sys.argv[1].lower()
     return get_system_language()

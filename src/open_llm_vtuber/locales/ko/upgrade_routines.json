@@ -1,0 +1,9 @@
+{
+  "model_dict_not_found": "⚠️ model_dict.json을 찾을 수 없습니다. 업그레이드를 건너뜁니다.",
+  "model_dict_read_error": "❌ model_dict.json 읽기 실패: {error}",
+  "upgrade_success": "✅ model_dict.json이 v1.2.1 형식으로 업그레이드되었습니다 ({language} 언어)",
+  "already_latest": "model_dict.json이 이미 최신 형식입니다.",
+  "upgrade_error": "❌ model_dict.json 업그레이드 실패: {error}",
+  "no_upgrade_routine": "버전 {version}에 대한 업그레이드 루틴이 없습니다",
+  "upgrading_path": "⬆️ 설정 업그레이드 중: {from_version} → {to_version}"
+}

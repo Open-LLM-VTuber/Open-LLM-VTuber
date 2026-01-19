@@ -1,0 +1,14 @@
+{
+  "missing_keys": "User config is missing the following keys, which may be out-of-date: {keys}",
+  "extra_keys": "User config contains the following keys not present in default config: {keys}",
+  "up_to_date": "User config is up-to-date with default config.",
+  "compare_passed": "{name} comparison passed.",
+  "compare_failed": "{name} comparison failed: configs differ.",
+  "compare_diff_item": "- {item}",
+  "compare_error": "{name} comparison error: {error}",
+  "comments_up_to_date": "Comments are up to date, skipping comment sync.",
+  "extra_keys_deleted_count": "Deleted {count} extra keys:",
+  "extra_keys_deleted_item": "  - {key}",
+  "comment_sync_success": "All comments synchronized successfully.",
+  "comment_sync_error": "Failed to synchronize comments: {error}"
+}

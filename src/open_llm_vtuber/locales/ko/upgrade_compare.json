@@ -1,0 +1,14 @@
+{
+  "missing_keys": "사용자 설정에 다음 키가 누락되어 최신 상태가 아닐 수 있습니다: {keys}",
+  "extra_keys": "사용자 설정에 기본 설정에 없는 다음 키가 포함되어 있습니다: {keys}",
+  "up_to_date": "사용자 설정이 기본 설정과 일치합니다.",
+  "compare_passed": "{name} 비교 통과.",
+  "compare_failed": "{name} 비교 실패: 설정이 다릅니다.",
+  "compare_diff_item": "- {item}",
+  "compare_error": "{name} 비교 오류: {error}",
+  "comments_up_to_date": "주석이 최신 상태입니다. 주석 동기화를 건너뜁니다.",
+  "extra_keys_deleted_count": "{count}개의 추가 키 삭제됨:",
+  "extra_keys_deleted_item": "  - {key}",
+  "comment_sync_success": "모든 주석이 성공적으로 동기화되었습니다.",
+  "comment_sync_error": "주석 동기화 실패: {error}"
+}

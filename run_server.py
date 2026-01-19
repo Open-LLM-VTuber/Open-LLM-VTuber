@@ -16,8 +16,6 @@ from src.open_llm_vtuber.config_manager import Config, read_yaml, validate_confi
 os.environ["HF_HOME"] = str(Path(__file__).parent / "models")
 os.environ["MODELSCOPE_CACHE"] = str(Path(__file__).parent / "models")
 
-upgrade_manager = UpgradeManager()
-
 
 def get_version() -> str:
     with open("pyproject.toml", "rb") as f:
@@ -47,13 +45,15 @@ def init_logger(console_log_level: str = "INFO") -> None:
     )
 
 
-def check_frontend_submodule(lang=None):
+def check_frontend_submodule(upgrade_manager):
     """
     Check if the frontend submodule is initialized. If not, attempt to initialize it.
     If initialization fails, log an error message.
+
+    Args:
+        upgrade_manager: UpgradeManager instance for language-specific messages
     """
-    if lang is None:
-        lang = upgrade_manager.lang
+    lang = upgrade_manager.lang
 
     frontend_path = Path(__file__).parent / "frontend" / "index.html"
     if not frontend_path.exists():
@@ -109,6 +109,13 @@ def check_frontend_submodule(lang=None):
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Open-LLM-VTuber Server")
+    parser.add_argument(
+        "lang",
+        nargs="?",
+        choices=["en", "zh", "ko"],
+        default=None,
+        help="Language (en/zh/ko). If not specified, system language will be detected.",
+    )
     parser.add_argument("--verbose", action="store_true", help="Enable verbose logging")
     parser.add_argument(
         "--hf_mirror", action="store_true", help="Use Hugging Face mirror"
@@ -117,15 +124,19 @@ def parse_args():
 
 
 @logger.catch
-def run(console_log_level: str):
+def run(upgrade_manager, console_log_level: str):
+    """
+    Run the Open-LLM-VTuber server.
+
+    Args:
+        upgrade_manager: UpgradeManager instance for language and config management
+        console_log_level: Logging level (DEBUG or INFO)
+    """
     init_logger(console_log_level)
     logger.info(f"Open-LLM-VTuber, version v{get_version()}")
 
-    # Get selected language
-    lang = upgrade_manager.lang
-
     # Check if the frontend submodule is initialized
-    check_frontend_submodule(lang)
+    check_frontend_submodule(upgrade_manager)
 
     # Sync user config with default config
     try:
@@ -164,8 +175,23 @@ def run(console_log_level: str):
     )
 
 
-if __name__ == "__main__":
+def main():
+    """Main entry point for the server."""
     args = parse_args()
+
+    # If language is specified, inject it into sys.argv for UpgradeManager
+    if args.lang:
+        # Reconstruct sys.argv with language as first positional argument
+        # Keep all other arguments
+        new_argv = [sys.argv[0], args.lang]
+        for arg in sys.argv[1:]:
+            if arg not in ["en", "zh", "ko"]:  # Don't duplicate language arg
+                new_argv.append(arg)
+        sys.argv = new_argv
+
+    # Initialize upgrade_manager (after potentially setting language in sys.argv)
+    upgrade_manager = UpgradeManager()
+
     console_log_level = "DEBUG" if args.verbose else "INFO"
     if args.verbose:
         logger.info("Running in verbose mode")
@@ -175,4 +201,8 @@ if __name__ == "__main__":
         )
     if args.hf_mirror:
         os.environ["HF_ENDPOINT"] = "https://hf-mirror.com"
-    run(console_log_level=console_log_level)
+    run(upgrade_manager, console_log_level)
+
+
+if __name__ == "__main__":
+    main()

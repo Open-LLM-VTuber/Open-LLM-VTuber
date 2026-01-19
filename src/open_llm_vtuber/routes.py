@@ -10,6 +10,7 @@ from loguru import logger
 from .service_context import ServiceContext
 from .websocket_handler import WebSocketHandler
 from .proxy_handler import ProxyHandler
+from .i18n_manager import I18nManager
 
 
 def init_client_ws_route(default_context_cache: ServiceContext) -> APIRouter:
@@ -92,6 +93,25 @@ def init_webtool_routes(default_context_cache: ServiceContext) -> APIRouter:
     async def web_tool_redirect_alt():
         """Redirect /web_tool to /web_tool/index.html"""
         return Response(status_code=302, headers={"Location": "/web-tool/index.html"})
+
+    @router.get("/api/languages")
+    async def get_available_languages():
+        """Get list of available languages from i18n system"""
+        try:
+            languages = I18nManager.get_available_languages()
+            return JSONResponse(
+                {
+                    "type": "api/languages",
+                    "count": len(languages),
+                    "languages": languages
+                }
+            )
+        except Exception as e:
+            logger.error(f"Error getting available languages: {e}")
+            return JSONResponse(
+                {"error": "Failed to get available languages"},
+                status_code=500
+            )
 
     @router.get("/live2d-models/info")
     async def get_live2d_folder_info():
