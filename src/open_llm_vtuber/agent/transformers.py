@@ -8,6 +8,17 @@ from ..utils.sentence_divider import SentenceDivider
 from ..utils.sentence_divider import SentenceWithTags, TagState
 from loguru import logger
 
+# 表情标签到 emoji 的映射
+EMOTION_EMOJI_MAP = {
+    "joy": "😊",
+    "surprise": "😮",
+    "anger": "😠",
+    "sadness": "😢",
+    "fear": "😨",
+    "disgust": "🤢",
+    "neutral": "😐",
+}
+
 
 def sentence_divider(
     faster_first_response: bool = True,
@@ -138,6 +149,11 @@ def display_processor():
                                 text = "("
                             elif tag.state == TagState.END:
                                 text = ")"
+
+                    # Replace emotion tags with emojis
+                    for emotion, emoji in EMOTION_EMOJI_MAP.items():
+                        emotion_tag = f"[{emotion}]"
+                        text = text.replace(emotion_tag, emoji)
 
                     display = DisplayText(text=text)  # Simplified DisplayText creation
                     yield sentence, display, actions  # Yield the tuple

@@ -10,7 +10,7 @@
 		},
 		{
 			"Id": "ParamEyeLOpen",
-			"Value": 1,
+			"Value": 1.0,
 			"Blend": "Multiply"
 		},
 		{
@@ -25,7 +25,7 @@
 		},
 		{
 			"Id": "ParamEyeROpen",
-			"Value": 1,
+			"Value": 1.0,
 			"Blend": "Multiply"
 		},
 		{
