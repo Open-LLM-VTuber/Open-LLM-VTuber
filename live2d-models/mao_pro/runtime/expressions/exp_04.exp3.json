@@ -10,12 +10,12 @@
 		},
 		{
 			"Id": "ParamEyeLOpen",
-			"Value": 1.2,
+			"Value": 1.5,
 			"Blend": "Multiply"
 		},
 		{
 			"Id": "ParamEyeLSmile",
-			"Value": 1,
+			"Value": 0,
 			"Blend": "Add"
 		},
 		{
@@ -25,12 +25,12 @@
 		},
 		{
 			"Id": "ParamEyeROpen",
-			"Value": 1.2,
+			"Value": 1.5,
 			"Blend": "Multiply"
 		},
 		{
 			"Id": "ParamEyeRSmile",
-			"Value": 1,
+			"Value": 0,
 			"Blend": "Add"
 		},
 		{
@@ -55,17 +55,17 @@
 		},
 		{
 			"Id": "ParamEyeEffect",
-			"Value": 1,
+			"Value": 0,
 			"Blend": "Add"
 		},
 		{
 			"Id": "ParamBrowLY",
-			"Value": 0,
+			"Value": 0.5,
 			"Blend": "Add"
 		},
 		{
 			"Id": "ParamBrowRY",
-			"Value": 0,
+			"Value": 0.5,
 			"Blend": "Add"
 		},
 		{
@@ -80,22 +80,22 @@
 		},
 		{
 			"Id": "ParamBrowLAngle",
-			"Value": 0,
+			"Value": 1,
 			"Blend": "Add"
 		},
 		{
 			"Id": "ParamBrowRAngle",
-			"Value": 0,
+			"Value": 1,
 			"Blend": "Add"
 		},
 		{
 			"Id": "ParamBrowLForm",
-			"Value": 0,
+			"Value": 1,
 			"Blend": "Add"
 		},
 		{
 			"Id": "ParamBrowRForm",
-			"Value": 0,
+			"Value": 1,
 			"Blend": "Add"
 		},
 		{
@@ -120,7 +120,7 @@
 		},
 		{
 			"Id": "ParamO",
-			"Value": 0,
+			"Value": 1,
 			"Blend": "Add"
 		},
 		{
@@ -130,7 +130,7 @@
 		},
 		{
 			"Id": "ParamMouthDown",
-			"Value": 0,
+			"Value": 1,
 			"Blend": "Add"
 		},
 		{

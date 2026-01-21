@@ -10,7 +10,7 @@
 		},
 		{
 			"Id": "ParamEyeLOpen",
-			"Value": 0,
+			"Value": 0.8,
 			"Blend": "Multiply"
 		},
 		{
@@ -25,7 +25,7 @@
 		},
 		{
 			"Id": "ParamEyeROpen",
-			"Value": 0,
+			"Value": 0.8,
 			"Blend": "Multiply"
 		},
 		{
@@ -80,22 +80,22 @@
 		},
 		{
 			"Id": "ParamBrowLAngle",
-			"Value": 0,
+			"Value": -1,
 			"Blend": "Add"
 		},
 		{
 			"Id": "ParamBrowRAngle",
-			"Value": 0,
+			"Value": -1,
 			"Blend": "Add"
 		},
 		{
 			"Id": "ParamBrowLForm",
-			"Value": 0,
+			"Value": -1,
 			"Blend": "Add"
 		},
 		{
 			"Id": "ParamBrowRForm",
-			"Value": 0,
+			"Value": -1,
 			"Blend": "Add"
 		},
 		{
@@ -125,22 +125,22 @@
 		},
 		{
 			"Id": "ParamMouthUp",
-			"Value": 0,
+			"Value": -1,
 			"Blend": "Add"
 		},
 		{
 			"Id": "ParamMouthDown",
-			"Value": 0,
+			"Value": 1,
 			"Blend": "Add"
 		},
 		{
 			"Id": "ParamMouthAngry",
-			"Value": 0,
+			"Value": 1,
 			"Blend": "Add"
 		},
 		{
 			"Id": "ParamMouthAngryLine",
-			"Value": 0,
+			"Value": 1,
 			"Blend": "Add"
 		}
 	]

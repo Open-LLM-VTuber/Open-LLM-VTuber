@@ -10,12 +10,8 @@
         "idleMotionGroupName": "Idle",
         "emotionMap": {
             "neutral": 0,
+            "joy": 1,
             "anger": 2,
-            "disgust": 2,
-            "fear": 1,
-            "joy": 3,
-            "smirk": 3,
-            "sadness": 1,
             "surprise": 3
         },
         "tapMotions": {

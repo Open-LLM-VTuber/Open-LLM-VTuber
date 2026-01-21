@@ -24,22 +24,6 @@
 			{
 				"Name": "exp_04",
 				"File": "expressions/exp_04.exp3.json"
-			},
-			{
-				"Name": "exp_05",
-				"File": "expressions/exp_05.exp3.json"
-			},
-			{
-				"Name": "exp_06",
-				"File": "expressions/exp_06.exp3.json"
-			},
-			{
-				"Name": "exp_07",
-				"File": "expressions/exp_07.exp3.json"
-			},
-			{
-				"Name": "exp_08",
-				"File": "expressions/exp_08.exp3.json"
 			}
 		],
 		"Motions": {
