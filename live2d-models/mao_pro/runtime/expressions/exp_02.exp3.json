@@ -5,12 +5,12 @@
 	"Parameters": [
 		{
 			"Id": "ParamCheek",
-			"Value": 0,
+			"Value": 1,
 			"Blend": "Add"
 		},
 		{
 			"Id": "ParamEyeLOpen",
-			"Value": 0,
+			"Value": 1.0,
 			"Blend": "Multiply"
 		},
 		{
@@ -25,7 +25,7 @@
 		},
 		{
 			"Id": "ParamEyeROpen",
-			"Value": 0,
+			"Value": 1.0,
 			"Blend": "Multiply"
 		},
 		{
@@ -55,7 +55,7 @@
 		},
 		{
 			"Id": "ParamEyeEffect",
-			"Value": 0,
+			"Value": 1,
 			"Blend": "Add"
 		},
 		{
@@ -125,7 +125,7 @@
 		},
 		{
 			"Id": "ParamMouthUp",
-			"Value": 0,
+			"Value": 1,
 			"Blend": "Add"
 		},
 		{
