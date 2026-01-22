@@ -116,7 +116,7 @@ class AsyncLLM(StatelessLLMInterface):
                 api_kwargs["repeat_penalty"] = self.repeat_penalty
             if self.top_p is not None:
                 api_kwargs["top_p"] = self.top_p
-            
+
             stream: AsyncStream[
                 ChatCompletionChunk
             ] = await self.client.chat.completions.create(**api_kwargs)

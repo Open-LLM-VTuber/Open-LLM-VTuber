@@ -12,6 +12,7 @@ from loguru import logger
 def sentence_divider(
     faster_first_response: bool = True,
     segment_method: str = "pysbd",
+    language: str = None,
     valid_tags: List[str] = None,
 ):
     """
@@ -20,6 +21,7 @@ def sentence_divider(
     Args:
         faster_first_response: bool - Whether to enable faster first response
         segment_method: str - Method for sentence segmentation
+        language: str - Language code for sentence segmentation
         valid_tags: List[str] - List of valid tags to process
     """
 
@@ -37,6 +39,7 @@ def sentence_divider(
             divider = SentenceDivider(
                 faster_first_response=faster_first_response,
                 segment_method=segment_method,
+                language=language,
                 valid_tags=valid_tags or [],
             )
             stream_from_func = func(*args, **kwargs)

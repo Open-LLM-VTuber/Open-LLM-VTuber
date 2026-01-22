@@ -24,6 +24,7 @@ class LettaAgent(AgentInterface):
         tts_preprocessor_config: TTSPreprocessorConfig = None,
         faster_first_response: bool = True,
         segment_method: str = "pysbd",
+        language: str = None,
         host: str = "localhost",
         port: int = 8283,
     ):
@@ -36,6 +37,7 @@ class LettaAgent(AgentInterface):
         self._live2d_model = live2d_model
         self._faster_first_response = faster_first_response
         self._segment_method = segment_method
+        self._language = language
 
         # Delay decorator application
         self.chat = tts_filter(self._tts_preprocessor_config)(
@@ -44,6 +46,7 @@ class LettaAgent(AgentInterface):
                     sentence_divider(
                         faster_first_response=self._faster_first_response,
                         segment_method=self._segment_method,
+                        language=self._language,
                         valid_tags=["think"],
                     )(self.chat)
                 )

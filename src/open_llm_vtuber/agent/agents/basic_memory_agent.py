@@ -43,6 +43,7 @@ class BasicMemoryAgent(AgentInterface):
         tts_preprocessor_config: TTSPreprocessorConfig = None,
         faster_first_response: bool = True,
         segment_method: str = "pysbd",
+        language: Optional[str] = None,
         use_mcpp: bool = False,
         interrupt_method: Literal["system", "user"] = "user",
         tool_prompts: Dict[str, str] = None,
@@ -57,6 +58,7 @@ class BasicMemoryAgent(AgentInterface):
         self._tts_preprocessor_config = tts_preprocessor_config
         self._faster_first_response = faster_first_response
         self._segment_method = segment_method
+        self._language = language
         self._use_mcpp = use_mcpp
         self.interrupt_method = interrupt_method
         self._tool_prompts = tool_prompts or {}
@@ -589,6 +591,7 @@ class BasicMemoryAgent(AgentInterface):
         @sentence_divider(
             faster_first_response=self._faster_first_response,
             segment_method=self._segment_method,
+            language=self._language,
             valid_tags=["think"],
         )
         async def chat_with_memory(

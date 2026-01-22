@@ -31,6 +31,7 @@ class BasicMemoryAgentConfig(I18nMixin, BaseModel):
 
     faster_first_response: Optional[bool] = Field(True, alias="faster_first_response")
     segment_method: Literal["regex", "pysbd"] = Field("pysbd", alias="segment_method")
+    language: Optional[str] = Field(None, alias="language")
     use_mcpp: Optional[bool] = Field(False, alias="use_mcpp")
     mcp_enabled_servers: Optional[List[str]] = Field([], alias="mcp_enabled_servers")
 
@@ -46,6 +47,10 @@ class BasicMemoryAgentConfig(I18nMixin, BaseModel):
         "segment_method": Description(
             en="Method for segmenting sentences: 'regex' or 'pysbd' (default: 'pysbd')",
             zh="分割句子的方法：'regex' 或 'pysbd'（默认：'pysbd'）",
+        ),
+        "language": Description(
+            en="Language code for sentence segmentation (e.g., 'en', 'zh', 'ja'). If not specified, auto-detection is used.",
+            zh="句子分割的语言代码（例如 'en', 'zh', 'ja'）。如果未指定，将使用自动检测。",
         ),
         "use_mcpp": Description(
             en="Whether to use MCP (Model Context Protocol) for the agent (default: True)",
@@ -156,6 +161,7 @@ class LettaConfig(I18nMixin, BaseModel):
     id: str = Field(..., alias="id")
     faster_first_response: Optional[bool] = Field(True, alias="faster_first_response")
     segment_method: Literal["regex", "pysbd"] = Field("pysbd", alias="segment_method")
+    language: Optional[str] = Field(None, alias="language")
 
     DESCRIPTIONS: ClassVar[Dict[str, Description]] = {
         "host": Description(
@@ -168,6 +174,10 @@ class LettaConfig(I18nMixin, BaseModel):
         "id": Description(
             en="Agent instance ID running on the Letta server",
             zh="指定Letta服务器上运行的Agent实例id",
+        ),
+        "language": Description(
+            en="Language code for sentence segmentation (e.g., 'en', 'zh', 'ja'). If not specified, auto-detection is used.",
+            zh="句子分割的语言代码（例如 'en', 'zh', 'ja'）。如果未指定，将使用自动检测。",
         ),
     }
 
@@ -222,5 +232,9 @@ class AgentConfig(I18nMixin, BaseModel):
         "segment_method": Description(
             en="Method for segmenting sentences: 'regex' or 'pysbd' (default: 'pysbd')",
             zh="分割句子的方法：'regex' 或 'pysbd'（默认：'pysbd'）",
+        ),
+        "language": Description(
+            en="Language code for sentence segmentation (e.g., 'en', 'zh', 'ja'). If not specified, auto-detection is used.",
+            zh="句子分割的语言代码（例如 'en', 'zh', 'ja'）。如果未指定，将使用自动检测。",
         ),
     }

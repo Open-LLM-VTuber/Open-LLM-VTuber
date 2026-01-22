@@ -64,6 +64,9 @@ character_config:
         faster_first_response: True
         # Method for segmenting sentences: 'regex' or 'pysbd'
         segment_method: 'pysbd'
+        # Language code for sentence segmentation (e.g., 'en', 'zh', 'ja'). If not specified, auto-detection is used.
+        # Set to 'ja' for Japanese optimization.
+        language: ja
         # Use MCP (Model Context Protocol) Plus to let the LLM have the ability to use tools
         # 'Plus' means that it has the ability to call tools by using OpenAI API.
         use_mcpp: True
@@ -76,6 +79,8 @@ character_config:
         faster_first_response: True
         # Method for segmenting sentences: 'regex' or 'pysbd'
         segment_method: 'pysbd'
+        # Language code for sentence segmentation.
+        language: null
         # Once Letta is chosen as the agent, the LLM that runs in practice is configured on Letta, so the user needs to run the Letta server themselves.
         # For more detailed information, please refer to their documentation.
         

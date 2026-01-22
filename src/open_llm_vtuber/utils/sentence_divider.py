@@ -210,7 +210,9 @@ def segment_text_by_regex(text: str) -> Tuple[List[str], str]:
     return complete_sentences, remaining_text
 
 
-def segment_text_by_pysbd(text: str) -> Tuple[List[str], str]:
+def segment_text_by_pysbd(
+    text: str, language: Optional[str] = None
+) -> Tuple[List[str], str]:
     """
     Segment text into complete sentences and remaining text.
     Uses pysbd for supported languages, falls back to regex for others.
@@ -226,7 +228,7 @@ def segment_text_by_pysbd(text: str) -> Tuple[List[str], str]:
 
     try:
         # Detect language
-        lang = detect_language(text)
+        lang = language if language else detect_language(text)
 
         if lang is not None:
             # Use pysbd for supported languages
@@ -303,6 +305,7 @@ class SentenceDivider:
         self,
         faster_first_response: bool = True,
         segment_method: str = "pysbd",
+        language: Optional[str] = None,
         valid_tags: List[str] = None,
     ):
         """
@@ -315,6 +318,7 @@ class SentenceDivider:
         """
         self.faster_first_response = faster_first_response
         self.segment_method = segment_method
+        self.language = language
         self.valid_tags = valid_tags or ["think"]
         self._is_first_sentence = True
         self._buffer = ""
@@ -599,7 +603,7 @@ class SentenceDivider:
         """Segment text using the configured method"""
         if self.segment_method == "regex":
             return segment_text_by_regex(text)
-        return segment_text_by_pysbd(text)
+        return segment_text_by_pysbd(text, language=self.language)
 
     def reset(self):
         """Reset the divider state for a new conversation"""

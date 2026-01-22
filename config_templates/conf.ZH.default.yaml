@@ -64,6 +64,9 @@ character_config:
         faster_first_response: True
         # 句子分割方法：'regex' 或 'pysbd'
         segment_method: 'pysbd'
+        # 句子分割的语言代码（例如 'en', 'zh', 'ja'）。如果未指定，将使用自动检测。
+        # 建议日文用户设置为 'ja' 以获得最佳效果。
+        language: null
         # 是否使用 MCP（Model Context Protocol） Plus 以使 LLM 获得使用工具的能力（默认：False）
         # 'Plus' 意味着它包含了通过 OpenAI API 调用工具的能力。
         use_mcpp: False
@@ -85,6 +88,8 @@ character_config:
         faster_first_response: True
         # 句子分割方法：'regex' 或 'pysbd'
         segment_method: 'pysbd'
+        # 句子分割的语言代码
+        language: null
         # 一旦选择letta作为agent，那么实际运行时候的llm是在letta上配置的，因此用户需要自己运行letta server
         # 有关更多详细信息，请查看他们的文档
 
