@@ -26,5 +26,65 @@
                 "": 1
             }
         }
+    },
+    {
+        "name": "shizuku",
+        "description": "",
+        "url": "/live2d-models/shizuku/runtime/shizuku.model3.json",
+        "kScale": 0.5,
+        "initialXshift": 0,
+        "initialYshift": 0,
+        "kXOffset": 1150,
+        "idleMotionGroupName": "Idle",
+        "emotionMap": {
+            "neutral": 0,
+            "anger": 1,
+            "disgust": 1,
+            "fear": 1,
+            "joy": 2,
+            "smirk": 2,
+            "sadness": 1,
+            "surprise": 2
+        },
+        "tapMotions": {
+            "HitAreaHead": {
+                "": 1
+            },
+            "HitAreaBody": {
+                "": 1
+            }
+        }
+    },
+    {
+        "name": "tsumugi",
+        "description": "春日部つむぎ",
+        "url": "/live2d-models/tsumugi/tsumugi.model3.json",
+        "kScale": 0.8,
+        "initialXshift": 0,
+        "initialYshift": -10000,
+        "kXOffset": 0,
+        "idleMotionGroupName": "Idle",
+        "emotionMap": {
+            "neutral": -1,
+            "joy": 0,
+            "happy": 0,
+            "smirk": 1,
+            "shy": 1,
+            "sadness": 2,
+            "sad": 2,
+            "crying": 2,
+            "anger": 3,
+            "disgust": 3,
+            "fear": 3,
+            "surprise": 3
+        },
+        "tapMotions": {
+            "HitAreaHead": {
+                "": 1
+            },
+            "HitAreaBody": {
+                "": 1
+            }
+        }
     }
 ]
