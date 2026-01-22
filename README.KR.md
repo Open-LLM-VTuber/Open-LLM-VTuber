@@ -32,7 +32,7 @@
 >
 > 사용자 설문조사: https://forms.gle/w6Y6PiHTZr1nzbtWA
 >
-> 调查问卷(中文): https://wj.qq.com/s2/16150415/f50a/
+> 사용자 설문조사(중국어): https://wj.qq.com/s2/16150415/f50a/
 
 
 
@@ -120,7 +120,7 @@
 또한 설치 가이드를 참고하여 더 이상 필요 없는 추가 도구(`uv`, `ffmpeg`, `deeplx` 등)가 있는지 점검하세요.
 
 
-## 🤗 기여하고 싶으시다면?
+## 🤗 개발에 기여하고 싶다면?
 [Development Guide](https://docs.llmvtuber.com/docs/development-guide/overview)를 참고하세요.
 
 
