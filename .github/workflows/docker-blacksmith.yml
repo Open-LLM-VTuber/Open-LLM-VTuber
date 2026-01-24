@@ -104,12 +104,14 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          echo "tags<<'EOF'" >> "$GITHUB_OUTPUT"
-          while IFS= read -r tag; do
-            [ -z "$tag" ] && continue
-            echo "${tag}-${{ matrix.platform }}" >> "$GITHUB_OUTPUT"
-          done <<< "${{ needs.meta.outputs.tags }}"
-          echo "EOF" >> "$GITHUB_OUTPUT"
+          {
+            echo "tags<<EOF"
+            while IFS= read -r tag; do
+              [ -z "$tag" ] && continue
+              echo "${tag}-${{ matrix.platform }}"
+            done <<< "${{ needs.meta.outputs.tags }}"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Build and push (${{ matrix.platform }})
         uses: useblacksmith/build-push-action@v2
