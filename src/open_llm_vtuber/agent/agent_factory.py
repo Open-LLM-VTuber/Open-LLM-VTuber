@@ -126,6 +126,7 @@ class AgentFactory:
                 segment_method=settings.get("segment_method"),
                 host=settings.get("host"),
                 port=settings.get("port"),
+                api_key=settings.get("api_key"),
             )
 
         else:
