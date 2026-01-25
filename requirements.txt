@@ -184,7 +184,7 @@ markdown-it-py==4.0.0
     # via rich
 markupsafe==3.0.3
     # via jinja2
-mcp==1.26.0
+mcp==1.23.0
     # via
     #   duckduckgo-mcp-server
     #   open-llm-vtuber
@@ -1114,7 +1114,7 @@ tomli==2.4.0
     #   open-llm-vtuber
 torch==2.2.2 ; platform_machine == 'x86_64' and sys_platform == 'darwin'
     # via open-llm-vtuber
-torch==2.10.0 ; platform_machine == 'arm64' or sys_platform != 'darwin'
+torch==2.8.0 ; platform_machine == 'arm64' or sys_platform != 'darwin'
     # via open-llm-vtuber
 tqdm==4.67.1
     # via
