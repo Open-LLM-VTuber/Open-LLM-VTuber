@@ -32,7 +32,7 @@ dependencies = [
     "sherpa-onnx>=1.10.39",
     "soundfile>=0.12.1",
     "tomli>=2.2.1",
-    "torch==2.2.2; sys_platform == 'darwin' and platform_machine == 'x86_64'",
+    "torch==2.8.0; sys_platform == 'darwin' and platform_machine == 'x86_64'",
     "torch>=2.6.0; sys_platform == 'darwin' and platform_machine == 'arm64'",
     "torch>=2.6.0; sys_platform != 'darwin'",
     "tqdm>=4.67.1",
