@@ -1,0 +1,238 @@
+name: Create Release Packages
+
+# Only manual trigger
+on:
+  workflow_dispatch:
+    inputs:
+      version_override:
+        description: "Override version number in pyproject.toml (leave empty to use file version)"
+        required: false
+      upload_to_r2:
+        description: "Upload to Cloudflare R2"
+        type: boolean
+        default: true
+      create_github_release:
+        description: "Create GitHub Release"
+        type: boolean
+        default: true
+      target_branch:
+        description: "Branch to build (default is v1-release)"
+        required: false
+        default: "v1-release"
+
+jobs:
+  build-release-packages:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clone repository
+        uses: actions/checkout@v3
+        with:
+          repository: Open-LLM-VTuber/Open-LLM-VTuber
+          ref: ${{ github.event.inputs.target_branch }}
+          submodules: true
+          fetch-depth: 1
+          fetch-tags: true
+        continue-on-error: true
+        id: checkout
+
+      - name: Try with default branch
+        if: steps.checkout.outcome == 'failure'
+        uses: actions/checkout@v3
+        with:
+          repository: Open-LLM-VTuber/Open-LLM-VTuber
+          ref: v1-release
+          submodules: true
+          fetch-depth: 1
+
+      # Add debug step to check file structure
+      - name: Debug - Check repository structure
+        run: |
+          echo "Current working directory: $(pwd)"
+          echo "List root directory contents:"
+          ls -la
+          echo "Check if config_templates directory exists:"
+          ls -la | grep config_templates || echo "config_templates directory does not exist"
+
+          echo "List config_templates directory contents:"
+          ls -la config_templates/
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+
+      - name: Extract version from pyproject.toml
+        id: get_version
+        run: |
+          VERSION=$(grep -m 1 'version' pyproject.toml | sed 's/[^"]*"\([^"]*\).*/\1/')
+          if [ "${{ github.event.inputs.version_override }}" != "" ]; then
+            VERSION="${{ github.event.inputs.version_override }}"
+          fi
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "Found version: $VERSION"
+
+      # Download and prepare ASR model
+      - name: Download and prepare ASR model
+        run: |
+          mkdir -p models
+          cd models
+          echo "Downloading ASR model..."
+          wget https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17.tar.bz2
+          echo "Extracting model..."
+          tar -xjf sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17.tar.bz2
+          rm sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17.tar.bz2
+          echo "Removing model.onnx file to reduce size..."
+          rm -f sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17/model.onnx
+
+      # Clean unnecessary files
+      - name: Clean project
+        run: |
+          echo "Cleaning __pycache__ and .venv folders..."
+          find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
+          find . -type d -name ".venv" -exec rm -rf {} + 2>/dev/null || true
+
+      # Create Chinese version
+      - name: Create Chinese version
+        run: |
+          echo "Creating Chinese version..."
+          cp config_templates/conf.ZH.default.yaml conf.yaml
+          zip -r Open-LLM-VTuber-v${{ env.VERSION }}-zh.zip . -x "*.zip"
+          rm conf.yaml
+
+      # Create English version
+      - name: Create English version
+        run: |
+          echo "Creating English version..."
+          cp config_templates/conf.default.yaml conf.yaml
+          zip -r Open-LLM-VTuber-v${{ env.VERSION }}-en.zip . -x "*.zip"
+          rm conf.yaml
+
+      # Get latest Electron app
+      - name: Get latest Electron app
+        id: download_electron
+        run: |
+          set -e
+
+          # Fetch the latest release JSON from the GitHub API
+          RELEASE_JSON=$(curl --silent "https://api.github.com/repos/Open-LLM-VTuber/Open-LLM-VTuber-Web/releases/latest")
+
+          # Use jq to extract browser_download_url for assets ending with .exe or .dmg
+          ASSET_URLS=$(echo "$RELEASE_JSON" | jq -r '.assets[] | select(.name | endswith(".exe") or endswith(".dmg")) | .browser_download_url')
+
+          # Download each asset into the current directory
+          for url in $ASSET_URLS; do
+              echo "Downloading $(basename "$url")..."
+              curl -L -O "$url"
+          ls -la
+          done
+
+      # If chosen, upload to GitHub Actions artifacts
+      - name: Upload Chinese version to GitHub Actions artifacts
+        if: ${{ github.event.inputs.create_github_release == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: Open-LLM-VTuber-v${{ env.VERSION }}-zh
+          path: Open-LLM-VTuber-v${{ env.VERSION }}-zh.zip
+          retention-days: 30
+
+      - name: Upload English version to GitHub Actions artifacts
+        if: ${{ github.event.inputs.create_github_release == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: Open-LLM-VTuber-v${{ env.VERSION }}-en
+          path: Open-LLM-VTuber-v${{ env.VERSION }}-en.zip
+          retention-days: 30
+
+      - name: Upload Windows installer to GitHub Actions artifacts
+        if: ${{ github.event.inputs.create_github_release == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: Open-LLM-VTuber-v${{ env.VERSION }}-windows
+          path: open-llm-vtuber-electron-*-setup.exe
+          retention-days: 30
+
+      - name: Upload macOS installer to GitHub Actions artifacts
+        if: ${{ github.event.inputs.create_github_release == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: Open-LLM-VTuber-v${{ env.VERSION }}-macos
+          path: open-llm-vtuber-electron-*.dmg
+          retention-days: 30
+
+      - name: Debug input parameters
+        run: |
+          echo "upload_to_r2 value: '${{ github.event.inputs.upload_to_r2 }}'"
+          echo "type: $(typeof ${{ github.event.inputs.upload_to_r2 }})"
+          
+      # If chosen, upload to Cloudflare R2
+      - name: Upload to Cloudflare R2
+        if: ${{ github.event.inputs.upload_to_r2 == 'true' }}
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+          R2_PUBLIC_URL: ${{ secrets.R2_PUBLIC_URL }}
+        run: |
+          # Install AWS CLI
+          pip install awscli
+          echo "AWS CLI installation complete"
+          # Configure AWS CLI for Cloudflare R2
+          aws configure set aws_access_key_id "$AWS_ACCESS_KEY_ID"
+          aws configure set aws_secret_access_key "$AWS_SECRET_ACCESS_KEY"
+
+          # Confirm AWS CLI configuration
+          echo "AWS CLI configured, preparing to upload files..."
+
+          # Create version directory in bucket
+          aws s3 --endpoint-url=$R2_ENDPOINT cp --recursive --acl public-read . s3://open-llm-vtuber-release/v${{ env.VERSION }}/ --exclude "*" --include "Open-LLM-VTuber-v${{ env.VERSION }}-*.zip" --include "open-llm-vtuber-electron-*.dmg" --include "open-llm-vtuber-electron-*-setup.exe"
+
+          # Output public URLs
+          echo "Files uploaded to R2. Public URLs:"
+          for file in Open-LLM-VTuber-v${{ env.VERSION }}-zh.zip Open-LLM-VTuber-v${{ env.VERSION }}-en.zip open-llm-vtuber-electron-*.dmg open-llm-vtuber-electron-*-setup.exe; do
+            echo "$R2_PUBLIC_URL/v${{ env.VERSION }}/$file"
+          done   
+
+          echo "R2 upload process completed"
+          
+      # Generate download links markdown
+      - name: Generate R2 download links markdown
+        if: ${{ github.event.inputs.upload_to_r2 == 'true' }}
+        env:
+          R2_PUBLIC_URL: ${{ secrets.R2_PUBLIC_URL }}
+        run: |
+          # Get electron app version from filenames
+          EXE_VERSION=$(ls open-llm-vtuber-electron-*-setup.exe | sed -E 's/open-llm-vtuber-electron-(.*)-setup.exe/\1/')
+          DMG_VERSION=$(ls open-llm-vtuber-electron-*.dmg | sed -E 's/open-llm-vtuber-electron-(.*).dmg/\1/')
+          
+          # Create markdown text with download links and save to file
+          cat > download-links.md << EOF
+          
+          ## Faster download links for Chinese users 给内地用户准备的(相对)快速的下载链接
+          Open-LLM-VTuber-v${{ env.VERSION }}-zh.zip (包含 sherpa onnx asr 的 sense-voice 模型，就不用再从github上拉取了)
+          - [Open-LLM-VTuber-v${{ env.VERSION }}-en.zip]($R2_PUBLIC_URL/v${{ env.VERSION }}/Open-LLM-VTuber-v${{ env.VERSION }}-en.zip)
+          - [Open-LLM-VTuber-v${{ env.VERSION }}-zh.zip]($R2_PUBLIC_URL/v${{ env.VERSION }}/Open-LLM-VTuber-v${{ env.VERSION }}-zh.zip)
+          
+          open-llm-vtuber-electron-$EXE_VERSION-frontend.exe (桌面版前端，Windows)
+          - [open-llm-vtuber-electron-$EXE_VERSION-setup.exe]($R2_PUBLIC_URL/v${{ env.VERSION }}/open-llm-vtuber-electron-$EXE_VERSION-setup.exe)
+          
+          open-llm-vtuber-electron-$DMG_VERSION-frontend.dmg (桌面版前端，macOS)
+          - [open-llm-vtuber-electron-$DMG_VERSION.dmg]($R2_PUBLIC_URL/v${{ env.VERSION }}/open-llm-vtuber-electron-$DMG_VERSION.dmg)
+          EOF
+          
+          echo "Download links markdown file created"
+      
+      # Upload download links as an artifact
+      - name: Upload download links markdown
+        if: ${{ github.event.inputs.upload_to_r2 == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: download-links
+          path: download-links.md
+          retention-days: 30
+          
+      # Add the download links to GitHub release if creating one
+      - name: Add download links to release description
+        if: ${{ github.event.inputs.upload_to_r2 == 'true' && github.event.inputs.create_github_release == 'true' }}
+        run: |
+          echo "::set-output name=download_links::$(cat download-links.md)"
+        id: download_links

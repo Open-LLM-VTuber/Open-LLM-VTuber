@@ -1,0 +1,68 @@
+[project]
+name = "open-llm-vtuber"
+version = "1.2.1"
+description = "Talk to any LLM with hands-free voice interaction, voice interruption, and Live2D taking face running locally across platforms"
+readme = "README.md"
+requires-python = ">=3.10,<3.13"
+dependencies = [
+    "anthropic>=0.40.0",
+    "azure-cognitiveservices-speech>=1.41.1",
+    "chardet>=5.2.0",
+    "cartesia>=2.0.0", 
+    "edge-tts>=7.0.0",
+    "elevenlabs>=1.0.0",
+    "fastapi[standard]>=0.115.8",
+    "groq>=0.13.0",
+    "httpx>=0.28.1",
+    "langdetect>=1.0.9",
+    "loguru>=0.7.2",
+    "mcp[cli]>=1.6.0",
+    "numpy>=1.26.4,<2",
+    "onnxruntime>=1.20.1",
+    "openai>=1.57.4",
+    "pre-commit>=4.1.0",
+    "pydub>=0.25.1",
+    "pysbd>=0.3.4",
+    "pyttsx3>=2.98",
+    "pyyaml>=6.0.2",
+    "requests>=2.32.3",
+    "ruamel-yaml>=0.18.10",
+    "ruff>=0.8.6",
+    "scipy>=1.14.1",
+    "sherpa-onnx>=1.10.39",
+    "soundfile>=0.12.1",
+    "tomli>=2.2.1",
+    "torch==2.2.2; sys_platform == 'darwin' and platform_machine == 'x86_64'",
+    "torch>=2.6.0; sys_platform == 'darwin' and platform_machine == 'arm64'",
+    "torch>=2.6.0; sys_platform != 'darwin'",
+    "tqdm>=4.67.1",
+    "uvicorn[standard]>=0.33.0",
+    "websocket-client>=1.8.0",
+    "letta-client>=0.1.100",
+    "duckduckgo-mcp-server>=0.1.1",
+]
+
+[project.optional-dependencies]
+bilibili = [
+    "aiohttp>=3.10.0",
+    "Brotli~=1.1.0",
+    "yarl>=1.12.0,<2.0"
+]
+
+[tool.pixi.project]
+channels = ["conda-forge"]
+platforms = ["win-64", "linux-64"]
+
+[tool.pixi.pypi-dependencies]
+open-llm-vtuber = { path = ".", editable = true }
+
+[tool.pixi.dependencies]
+cudnn = ">=8.0,<9"
+cudatoolkit = ">=11.0,<12"
+
+[tool.ruff]
+target-version = "py310"
+
+[tool.ruff.lint]
+# Ignore E402 (module level import not at top of file) for the run_bilibili_live.py script
+per-file-ignores = { "scripts/run_bilibili_live.py" = ["E402"] }

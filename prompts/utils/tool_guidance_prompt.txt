@@ -1,0 +1,1 @@
+If a tool is needed, proactively use it without asking the user directly. You can use **at most one** sentence to explain your reason / plan for using one tool. (i.e., if you are going to use a tool, avoid speaking more than one sentence before using it).

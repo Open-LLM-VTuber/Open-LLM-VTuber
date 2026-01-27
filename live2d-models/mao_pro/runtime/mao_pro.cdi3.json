@@ -1,0 +1,886 @@
+{
+	"Version": 3,
+	"Parameters": [
+		{
+			"Id": "ParamAngleX",
+			"GroupId": "ParamGroupFace",
+			"Name": "Angle_X"
+		},
+		{
+			"Id": "ParamAngleY",
+			"GroupId": "ParamGroupFace",
+			"Name": "Angle_Y"
+		},
+		{
+			"Id": "ParamAngleZ",
+			"GroupId": "ParamGroupFace",
+			"Name": "Angle_Z"
+		},
+		{
+			"Id": "ParamCheek",
+			"GroupId": "ParamGroupFace",
+			"Name": "Blush"
+		},
+		{
+			"Id": "ParamFaceInkOn",
+			"GroupId": "ParamGroupFace",
+			"Name": "Face Ink_Display"
+		},
+		{
+			"Id": "ParamEyeLOpen",
+			"GroupId": "ParamGroupEyes",
+			"Name": "Eye L_Open"
+		},
+		{
+			"Id": "ParamEyeLSmile",
+			"GroupId": "ParamGroupEyes",
+			"Name": "Eye L_Smile"
+		},
+		{
+			"Id": "ParamEyeLForm",
+			"GroupId": "ParamGroupEyes",
+			"Name": "Eye L_Deformation"
+		},
+		{
+			"Id": "ParamEyeROpen",
+			"GroupId": "ParamGroupEyes",
+			"Name": "Eye R_Open"
+		},
+		{
+			"Id": "ParamEyeRSmile",
+			"GroupId": "ParamGroupEyes",
+			"Name": "Eye R_Smile"
+		},
+		{
+			"Id": "ParamEyeRForm",
+			"GroupId": "ParamGroupEyes",
+			"Name": "Eye R_Deformation"
+		},
+		{
+			"Id": "ParamEyeBallX",
+			"GroupId": "ParamGroupEyeballs",
+			"Name": "Eyeballs_X"
+		},
+		{
+			"Id": "ParamEyeBallY",
+			"GroupId": "ParamGroupEyeballs",
+			"Name": "Eyeballs_Y"
+		},
+		{
+			"Id": "ParamEyeBallForm",
+			"GroupId": "ParamGroupEyeballs",
+			"Name": "Eyeballs_Shrink"
+		},
+		{
+			"Id": "ParamEyeEffect",
+			"GroupId": "ParamGroupEyeballs",
+			"Name": "Eyes_Effect"
+		},
+		{
+			"Id": "ParamBrowLY",
+			"GroupId": "ParamGroupBrows",
+			"Name": "Eyebrow L_Y"
+		},
+		{
+			"Id": "ParamBrowRY",
+			"GroupId": "ParamGroupBrows",
+			"Name": "Eyebrow R_Y"
+		},
+		{
+			"Id": "ParamBrowLX",
+			"GroupId": "ParamGroupBrows",
+			"Name": "Eyebrow L_X"
+		},
+		{
+			"Id": "ParamBrowRX",
+			"GroupId": "ParamGroupBrows",
+			"Name": "Eyebrow R_X"
+		},
+		{
+			"Id": "ParamBrowLAngle",
+			"GroupId": "ParamGroupBrows",
+			"Name": "Eyebrow L_Angle"
+		},
+		{
+			"Id": "ParamBrowRAngle",
+			"GroupId": "ParamGroupBrows",
+			"Name": "Eyebrow R_Angle"
+		},
+		{
+			"Id": "ParamBrowLForm",
+			"GroupId": "ParamGroupBrows",
+			"Name": "Eyebrow L_Deformation"
+		},
+		{
+			"Id": "ParamBrowRForm",
+			"GroupId": "ParamGroupBrows",
+			"Name": "Eyebrow R_Deformation"
+		},
+		{
+			"Id": "ParamA",
+			"GroupId": "ParamGroupMouth",
+			"Name": "A"
+		},
+		{
+			"Id": "ParamI",
+			"GroupId": "ParamGroupMouth",
+			"Name": "I"
+		},
+		{
+			"Id": "ParamU",
+			"GroupId": "ParamGroupMouth",
+			"Name": "U"
+		},
+		{
+			"Id": "ParamE",
+			"GroupId": "ParamGroupMouth",
+			"Name": "E"
+		},
+		{
+			"Id": "ParamO",
+			"GroupId": "ParamGroupMouth",
+			"Name": "O"
+		},
+		{
+			"Id": "ParamMouthUp",
+			"GroupId": "ParamGroupMouth",
+			"Name": "Mouth Corner Upward"
+		},
+		{
+			"Id": "ParamMouthDown",
+			"GroupId": "ParamGroupMouth",
+			"Name": "Mouth Corner Downward"
+		},
+		{
+			"Id": "ParamMouthAngry",
+			"GroupId": "ParamGroupMouth",
+			"Name": "Pouting Mouth"
+		},
+		{
+			"Id": "ParamMouthAngryLine",
+			"GroupId": "ParamGroupMouth",
+			"Name": "Pouting Mouth Line"
+		},
+		{
+			"Id": "ParamBodyAngleX",
+			"GroupId": "ParamGroupBody",
+			"Name": "Body Rotation_X"
+		},
+		{
+			"Id": "ParamBodyAngleY",
+			"GroupId": "ParamGroupBody",
+			"Name": "Body Rotation_Y"
+		},
+		{
+			"Id": "ParamBodyAngleZ",
+			"GroupId": "ParamGroupBody",
+			"Name": "Body Rotation_Z"
+		},
+		{
+			"Id": "ParamBreath",
+			"GroupId": "ParamGroupBody",
+			"Name": "Breath"
+		},
+		{
+			"Id": "ParamLeftShoulderUp",
+			"GroupId": "ParamGroupBody",
+			"Name": "Shoulder L_Y"
+		},
+		{
+			"Id": "ParamRightShoulderUp",
+			"GroupId": "ParamGroupBody",
+			"Name": "Shoulder R_Y"
+		},
+		{
+			"Id": "ParamArmLA01",
+			"GroupId": "ParamGroupArmLA",
+			"Name": "Arm L A_Shoulder Rotation"
+		},
+		{
+			"Id": "ParamArmLA02",
+			"GroupId": "ParamGroupArmLA",
+			"Name": "Arm L A_Elbow Rotation"
+		},
+		{
+			"Id": "ParamArmLA03",
+			"GroupId": "ParamGroupArmLA",
+			"Name": "Arm L A_Wrist Rotation"
+		},
+		{
+			"Id": "ParamHandLA",
+			"GroupId": "ParamGroupArmLA",
+			"Name": "Hand L A"
+		},
+		{
+			"Id": "ParamArmRA01",
+			"GroupId": "ParamGroupArmRA",
+			"Name": "Arm R A_Shoulder Rotation"
+		},
+		{
+			"Id": "ParamArmRA02",
+			"GroupId": "ParamGroupArmRA",
+			"Name": "Arm R A_Elbow Rotation"
+		},
+		{
+			"Id": "ParamArmRA03",
+			"GroupId": "ParamGroupArmRA",
+			"Name": "Arm R A_Wrist Rotation"
+		},
+		{
+			"Id": "ParamWandRotate",
+			"GroupId": "ParamGroupArmRA",
+			"Name": "Wand Rotation"
+		},
+		{
+			"Id": "ParamHandRA",
+			"GroupId": "ParamGroupArmRA",
+			"Name": "Hand R A"
+		},
+		{
+			"Id": "ParamInkDrop",
+			"GroupId": "ParamGroupArmRA",
+			"Name": "Dropping Ink"
+		},
+		{
+			"Id": "ParamInkDropRotate",
+			"GroupId": "ParamGroupArmRA",
+			"Name": "Dropping Ink_Rotation"
+		},
+		{
+			"Id": "ParamInkDropOn",
+			"GroupId": "ParamGroupArmRA",
+			"Name": "Dropping Ink_Display"
+		},
+		{
+			"Id": "ParamArmLB01",
+			"GroupId": "ParamGroupArmLB",
+			"Name": "Arm L B_Shoulder Rotation"
+		},
+		{
+			"Id": "ParamArmLB02",
+			"GroupId": "ParamGroupArmLB",
+			"Name": "Arm L B_Elbow Rotation"
+		},
+		{
+			"Id": "ParamArmLB03",
+			"GroupId": "ParamGroupArmLB",
+			"Name": "Arm L B_Wrist Rotation"
+		},
+		{
+			"Id": "ParamHandLB",
+			"GroupId": "ParamGroupArmLB",
+			"Name": "Hand L B"
+		},
+		{
+			"Id": "ParamHatForm",
+			"GroupId": "ParamGroupArmLB",
+			"Name": "Hat Deformation"
+		},
+		{
+			"Id": "ParamArmRB01",
+			"GroupId": "ParamGroupArmRB",
+			"Name": "Arm R B_Shoulder Rotation"
+		},
+		{
+			"Id": "ParamArmRB02",
+			"GroupId": "ParamGroupArmRB",
+			"Name": "Arm R B_Elbow Rotation"
+		},
+		{
+			"Id": "ParamArmRB02Y",
+			"GroupId": "ParamGroupArmRB",
+			"Name": "Arm R B_Arm Y"
+		},
+		{
+			"Id": "ParamArmRB03",
+			"GroupId": "ParamGroupArmRB",
+			"Name": "Arm R B_Wrist Rotation"
+		},
+		{
+			"Id": "ParamHandRB",
+			"GroupId": "ParamGroupArmRB",
+			"Name": "Hand R B"
+		},
+		{
+			"Id": "ParamAllX",
+			"GroupId": "ParamGroupOverall",
+			"Name": "Overall Movement_X"
+		},
+		{
+			"Id": "ParamAllY",
+			"GroupId": "ParamGroupOverall",
+			"Name": "Overall Movement_Y"
+		},
+		{
+			"Id": "ParamAllRotate",
+			"GroupId": "ParamGroupOverall",
+			"Name": "Overall Rotation"
+		},
+		{
+			"Id": "ParamHairFront",
+			"GroupId": "ParamGroupSway",
+			"Name": "Hair Sway_Front"
+		},
+		{
+			"Id": "ParamHairSideL",
+			"GroupId": "ParamGroupSway",
+			"Name": "Hair Sway_Side L"
+		},
+		{
+			"Id": "ParamHairSideR",
+			"GroupId": "ParamGroupSway",
+			"Name": "Hair Sway_Side R"
+		},
+		{
+			"Id": "ParamHairBack",
+			"GroupId": "ParamGroupSway",
+			"Name": "Hair Sway_Back"
+		},
+		{
+			"Id": "ParamHairBackR",
+			"GroupId": "ParamGroupSway",
+			"Name": "Hair Sway_Back R"
+		},
+		{
+			"Id": "ParamHairBackL",
+			"GroupId": "ParamGroupSway",
+			"Name": "Hair Sway_Back L"
+		},
+		{
+			"Id": "ParamoHairMesh",
+			"GroupId": "ParamGroupSway",
+			"Name": "Hair Streaks Sway"
+		},
+		{
+			"Id": "ParamHairFrontFuwa",
+			"GroupId": "ParamGroupSway",
+			"Name": "Front Hair_Fluff"
+		},
+		{
+			"Id": "ParamHairSideFuwa",
+			"GroupId": "ParamGroupSway",
+			"Name": "Side Hair_Fluff"
+		},
+		{
+			"Id": "ParamHairBackFuwa",
+			"GroupId": "ParamGroupSway",
+			"Name": "Back Hair_Fluff"
+		},
+		{
+			"Id": "ParamWing",
+			"GroupId": "ParamGroupSway",
+			"Name": "Feather Sway"
+		},
+		{
+			"Id": "ParamRibbon",
+			"GroupId": "ParamGroupSway",
+			"Name": "Hat Ribbon Sway"
+		},
+		{
+			"Id": "ParamHatBrim",
+			"GroupId": "ParamGroupSway",
+			"Name": "Hat Brim Sway"
+		},
+		{
+			"Id": "ParamHatTop",
+			"GroupId": "ParamGroupSway",
+			"Name": "Hat Top Sway"
+		},
+		{
+			"Id": "ParamAccessory1",
+			"GroupId": "ParamGroupSway",
+			"Name": "Pendant Sway 1"
+		},
+		{
+			"Id": "ParamAccessory2",
+			"GroupId": "ParamGroupSway",
+			"Name": "Pendant Sway 2"
+		},
+		{
+			"Id": "ParamString",
+			"GroupId": "ParamGroupSway",
+			"Name": "Hood Rope Sway"
+		},
+		{
+			"Id": "ParamRobeL",
+			"GroupId": "ParamGroupSway",
+			"Name": "Robe Sway_L"
+		},
+		{
+			"Id": "ParamRobeR",
+			"GroupId": "ParamGroupSway",
+			"Name": "Robe Sway_R"
+		},
+		{
+			"Id": "ParamRobeFuwa",
+			"GroupId": "ParamGroupSway",
+			"Name": "Robe Flap"
+		},
+		{
+			"Id": "ParamHeartMissOn",
+			"GroupId": "ParamGroupHeart",
+			"Name": "Heart Fail_Display"
+		},
+		{
+			"Id": "ParamHeartBackMissOn",
+			"GroupId": "ParamGroupHeart",
+			"Name": "Back Heart Fail_Display"
+		},
+		{
+			"Id": "ParamHeartColorRainbow",
+			"GroupId": "ParamGroupHeart",
+			"Name": "Heart Fail_Rainbow"
+		},
+		{
+			"Id": "ParamHeartHealOn",
+			"GroupId": "ParamGroupHeart",
+			"Name": "Heart Heal_Display"
+		},
+		{
+			"Id": "ParamHeartBackHealOn",
+			"GroupId": "ParamGroupHeart",
+			"Name": "Back Heart Heal_Display"
+		},
+		{
+			"Id": "ParamHeartColorHeal",
+			"GroupId": "ParamGroupHeart",
+			"Name": "Heart Hea_Green"
+		},
+		{
+			"Id": "ParamHeartDrow",
+			"GroupId": "ParamGroupHeart",
+			"Name": "Heart_Drawing"
+		},
+		{
+			"Id": "ParamHeartSize",
+			"GroupId": "ParamGroupHeart",
+			"Name": "Heart_Scaling"
+		},
+		{
+			"Id": "ParamHeartColorLight",
+			"GroupId": "ParamGroupHeart",
+			"Name": "Heart_Color Variation"
+		},
+		{
+			"Id": "ParamWandInkColorRainbow",
+			"GroupId": "ParamGroupInk",
+			"Name": "Wand Ink_Rainbow"
+		},
+		{
+			"Id": "ParamWandInkColorHeal",
+			"GroupId": "ParamGroupInk",
+			"Name": "Wand Ink_Green"
+		},
+		{
+			"Id": "ParamWandInk",
+			"GroupId": "ParamGroupInk",
+			"Name": "Wand Ink"
+		},
+		{
+			"Id": "ParamSmokeOn",
+			"GroupId": "ParamGroupExplosion",
+			"Name": "Smoke_Display"
+		},
+		{
+			"Id": "ParamSmoke",
+			"GroupId": "ParamGroupExplosion",
+			"Name": "Smoke"
+		},
+		{
+			"Id": "ParamExplosionChargeOn",
+			"GroupId": "ParamGroupExplosion",
+			"Name": "Explosion Light Gathering_Display"
+		},
+		{
+			"Id": "ParamExplosionLightCharge",
+			"GroupId": "ParamGroupExplosion",
+			"Name": "Explosion Light Gathering"
+		},
+		{
+			"Id": "ParamExplosionOn",
+			"GroupId": "ParamGroupExplosion",
+			"Name": "Explosion Display"
+		},
+		{
+			"Id": "ParamExplosion",
+			"GroupId": "ParamGroupExplosion",
+			"Name": "Explosion"
+		},
+		{
+			"Id": "ParamRabbitElimination",
+			"GroupId": "ParamGroupRabbit",
+			"Name": "Rabbit_Disappear"
+		},
+		{
+			"Id": "ParamRabbitAppearance",
+			"GroupId": "ParamGroupRabbit",
+			"Name": "Rabbit_Appear"
+		},
+		{
+			"Id": "ParamRabbitSize",
+			"GroupId": "ParamGroupRabbit",
+			"Name": "Rabbit_Scaling"
+		},
+		{
+			"Id": "ParamRabbitDraworder",
+			"GroupId": "ParamGroupRabbit",
+			"Name": "Rabbit_Draw Order"
+		},
+		{
+			"Id": "ParamRabbitEar",
+			"GroupId": "ParamGroupRabbit",
+			"Name": "Rabbit_Ears"
+		},
+		{
+			"Id": "ParamRabbitDirection",
+			"GroupId": "ParamGroupRabbit",
+			"Name": "Rabbit_Direction"
+		},
+		{
+			"Id": "ParamRabbitLight",
+			"GroupId": "ParamGroupRabbit",
+			"Name": "Rabbit_Color Variation"
+		},
+		{
+			"Id": "ParamRabbitLightSize",
+			"GroupId": "ParamGroupRabbit",
+			"Name": "Rabbit Light_Scaling"
+		},
+		{
+			"Id": "ParamRabbitX",
+			"GroupId": "ParamGroupRabbit",
+			"Name": "Rabbit_Move X"
+		},
+		{
+			"Id": "ParamRabbitY",
+			"GroupId": "ParamGroupRabbit",
+			"Name": "Rabbit_Move Y"
+		},
+		{
+			"Id": "ParamRabbitRotate",
+			"GroupId": "ParamGroupRabbit",
+			"Name": "Rabbit Rotation"
+		},
+		{
+			"Id": "ParamAuraOn",
+			"GroupId": "ParamGroupAura",
+			"Name": "Aura_Display"
+		},
+		{
+			"Id": "ParamAura",
+			"GroupId": "ParamGroupAura",
+			"Name": "Aura"
+		},
+		{
+			"Id": "ParamAuraColor1",
+			"GroupId": "ParamGroupAura",
+			"Name": "Aura_Color Variation 1"
+		},
+		{
+			"Id": "ParamAuraColor2",
+			"GroupId": "ParamGroupAura",
+			"Name": "Aura_Color Variation 2"
+		},
+		{
+			"Id": "ParamHeartLightOn",
+			"GroupId": "ParamGroupLight",
+			"Name": "Light_Display"
+		},
+		{
+			"Id": "ParamHeartLight",
+			"GroupId": "ParamGroupLight",
+			"Name": "Light_Star"
+		},
+		{
+			"Id": "ParamHeartLightColor",
+			"GroupId": "ParamGroupLight",
+			"Name": "Light_Color Variation"
+		},
+		{
+			"Id": "ParamHealLightOn",
+			"GroupId": "ParamGroupLight",
+			"Name": "Heal Magic Light_Display"
+		},
+		{
+			"Id": "ParamHealLight",
+			"GroupId": "ParamGroupLight",
+			"Name": "Heal Magic Light"
+		},
+		{
+			"Id": "ParamStrengthenLightOn",
+			"GroupId": "ParamGroupLight",
+			"Name": "Enhancement Magic Light_Display"
+		},
+		{
+			"Id": "ParamStrengthenLight",
+			"GroupId": "ParamGroupLight",
+			"Name": "Enhancement Magic Light"
+		},
+		{
+			"Id": "ParamStrengthenLightMove",
+			"GroupId": "ParamGroupLight",
+			"Name": "Enhancement Magic Light_Movement"
+		},
+		{
+			"Id": "ParamMagicPositionX",
+			"GroupId": "ParamGroupAllEffects",
+			"Name": "Magic Position X"
+		},
+		{
+			"Id": "ParamMagicPositionY",
+			"GroupId": "ParamGroupAllEffects",
+			"Name": "Magic Position Y"
+		},
+		{
+			"Id": "ParamAllColor1",
+			"GroupId": "ParamGroupAllEffects",
+			"Name": "Overall Color 1"
+		},
+		{
+			"Id": "ParamAllColor2",
+			"GroupId": "ParamGroupAllEffects",
+			"Name": "Overall Color 2"
+		}
+	],
+	"ParameterGroups": [
+		{
+			"Id": "ParamGroupFace",
+			"GroupId": "",
+			"Name": "Face"
+		},
+		{
+			"Id": "ParamGroupEyes",
+			"GroupId": "",
+			"Name": "Eyes"
+		},
+		{
+			"Id": "ParamGroupEyeballs",
+			"GroupId": "",
+			"Name": "Eyeballs"
+		},
+		{
+			"Id": "ParamGroupBrows",
+			"GroupId": "",
+			"Name": "Eyebrows"
+		},
+		{
+			"Id": "ParamGroupMouth",
+			"GroupId": "",
+			"Name": "Mouth"
+		},
+		{
+			"Id": "ParamGroupBody",
+			"GroupId": "",
+			"Name": "Body"
+		},
+		{
+			"Id": "ParamGroupArmLA",
+			"GroupId": "",
+			"Name": "Arm L A"
+		},
+		{
+			"Id": "ParamGroupArmRA",
+			"GroupId": "",
+			"Name": "Arm R A"
+		},
+		{
+			"Id": "ParamGroupArmLB",
+			"GroupId": "",
+			"Name": "Arm L B"
+		},
+		{
+			"Id": "ParamGroupArmRB",
+			"GroupId": "",
+			"Name": "Arm R B"
+		},
+		{
+			"Id": "ParamGroupOverall",
+			"GroupId": "",
+			"Name": "Overall"
+		},
+		{
+			"Id": "ParamGroupSway",
+			"GroupId": "",
+			"Name": "Sway"
+		},
+		{
+			"Id": "ParamGroupHeart",
+			"GroupId": "",
+			"Name": "Heart"
+		},
+		{
+			"Id": "ParamGroupInk",
+			"GroupId": "",
+			"Name": "Ink"
+		},
+		{
+			"Id": "ParamGroupExplosion",
+			"GroupId": "",
+			"Name": "Explosion"
+		},
+		{
+			"Id": "ParamGroupRabbit",
+			"GroupId": "",
+			"Name": "Rabbit"
+		},
+		{
+			"Id": "ParamGroupAura",
+			"GroupId": "",
+			"Name": "Aura"
+		},
+		{
+			"Id": "ParamGroupLight",
+			"GroupId": "",
+			"Name": "Light"
+		},
+		{
+			"Id": "ParamGroupAllEffects",
+			"GroupId": "",
+			"Name": "Overall Effect"
+		}
+	],
+	"Parts": [
+		{
+			"Id": "PartCore",
+			"Name": "Core"
+		},
+		{
+			"Id": "Part",
+			"Name": "Rabbit"
+		},
+		{
+			"Id": "Part2",
+			"Name": "Effect"
+		},
+		{
+			"Id": "PartInk",
+			"Name": "Ink"
+		},
+		{
+			"Id": "PartSmoke",
+			"Name": "Smoke"
+		},
+		{
+			"Id": "PartExplosionLight",
+			"Name": "Explosion Light"
+		},
+		{
+			"Id": "Partaura",
+			"Name": "Aura"
+		},
+		{
+			"Id": "PartLight",
+			"Name": "Light"
+		},
+		{
+			"Id": "PartHeart",
+			"Name": "Heart"
+		},
+		{
+			"Id": "PartHat",
+			"Name": "Hat"
+		},
+		{
+			"Id": "PartHairSide",
+			"Name": "Side Hair"
+		},
+		{
+			"Id": "PartHairFront",
+			"Name": "Front Hair"
+		},
+		{
+			"Id": "PartHairBack",
+			"Name": "Back Hair"
+		},
+		{
+			"Id": "PartBrow",
+			"Name": "Eyebrows"
+		},
+		{
+			"Id": "PartEye",
+			"Name": "Eyes"
+		},
+		{
+			"Id": "PartCheek",
+			"Name": "Cheeks"
+		},
+		{
+			"Id": "PartNose",
+			"Name": "Nose"
+		},
+		{
+			"Id": "PartMouth",
+			"Name": "Mouth"
+		},
+		{
+			"Id": "PartFace",
+			"Name": "Face"
+		},
+		{
+			"Id": "PartEar",
+			"Name": "Ears"
+		},
+		{
+			"Id": "PartNeck",
+			"Name": "Neck"
+		},
+		{
+			"Id": "PartRobe",
+			"Name": "Robe"
+		},
+		{
+			"Id": "PartHoodie",
+			"Name": "Hoodie"
+		},
+		{
+			"Id": "PartLeg",
+			"Name": "Legs"
+		},
+		{
+			"Id": "PartArmLA",
+			"Name": "Arm L A"
+		},
+		{
+			"Id": "PartArmRA",
+			"Name": "Arm R A"
+		},
+		{
+			"Id": "PartArmLB",
+			"Name": "Arm L B"
+		},
+		{
+			"Id": "PartArmRB",
+			"Name": "Arm R B"
+		},
+		{
+			"Id": "PartSketch",
+			"Name": "[Guide Image]"
+		},
+		{
+			"Id": "PartEyeBall",
+			"Name": "Eyeballs"
+		},
+		{
+			"Id": "PartWandA",
+			"Name": "Wand A"
+		},
+		{
+			"Id": "PartWandB",
+			"Name": "Wand B"
+		}
+	],
+	"CombinedParameters": [
+		[
+			"ParamAngleX",
+			"ParamAngleY"
+		],
+		[
+			"ParamAllX",
+			"ParamAllY"
+		],
+		[
+			"ParamMagicPositionX",
+			"ParamMagicPositionY"
+		]
+	]
+}
