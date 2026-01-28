@@ -3,13 +3,15 @@
 <h1 align="center">Open-LLM-VTuber</h1>
 <h3 align="center">
 
-[![GitHub release](https://img.shields.io/github/v/release/t41372/Open-LLM-VTuber)](https://github.com/t41372/Open-LLM-VTuber/releases) 
-[![license](https://img.shields.io/github/license/t41372/Open-LLM-VTuber)](https://github.com/t41372/Open-LLM-VTuber/blob/master/LICENSE) 
+[![GitHub release](https://img.shields.io/github/v/release/Open-LLM-VTuber/Open-LLM-VTuber)](https://github.com/Open-LLM-VTuber/Open-LLM-VTuber/releases) 
+[![license](https://img.shields.io/github/license/Open-LLM-VTuber/Open-LLM-VTuber)](https://github.com/Open-LLM-VTuber/Open-LLM-VTuber/blob/master/LICENSE) 
 [![CodeQL](https://github.com/Open-LLM-VTuber/Open-LLM-VTuber/actions/workflows/codeql.yml/badge.svg)](https://github.com/Open-LLM-VTuber/Open-LLM-VTuber/actions/workflows/codeql.yml)
 [![Ruff](https://github.com/Open-LLM-VTuber/Open-LLM-VTuber/actions/workflows/ruff.yml/badge.svg)](https://github.com/Open-LLM-VTuber/Open-LLM-VTuber/actions/workflows/ruff.yml)
-[![Docker](https://img.shields.io/badge/t41372%2FOpen--LLM--VTuber-%25230db7ed.svg?logo=docker&logoColor=blue&labelColor=white&color=blue)](https://hub.docker.com/r/t41372/open-llm-vtuber) 
-[![QQ Group](https://img.shields.io/badge/QQ_Group-792615362-white?style=flat&logo=qq&logoColor=white)](https://qm.qq.com/q/ngvNUQpuKI)
-[![QQ Channel](https://img.shields.io/badge/QQ_Channel_(dev)-pd93364606-white?style=flat&logo=qq&logoColor=white)](https://pd.qq.com/s/tt54r3bu)
+[![Docker](https://img.shields.io/badge/Open-LLM-VTuber%2FOpen--LLM--VTuber-%25230db7ed.svg?logo=docker&logoColor=blue&labelColor=white&color=blue)](https://hub.docker.com/r/Open-LLM-VTuber/open-llm-vtuber) 
+[![QQ User Group](https://img.shields.io/badge/QQ_User_Group-792615362-white?style=flat&logo=qq&logoColor=white)](https://qm.qq.com/q/ngvNUQpuKI)
+[![Static Badge](https://img.shields.io/badge/Join%20Chat-Zulip?style=flat&logo=zulip&label=Zulip(dev-community)&color=blue&link=https%3A%2F%2Folv.zulipchat.com)](https://olv.zulipchat.com)
+
+> **📢 v2.0 開発中**: 現在、Open-LLM-VTuber v2.0の開発に注力しています — これはコードベースの完全な書き直しです。v2.0は現在、初期の議論と計画段階にあります。v1への機能リクエストに関する新しいissueやpull requestの提出はお控えください。v2の議論に参加したい、または貢献したい場合は、[Zulip](https://olv.zulipchat.com)の開発者コミュニティにご参加ください。週次ミーティングのスケジュールはZulipで発表されます。v1のバグ修正と既存のpull requestの対応は継続します。
 
 
 [![BuyMeACoffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-ffdd00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://www.buymeacoffee.com/yi.ting)
@@ -17,11 +19,11 @@
 
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/Open-LLM-VTuber/Open-LLM-VTuber)
 
-[English README](https://github.com/t41372/Open-LLM-VTuber/blob/main/README.md) | [中文 README](https://github.com/t41372/Open-LLM-VTuber/blob/main/README.CN.md) | [한국어 README](https://github.com/t41372/Open-LLM-VTuber/blob/main/README.KR.md) | 日本語 README
+[English README](./README.md) | [中文 README](./README.CN.md) | [한국어 README](./README.KR.md) | 日本語 README
 
 [ドキュメント](https://open-llm-vtuber.github.io/docs/quick-start) | [![Roadmap](https://img.shields.io/badge/Roadmap-GitHub_Project-yellow)](https://github.com/orgs/Open-LLM-VTuber/projects/2)
 
-<a href="https://trendshift.io/repositories/12358" target="_blank"><img src="https://trendshift.io/api/badge/repositories/12358" alt="t41372%2FOpen-LLM-VTuber | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
+<a href="https://trendshift.io/repositories/12358" target="_blank"><img src="https://trendshift.io/api/badge/repositories/12358" alt="Open-LLM-VTuber%2FOpen-LLM-VTuber | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
 
 </h3>
 
@@ -47,9 +49,6 @@
 バックエンドサポートの面では、様々なLLM推論、テキスト読み上げ（TTS）、音声認識ソリューションを統合しました。AIコンパニオンをカスタマイズしたい場合は、[Character Customization Guide](https://open-llm-vtuber.github.io/docs/user-guide/live2d)を参照して、AIコンパニオンの外見や性格をカスタマイズできます。
 
 このプロジェクトが `Open-LLM-Companion` や `Open-LLM-Waifu` ではなく `Open-LLM-Vtuber` という名前である理由は、初期の開発目標が **Windows以外のプラットフォームでもオフラインで実行可能なオープンソースソリューションを活用** し、**クローズドなAI Vtuberである `neuro-sama` を再現** することだったためです。
-
-このプロジェクトは `v1.0.0` バージョン以降、**コードのリファクタリング** を経ており、現在活発に開発中で、**まもなく様々な興味深い機能が追加される予定** です！🚀 アップデート計画は [Roadmap](https://github.com/users/t41372/projects/1/views/5) で確認できます。
-
 
 ### 👀 効果実証
 | ![](assets/i1.jpg) | ![](assets/i2.jpg) |
@@ -150,4 +149,4 @@
 
 ## スター履歴 (Star History)
 
-[![Star History Chart](https://api.star-history.com/svg?repos=t41372/open-llm-vtuber&type=Date)](https://star-history.com/#t41372/open-llm-vtuber&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=Open-LLM-VTuber/open-llm-vtuber&type=Date)](https://star-history.com/#Open-LLM-VTuber/open-llm-vtuber&Date)

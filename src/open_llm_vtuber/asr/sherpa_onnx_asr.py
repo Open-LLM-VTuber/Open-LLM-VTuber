@@ -10,7 +10,7 @@ import onnxruntime
 class VoiceRecognition(ASRInterface):
     def __init__(
         self,
-        model_type: str = "paraformer",  # or "transducer", "nemo_ctc", "wenet_ctc", "whisper", "tdnn_ctc", "sense_voice"
+        model_type: str = "paraformer",  # or "transducer", "nemo_ctc", "wenet_ctc", "whisper", "tdnn_ctc", "sense_voice", "fire_red_asr"
         encoder: str = None,  # Path to the encoder model, used with transducer
         decoder: str = None,  # Path to the decoder model, used with transducer
         joiner: str = None,  # Path to the joiner model, used with transducer
@@ -21,6 +21,8 @@ class VoiceRecognition(ASRInterface):
         whisper_encoder: str = None,  # Path to whisper encoder model
         whisper_decoder: str = None,  # Path to whisper decoder model
         sense_voice: str = None,  # Path to the model.onnx from SenseVoice
+        fire_red_asr_encoder: str = None,  # Path to FireRedASR encoder model
+        fire_red_asr_decoder: str = None,  # Path to FireRedASR decoder model
         tokens: str = None,  # Path to tokens.txt
         hotwords_file: str = "",  # Path to hotwords file
         hotwords_score: float = 1.5,  # Hotwords score
@@ -49,6 +51,8 @@ class VoiceRecognition(ASRInterface):
         self.whisper_encoder = whisper_encoder
         self.whisper_decoder = whisper_decoder
         self.sense_voice: str = sense_voice
+        self.fire_red_asr_encoder = fire_red_asr_encoder
+        self.fire_red_asr_decoder = fire_red_asr_decoder
         self.tokens = tokens
         self.hotwords_file = hotwords_file
         self.hotwords_score = hotwords_score
@@ -190,6 +194,16 @@ class VoiceRecognition(ASRInterface):
                 tokens=self.tokens,
                 num_threads=self.num_threads,
                 use_itn=self.use_itn,
+                debug=self.debug,
+                provider=self.provider,
+            )
+        elif self.model_type == "fire_red_asr":
+            recognizer = sherpa_onnx.OfflineRecognizer.from_fire_red_asr(
+                encoder=self.fire_red_asr_encoder,
+                decoder=self.fire_red_asr_decoder,
+                tokens=self.tokens,
+                num_threads=self.num_threads,
+                decoding_method=self.decoding_method,
                 debug=self.debug,
                 provider=self.provider,
             )
