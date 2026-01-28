@@ -1189,3 +1189,5 @@ win32-setctime==1.2.0 ; sys_platform == 'win32'
     # via loguru
 yarl==1.22.0
     # via aiohttp
+memu-py==0.1.0
+    # via open-llm-vtuber (pyproject.toml)

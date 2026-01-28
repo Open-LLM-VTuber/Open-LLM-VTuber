@@ -40,6 +40,7 @@ dependencies = [
     "websocket-client>=1.8.0",
     "letta-client>=0.1.100",
     "duckduckgo-mcp-server>=0.1.1",
+    "memu-py>=0.1.8",
 ]
 
 [project.optional-dependencies]

@@ -33,6 +33,7 @@ class BasicMemoryAgentConfig(I18nMixin, BaseModel):
     segment_method: Literal["regex", "pysbd"] = Field("pysbd", alias="segment_method")
     use_mcpp: Optional[bool] = Field(False, alias="use_mcpp")
     mcp_enabled_servers: Optional[List[str]] = Field([], alias="mcp_enabled_servers")
+    memu_config: Optional["MemUConfig"] = Field(None, alias="memu_config")
 
     DESCRIPTIONS: ClassVar[Dict[str, Description]] = {
         "llm_provider": Description(
@@ -54,6 +55,51 @@ class BasicMemoryAgentConfig(I18nMixin, BaseModel):
         "mcp_enabled_servers": Description(
             en="List of MCP servers to enable for the agent",
             zh="为智能体启用 MCP 服务器列表",
+        ),
+        "memu_config": Description(
+            en="Configuration for MemU long-term memory (optional)",
+            zh="MemU 长期记忆配置（可选）",
+        ),
+    }
+
+
+class MemUConfig(I18nMixin, BaseModel):
+    """Configuration for MemU long-term memory service.
+
+    Attributes:
+        enable (bool): Whether to enable MemU for the agent.
+        base_url (str): Base URL for the MemU API service.
+        api_key (str): API key for authenticating with MemU.
+        top_k (int): Number of memory items to retrieve per query.
+        min_similarity (float): Minimum similarity threshold for retrieval.
+    """
+
+    enable: bool = Field(False, alias="enable")
+    base_url: str = Field("https://api.memu.so", alias="base_url")
+    api_key: str = Field("", alias="api_key")
+    top_k: int = Field(3, alias="top_k")
+    min_similarity: float = Field(0.7, alias="min_similarity")
+
+    DESCRIPTIONS: ClassVar[Dict[str, Description]] = {
+        "enable": Description(
+            en="Enable MemU for long-term memory",
+            zh="启用 MemU 作为长期记忆",
+        ),
+        "base_url": Description(
+            en="API base URL for MemU service",
+            zh="MemU 服务的 API 基础 URL",
+        ),
+        "api_key": Description(
+            en="API key for MemU authentication",
+            zh="用于 MemU 认证的 API 密钥",
+        ),
+        "top_k": Description(
+            en="Number of memories to retrieve per query",
+            zh="每次检索的记忆条数",
+        ),
+        "min_similarity": Description(
+            en="Minimum similarity score for retrieved memories",
+            zh="检索记忆的最小相似度分数",
         ),
     }
 

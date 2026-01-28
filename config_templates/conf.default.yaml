@@ -69,6 +69,14 @@ character_config:
         use_mcpp: True
         mcp_enabled_servers: ["time", "ddg-search"] # Enabled MCP servers
 
+        # -- MemU Long-term Memory (Optional) --
+        # memu_config:
+        #   enable: true
+        #   base_url: "https://api.memu.so"
+        #   api_key: "your_memu_api_key_here"
+        #   top_k: 3           # How many memories to retrieve
+        #   min_similarity: 0.7 # Minimum relevance score
+
       letta_agent:
         host: 'localhost' # Host address
         port: 8283 # Port number
