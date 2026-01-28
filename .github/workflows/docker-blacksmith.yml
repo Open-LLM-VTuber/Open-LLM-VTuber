@@ -1,0 +1,155 @@
+name: Docker Build & Push (Blacksmith)
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - "v*"
+      - "*.*.*"
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: docker-blacksmith-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  DOCKERFILE: dockerfiles/dockerfile
+  CONTEXT: .
+  DOCKERHUB_IMAGE: ${{ vars.DOCKERHUB_IMAGE || 'openllmvtuber/open-llm-vtuber' }}
+  GHCR_IMAGE: ${{ vars.GHCR_IMAGE || '' }}
+
+jobs:
+  meta:
+    runs-on: blacksmith-8vcpu-ubuntu-2204
+    outputs:
+      tags: ${{ steps.meta.outputs.tags }}
+      labels: ${{ steps.meta.outputs.labels }}
+      dockerhub_image: ${{ steps.image.outputs.dockerhub_image }}
+      ghcr_image: ${{ steps.image.outputs.ghcr_image }}
+    steps:
+      - name: Resolve image names
+        id: image
+        shell: bash
+        run: |
+          set -euo pipefail
+          dockerhub_image="${DOCKERHUB_IMAGE}"
+          if [ -n "${GHCR_IMAGE:-}" ]; then
+            ghcr_image="${GHCR_IMAGE}"
+          else
+            ghcr_image="ghcr.io/${GITHUB_REPOSITORY,,}"
+          fi
+          echo "dockerhub_image=${dockerhub_image}" >> "$GITHUB_OUTPUT"
+          echo "ghcr_image=${ghcr_image}" >> "$GITHUB_OUTPUT"
+
+      - name: Docker image metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: |
+            ${{ steps.image.outputs.dockerhub_image }}
+            ${{ steps.image.outputs.ghcr_image }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=tag
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha,format=short
+            type=raw,value=latest,enable={{is_default_branch}}
+
+  build:
+    needs: meta
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: amd64
+            runner: blacksmith-8vcpu-ubuntu-2204
+            docker_platform: linux/amd64
+          - platform: arm64
+            runner: blacksmith-8vcpu-ubuntu-2204-arm
+            docker_platform: linux/arm64
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Blacksmith Docker builder
+        uses: useblacksmith/setup-docker-builder@v1
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        if: github.event_name != 'pull_request'
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        if: github.event_name != 'pull_request'
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Prepare arch tags
+        id: arch-tags
+        shell: bash
+        run: |
+          set -euo pipefail
+          {
+            echo "tags<<EOF"
+            while IFS= read -r tag; do
+              [ -z "$tag" ] && continue
+              echo "${tag}-${{ matrix.platform }}"
+            done <<< "${{ needs.meta.outputs.tags }}"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Build and push (${{ matrix.platform }})
+        uses: useblacksmith/build-push-action@v2
+        with:
+          context: ${{ env.CONTEXT }}
+          file: ${{ env.DOCKERFILE }}
+          platforms: ${{ matrix.docker_platform }}
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.arch-tags.outputs.tags }}
+          labels: ${{ needs.meta.outputs.labels }}
+
+  manifest:
+    needs: [meta, build]
+    runs-on: blacksmith-8vcpu-ubuntu-2204
+    if: github.event_name != 'pull_request'
+    steps:
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create and push multi-arch manifests
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t tags <<< "${{ needs.meta.outputs.tags }}"
+          for tag in "${tags[@]}"; do
+            [ -z "$tag" ] && continue
+            docker manifest create "$tag" \
+              "${tag}-amd64" \
+              "${tag}-arm64"
+            docker manifest push "$tag"
+          done
