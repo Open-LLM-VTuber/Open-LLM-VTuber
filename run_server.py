@@ -160,15 +160,9 @@ def run(console_log_level: str):
                         config.character_config.model_dump(by_alias=True),
                         alt_data,
                     )
-                    config = validate_config(
-                        {
-                            "system_config": config.system_config.model_dump(
-                                by_alias=True
-                            ),
-                            "character_config": merged,
-                            "live_config": config.live_config.model_dump(by_alias=True),
-                        }
-                    )
+                    new_config_data = config.model_dump(by_alias=True)
+                    new_config_data["character_config"] = merged
+                    config = validate_config(new_config_data)
                     logger.info(f"Applied default character config: {default_char}")
                 else:
                     logger.warning(f"No character_config found in {alt_path}")
