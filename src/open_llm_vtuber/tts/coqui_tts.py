@@ -57,8 +57,11 @@ class TTSEngine(TTSInterface):
             raise RuntimeError(f"Failed to initialize CoquiTTS model: {str(e)}")
 
     _SAMPLE_WIDTH_BYTES = 2  # 16-bit audio
+    _DEFAULT_SILENCE_DURATION_S = 0.1
 
-    def _generate_silent_wav(self, output_path: str, duration: float = 0.1) -> None:
+    def _generate_silent_wav(
+        self, output_path: str, duration: float = _DEFAULT_SILENCE_DURATION_S
+    ) -> None:
         """Generate a short silent WAV file matching the model's sample rate.
 
         Args:
@@ -97,7 +100,6 @@ class TTSEngine(TTSInterface):
             return output_path
 
         try:
-
             # Generate speech based on speaker mode
             if self.is_multi_speaker and self.speaker_wav:
                 # Multi-speaker mode with voice cloning
