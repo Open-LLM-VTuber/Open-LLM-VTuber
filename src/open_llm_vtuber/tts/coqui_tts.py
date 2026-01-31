@@ -1,4 +1,6 @@
 import os
+import wave
+import struct
 from typing import Optional
 from TTS.api import TTS
 from loguru import logger
@@ -55,6 +57,16 @@ class TTSEngine(TTSInterface):
         except Exception as e:
             raise RuntimeError(f"Failed to initialize CoquiTTS model: {str(e)}")
 
+    @staticmethod
+    def _generate_silent_wav(output_path: str, duration: float = 0.1, sample_rate: int = 22050) -> None:
+        """Generate a short silent WAV file."""
+        num_frames = int(sample_rate * duration)
+        with wave.open(output_path, "w") as wf:
+            wf.setnchannels(1)
+            wf.setsampwidth(2)
+            wf.setframerate(sample_rate)
+            wf.writeframes(struct.pack(f"<{num_frames}h", *([0] * num_frames)))
+
     def generate_audio(self, text: str, file_name_no_ext: Optional[str] = None) -> str:
         """
         Generate speech audio file using CoquiTTS.
@@ -66,6 +78,14 @@ class TTSEngine(TTSInterface):
         Returns:
             Path to generated audio file
         """
+        # Sanitize: strip and check for pronounceable content
+        text = text.strip()
+        if not text or not any(c.isalnum() for c in text):
+            logger.warning(f"coqui_tts: Skipping non-pronounceable text: '{text}'")
+            output_path = self.generate_cache_file_name(file_name_no_ext, "wav")
+            self._generate_silent_wav(output_path)
+            return output_path
+
         try:
             # Generate output path
             output_path = self.generate_cache_file_name(file_name_no_ext, "wav")
