@@ -142,24 +142,30 @@ def run(console_log_level: str):
     default_char = config.system_config.default_character_config
     if default_char:
         characters_dir = config.system_config.config_alts_dir
-        alt_path = os.path.normpath(os.path.join(characters_dir, default_char))
-        if not alt_path.startswith(os.path.normpath(characters_dir)):
+        characters_dir_abs = os.path.abspath(characters_dir)
+        alt_path_abs = os.path.abspath(
+            os.path.join(characters_dir_abs, default_char)
+        )
+        if not alt_path_abs.startswith(characters_dir_abs + os.sep):
             logger.error(
-                f"Invalid default character config path (path traversal?): {alt_path}"
+                f"Invalid default character config path (path traversal attempt): {default_char}"
             )
-        elif not os.path.exists(alt_path):
-            logger.error(f"Default character config not found: {alt_path}")
+        elif not os.path.exists(alt_path_abs):
+            logger.error(f"Default character config not found: {alt_path_abs}")
         else:
-            alt_data = read_yaml(alt_path).get("character_config")
+            alt_data = read_yaml(alt_path_abs).get("character_config")
             if alt_data:
-                merged = deep_merge(config.character_config.model_dump(), alt_data)
+                merged = deep_merge(
+                    config.character_config.model_dump(by_alias=True), alt_data
+                )
                 config = validate_config({
-                    "system_config": config.system_config.model_dump(),
+                    "system_config": config.system_config.model_dump(by_alias=True),
                     "character_config": merged,
+                    "live_config": config.live_config.model_dump(by_alias=True),
                 })
                 logger.info(f"Applied default character config: {default_char}")
             else:
-                logger.warning(f"No character_config found in {alt_path}")
+                logger.warning(f"No character_config found in {alt_path_abs}")
 
     server_config = config.system_config
 
