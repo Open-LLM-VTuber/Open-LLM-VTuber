@@ -171,6 +171,19 @@ def scan_config_alts_directory(config_alts_dir: str) -> list[dict]:
     return config_files
 
 
+def deep_merge(dict1: dict, dict2: dict) -> dict:
+    """
+    Recursively merges dict2 into dict1, prioritizing values from dict2.
+    """
+    result = dict1.copy()
+    for key, value in dict2.items():
+        if key in result and isinstance(result[key], dict) and isinstance(value, dict):
+            result[key] = deep_merge(result[key], value)
+        else:
+            result[key] = value
+    return result
+
+
 def scan_bg_directory() -> list[str]:
     bg_files = []
     bg_dir = "backgrounds"

@@ -62,6 +62,7 @@ from .utils import (
     save_config,
     scan_config_alts_directory,
     scan_bg_directory,
+    deep_merge,
 )
 
 __all__ = [
@@ -122,4 +123,5 @@ __all__ = [
     "save_config",
     "scan_config_alts_directory",
     "scan_bg_directory",
+    "deep_merge",
 ]

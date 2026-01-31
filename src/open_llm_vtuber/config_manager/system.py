@@ -13,6 +13,7 @@ class SystemConfig(I18nMixin):
     config_alts_dir: str = Field(..., alias="config_alts_dir")
     tool_prompts: Dict[str, str] = Field(..., alias="tool_prompts")
     enable_proxy: bool = Field(False, alias="enable_proxy")
+    default_character_config: str = Field("", alias="default_character_config")
 
     DESCRIPTIONS: ClassVar[Dict[str, Description]] = {
         "conf_version": Description(en="Configuration version", zh="配置文件版本"),
@@ -28,6 +29,10 @@ class SystemConfig(I18nMixin):
         "enable_proxy": Description(
             en="Enable proxy mode for multiple clients",
             zh="启用代理模式以支持多个客户端使用一个 ws 连接",
+        ),
+        "default_character_config": Description(
+            en="Filename of a character config in config_alts_dir to use as default (e.g. 'zh_米粒.yaml'). Leave empty to use the character_config in conf.yaml.",
+            zh="config_alts_dir 中用作默认角色的配置文件名（例如 'zh_米粒.yaml'）。留空则使用 conf.yaml 中的 character_config。",
         ),
     }
 
