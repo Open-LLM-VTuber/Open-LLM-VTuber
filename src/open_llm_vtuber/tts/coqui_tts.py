@@ -86,18 +86,17 @@ class TTSEngine(TTSInterface):
         """
         # Sanitize: strip and check for pronounceable content
         text = text.strip()
+        output_path = self.generate_cache_file_name(file_name_no_ext, "wav")
+
         if not text or not any(c.isalnum() for c in text):
             logger.warning(
                 f"coqui_tts: Skipping non-pronounceable text: "
                 f"'{text[:100]}{'...' if len(text) > 100 else ''}'"
             )
-            output_path = self.generate_cache_file_name(file_name_no_ext, "wav")
             self._generate_silent_wav(output_path)
             return output_path
 
         try:
-            # Generate output path
-            output_path = self.generate_cache_file_name(file_name_no_ext, "wav")
 
             # Generate speech based on speaker mode
             if self.is_multi_speaker and self.speaker_wav:
