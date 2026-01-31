@@ -1,6 +1,5 @@
 import os
 import wave
-import struct
 from typing import Optional
 from TTS.api import TTS
 from loguru import logger
@@ -57,15 +56,21 @@ class TTSEngine(TTSInterface):
         except Exception as e:
             raise RuntimeError(f"Failed to initialize CoquiTTS model: {str(e)}")
 
-    @staticmethod
-    def _generate_silent_wav(output_path: str, duration: float = 0.1, sample_rate: int = 22050) -> None:
-        """Generate a short silent WAV file."""
+    def _generate_silent_wav(self, output_path: str, duration: float = 0.1) -> None:
+        """Generate a short silent WAV file matching the model's sample rate.
+
+        Args:
+            output_path: The path to save the output WAV file.
+            duration: The duration of the silence in seconds.
+        """
+        sample_rate = self.tts.synthesizer.output_sample_rate
         num_frames = int(sample_rate * duration)
+        samp_width = 2  # 16-bit audio
         with wave.open(output_path, "w") as wf:
             wf.setnchannels(1)
-            wf.setsampwidth(2)
+            wf.setsampwidth(samp_width)
             wf.setframerate(sample_rate)
-            wf.writeframes(struct.pack(f"<{num_frames}h", *([0] * num_frames)))
+            wf.writeframes(b"\0" * num_frames * samp_width)
 
     def generate_audio(self, text: str, file_name_no_ext: Optional[str] = None) -> str:
         """
