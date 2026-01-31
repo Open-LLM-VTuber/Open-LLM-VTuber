@@ -11,7 +11,12 @@ from loguru import logger
 from upgrade_codes.upgrade_manager import UpgradeManager
 
 from src.open_llm_vtuber.server import WebSocketServer
-from src.open_llm_vtuber.config_manager import Config, read_yaml, validate_config, deep_merge
+from src.open_llm_vtuber.config_manager import (
+    Config,
+    read_yaml,
+    validate_config,
+    deep_merge,
+)
 
 os.environ["HF_HOME"] = str(Path(__file__).parent / "models")
 os.environ["MODELSCOPE_CACHE"] = str(Path(__file__).parent / "models")
@@ -147,9 +152,7 @@ def run(console_log_level: str):
             alt_path.relative_to(characters_dir)
 
             if not alt_path.is_file():
-                logger.error(
-                    f"Default character config not found: {alt_path}"
-                )
+                logger.error(f"Default character config not found: {alt_path}")
             else:
                 alt_data = read_yaml(str(alt_path)).get("character_config")
                 if alt_data:
@@ -157,22 +160,18 @@ def run(console_log_level: str):
                         config.character_config.model_dump(by_alias=True),
                         alt_data,
                     )
-                    config = validate_config({
-                        "system_config": config.system_config.model_dump(
-                            by_alias=True
-                        ),
-                        "character_config": merged,
-                        "live_config": config.live_config.model_dump(
-                            by_alias=True
-                        ),
-                    })
-                    logger.info(
-                        f"Applied default character config: {default_char}"
+                    config = validate_config(
+                        {
+                            "system_config": config.system_config.model_dump(
+                                by_alias=True
+                            ),
+                            "character_config": merged,
+                            "live_config": config.live_config.model_dump(by_alias=True),
+                        }
                     )
+                    logger.info(f"Applied default character config: {default_char}")
                 else:
-                    logger.warning(
-                        f"No character_config found in {alt_path}"
-                    )
+                    logger.warning(f"No character_config found in {alt_path}")
         except ValueError:
             logger.error(
                 f"Invalid default character config path (path traversal attempt): {default_char}"
