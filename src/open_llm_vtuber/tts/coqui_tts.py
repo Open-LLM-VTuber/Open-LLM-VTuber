@@ -67,6 +67,9 @@ class TTSEngine(TTSInterface):
         Args:
             output_path: The path to save the output WAV file.
             duration: The duration of the silence in seconds.
+
+        Returns:
+            None.
         """
         sample_rate = self.tts.synthesizer.output_sample_rate
         num_frames = int(sample_rate * duration)
@@ -87,19 +90,19 @@ class TTSEngine(TTSInterface):
         Returns:
             Path to generated audio file
         """
-        # Sanitize: strip and check for pronounceable content
-        text = text.strip()
-        output_path = self.generate_cache_file_name(file_name_no_ext, "wav")
-
-        if not text or not any(c.isalnum() for c in text):
-            logger.warning(
-                f"coqui_tts: Skipping non-pronounceable text: "
-                f"'{text[:100]}{'...' if len(text) > 100 else ''}'"
-            )
-            self._generate_silent_wav(output_path)
-            return output_path
-
         try:
+            # Sanitize: strip and check for pronounceable content
+            text = text.strip()
+            output_path = self.generate_cache_file_name(file_name_no_ext, "wav")
+
+            if not text or not any(c.isalnum() for c in text):
+                logger.warning(
+                    f"coqui_tts: Skipping non-pronounceable text: "
+                    f"'{text[:100]}{'...' if len(text) > 100 else ''}'"
+                )
+                self._generate_silent_wav(output_path)
+                return output_path
+
             # Generate speech based on speaker mode
             if self.is_multi_speaker and self.speaker_wav:
                 # Multi-speaker mode with voice cloning
