@@ -141,8 +141,13 @@ def run(console_log_level: str):
     # Apply default character config override if specified
     default_char = config.system_config.default_character_config
     if default_char:
-        alt_path = os.path.join(config.system_config.config_alts_dir, default_char)
-        if not os.path.exists(alt_path):
+        characters_dir = config.system_config.config_alts_dir
+        alt_path = os.path.normpath(os.path.join(characters_dir, default_char))
+        if not alt_path.startswith(os.path.normpath(characters_dir)):
+            logger.error(
+                f"Invalid default character config path (path traversal?): {alt_path}"
+            )
+        elif not os.path.exists(alt_path):
             logger.error(f"Default character config not found: {alt_path}")
         else:
             alt_data = read_yaml(alt_path).get("character_config")
