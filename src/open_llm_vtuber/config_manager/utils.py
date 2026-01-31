@@ -171,9 +171,15 @@ def scan_config_alts_directory(config_alts_dir: str) -> list[dict]:
     return config_files
 
 
-def deep_merge(dict1: dict, dict2: dict) -> dict:
-    """
-    Recursively merges dict2 into dict1, prioritizing values from dict2.
+def deep_merge(dict1: dict[str, Any], dict2: dict[str, Any]) -> dict[str, Any]:
+    """Recursively merges dict2 into dict1, prioritizing values from dict2.
+
+    Args:
+        dict1: The base dictionary.
+        dict2: The dictionary to merge into the base dictionary.
+
+    Returns:
+        The merged dictionary.
     """
     result = dict1.copy()
     for key, value in dict2.items():
