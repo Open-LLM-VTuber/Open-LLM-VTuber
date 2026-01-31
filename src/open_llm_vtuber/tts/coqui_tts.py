@@ -56,6 +56,8 @@ class TTSEngine(TTSInterface):
         except Exception as e:
             raise RuntimeError(f"Failed to initialize CoquiTTS model: {str(e)}")
 
+    _SAMPLE_WIDTH_BYTES = 2  # 16-bit audio
+
     def _generate_silent_wav(self, output_path: str, duration: float = 0.1) -> None:
         """Generate a short silent WAV file matching the model's sample rate.
 
@@ -65,12 +67,11 @@ class TTSEngine(TTSInterface):
         """
         sample_rate = self.tts.synthesizer.output_sample_rate
         num_frames = int(sample_rate * duration)
-        samp_width = 2  # 16-bit audio
         with wave.open(output_path, "w") as wf:
             wf.setnchannels(1)
-            wf.setsampwidth(samp_width)
+            wf.setsampwidth(self._SAMPLE_WIDTH_BYTES)
             wf.setframerate(sample_rate)
-            wf.writeframes(b"\0" * num_frames * samp_width)
+            wf.writeframes(b"\0" * num_frames * self._SAMPLE_WIDTH_BYTES)
 
     def generate_audio(self, text: str, file_name_no_ext: Optional[str] = None) -> str:
         """
@@ -86,7 +87,10 @@ class TTSEngine(TTSInterface):
         # Sanitize: strip and check for pronounceable content
         text = text.strip()
         if not text or not any(c.isalnum() for c in text):
-            logger.warning(f"coqui_tts: Skipping non-pronounceable text: '{text}'")
+            logger.warning(
+                f"coqui_tts: Skipping non-pronounceable text: "
+                f"'{text[:100]}{'...' if len(text) > 100 else ''}'"
+            )
             output_path = self.generate_cache_file_name(file_name_no_ext, "wav")
             self._generate_silent_wav(output_path)
             return output_path
