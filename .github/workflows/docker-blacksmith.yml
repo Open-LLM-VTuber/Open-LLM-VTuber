@@ -21,7 +21,7 @@ permissions:
   packages: write
 
 env:
-  DOCKERFILE: dockerfiles/dockerfile
+  DOCKERFILE: dockerfile
   CONTEXT: .
   DOCKERHUB_IMAGE: ${{ vars.DOCKERHUB_IMAGE || 'openllmvtuber/open-llm-vtuber' }}
   GHCR_IMAGE: ${{ vars.GHCR_IMAGE || '' }}
