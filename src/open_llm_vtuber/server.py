@@ -14,7 +14,13 @@ from starlette.middleware.cors import CORSMiddleware
 from starlette.responses import Response
 from starlette.staticfiles import StaticFiles as StarletteStaticFiles
 
-from .routes import init_client_ws_route, init_webtool_routes, init_proxy_route
+from .routes import (
+    init_client_ws_route,
+    init_webtool_routes,
+    init_proxy_route,
+    init_direct_control_routes,
+)
+from .websocket_handler import WebSocketHandler
 from .service_context import ServiceContext
 from .config_manager.utils import Config
 
@@ -88,13 +94,17 @@ class WebSocketServer:
             allow_headers=["*"],
         )
 
-        # Include routes, passing the context instance
-        # The context will be populated during the initialize step
-        self.app.include_router(
-            init_client_ws_route(default_context_cache=self.default_context_cache),
-        )
+        # Create a shared WebSocket handler and include routes
+        ws_handler = WebSocketHandler(self.default_context_cache)
+        self.app.include_router(init_client_ws_route(ws_handler=ws_handler))
         self.app.include_router(
             init_webtool_routes(default_context_cache=self.default_context_cache),
+        )
+        self.app.include_router(
+            init_direct_control_routes(
+                ws_handler=ws_handler,
+                default_context_cache=self.default_context_cache,
+            ),
         )
 
         # Initialize and include proxy routes if proxy is enabled

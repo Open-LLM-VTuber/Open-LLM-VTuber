@@ -3,16 +3,18 @@ import json
 from uuid import uuid4
 import numpy as np
 from datetime import datetime
-from fastapi import APIRouter, WebSocket, UploadFile, File, Response
+from fastapi import APIRouter, WebSocket, UploadFile, File, Response, HTTPException
+from pydantic import BaseModel, Field
 from starlette.responses import JSONResponse
 from starlette.websockets import WebSocketDisconnect
 from loguru import logger
 from .service_context import ServiceContext
 from .websocket_handler import WebSocketHandler
+from .conversations.direct_control import speak_text
 from .proxy_handler import ProxyHandler
 
 
-def init_client_ws_route(default_context_cache: ServiceContext) -> APIRouter:
+def init_client_ws_route(ws_handler: WebSocketHandler) -> APIRouter:
     """
     Create and return API routes for handling the `/client-ws` WebSocket connections.
 
@@ -24,7 +26,6 @@ def init_client_ws_route(default_context_cache: ServiceContext) -> APIRouter:
     """
 
     router = APIRouter()
-    ws_handler = WebSocketHandler(default_context_cache)
 
     @router.websocket("/client-ws")
     async def websocket_endpoint(websocket: WebSocket):
@@ -250,5 +251,197 @@ def init_webtool_routes(default_context_cache: ServiceContext) -> APIRouter:
         except Exception as e:
             logger.error(f"Error in TTS WebSocket connection: {e}")
             await websocket.close()
+
+    return router
+
+
+def init_direct_control_routes(
+    ws_handler: WebSocketHandler, default_context_cache: ServiceContext
+) -> APIRouter:
+    """REST API for direct control over the active chat session."""
+
+    router = APIRouter()
+
+    class CommonTarget(BaseModel):
+        client_uid: str | None = Field(
+            default=None, description="Target client UID; default last active"
+        )
+        apply_to_all: bool = Field(
+            default=False, description="Apply to all connected sessions"
+        )
+
+    class SpeakRequest(CommonTarget):
+        text: str = Field(..., description="Text for the avatar to speak")
+
+    class SpeakResponse(BaseModel):
+        status: str
+        targets: list[str]
+        message: str
+
+    @router.get(
+        "/v1/sessions",
+        response_model=list[str],
+        summary="List connected session UIDs",
+        tags=["sessions"],
+    )
+    async def list_sessions():
+        handler = ws_handler
+        if not handler:
+            return []
+        return list(handler.client_connections.keys())
+
+    def _resolve_targets(handler: WebSocketHandler, req: CommonTarget) -> list[str]:
+        if not handler or not handler.client_connections:
+            raise HTTPException(status_code=409, detail="No active chat session")
+
+        if req.apply_to_all:
+            return list(handler.client_connections.keys())
+
+        if req.client_uid:
+            if req.client_uid not in handler.client_connections:
+                raise HTTPException(status_code=404, detail="client_uid not connected")
+            return [req.client_uid]
+
+        # Default: last active session, then fallback to last connected
+        last_active = getattr(handler, "last_active_client_uid", None)
+        if last_active and last_active in handler.client_connections:
+            return [last_active]
+
+        keys = list(handler.client_connections.keys())
+        return [keys[-1]]
+
+    def _sync_memory(context) -> None:
+        if not context or not context.history_uid:
+            return
+        try:
+            context.agent_engine.set_memory_from_history(
+                conf_uid=context.character_config.conf_uid,
+                history_uid=context.history_uid,
+            )
+        except Exception as e:
+            logger.warning(f"Failed to sync memory from history: {e}")
+
+    @router.post(
+        "/v1/control/speak",
+        response_model=SpeakResponse,
+        summary="Speak text (TTS-only, no memory)",
+        tags=["control"],
+    )
+    async def speak(req: SpeakRequest):
+        handler = ws_handler
+        targets = _resolve_targets(handler, req)
+
+        delivered: list[str] = []
+        for uid in targets:
+            websocket = handler.client_connections.get(uid)
+            if not websocket:
+                continue
+
+            context = handler.client_contexts.get(uid)
+            if not context:
+                continue
+
+            async def ws_send(payload: str):
+                await websocket.send_text(payload)
+            await speak_text(
+                context,
+                ws_send,
+                req.text,
+            )
+            delivered.append(uid)
+
+        return SpeakResponse(status="ok", targets=delivered, message="Speech delivered")
+
+    class SystemRequest(CommonTarget):
+        text: str = Field(
+            ..., description="Invisible instruction to apply to the agent"
+        )
+        mode: str = Field(
+            default="append", description="append | prepend | reset"
+        )
+
+    class SystemResponse(BaseModel):
+        status: str
+        targets: list[str]
+        message: str
+
+    @router.post(
+        "/v1/control/system",
+        response_model=SystemResponse,
+        summary="Apply invisible system instruction",
+        tags=["control"],
+    )
+    async def system_message(req: SystemRequest):
+        handler = ws_handler
+        targets = _resolve_targets(handler, req)
+
+        applied: list[str] = []
+        for uid in targets:
+            context = handler.client_contexts.get(uid)
+            if not context:
+                continue
+
+            if not hasattr(context, "_original_system_prompt") or not context._original_system_prompt:
+                context._original_system_prompt = context.system_prompt or ""
+
+            current = context.system_prompt or ""
+            instruction = req.text or ""
+            mode = (req.mode or "append").lower()
+
+            if mode == "reset":
+                new_system = context._original_system_prompt
+            elif mode == "prepend":
+                new_system = f"{instruction}\n\n{current}" if instruction else current
+            else:
+                new_system = f"{current}\n\n{instruction}" if instruction else current
+
+            context.system_prompt = new_system
+            if hasattr(context.agent_engine, "set_system"):
+                try:
+                    context.agent_engine.set_system(new_system)
+                except Exception as e:
+                    logger.warning(f"Failed applying system prompt to agent: {e}")
+
+            applied.append(uid)
+
+        return SystemResponse(
+            status="ok",
+            targets=applied,
+            message=("system prompt updated" if req.mode != "reset" else "system prompt reset"),
+        )
+
+    class RespondRequest(CommonTarget):
+        text: str = Field(
+            ..., description="User-style message to trigger an agent response"
+        )
+
+    class RespondResponse(BaseModel):
+        status: str
+        targets: list[str]
+        message: str
+
+    @router.post(
+        "/v1/control/respond",
+        response_model=RespondResponse,
+        summary="Trigger LLM response (remembered)",
+        tags=["control"],
+    )
+    async def respond(req: RespondRequest):
+        handler = ws_handler
+        targets = _resolve_targets(handler, req)
+
+        triggered: list[str] = []
+        for uid in targets:
+            websocket = handler.client_connections.get(uid)
+            if not websocket:
+                continue
+            # Ensure agent memory is synced with current history before LLM turn
+            context = handler.client_contexts.get(uid)
+            _sync_memory(context)
+            data = {"type": "text-input", "text": req.text}
+            await handler._handle_conversation_trigger(websocket, uid, data)
+            triggered.append(uid)
+
+        return RespondResponse(status="ok", targets=triggered, message="Agent response triggered")
 
     return router
