@@ -117,7 +117,7 @@
 또한 설치 가이드를 참고하여 더 이상 필요 없는 추가 도구(`uv`, `ffmpeg`, `deeplx` 등)가 있는지 점검하세요.
 
 
-## 🤗 기여하고 싶으시다면?
+## 🤗 개발에 기여하고 싶으시다면?
 [Development Guide](https://docs.llmvtuber.com/docs/development-guide/overview)를 참고하세요.
 
 
