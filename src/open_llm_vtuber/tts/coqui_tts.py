@@ -1,4 +1,5 @@
 import os
+import wave
 from typing import Optional
 from TTS.api import TTS
 from loguru import logger
@@ -55,6 +56,29 @@ class TTSEngine(TTSInterface):
         except Exception as e:
             raise RuntimeError(f"Failed to initialize CoquiTTS model: {str(e)}")
 
+    _SAMPLE_WIDTH_BYTES = 2  # 16-bit audio
+    _DEFAULT_SILENCE_DURATION_S = 0.1
+
+    def _generate_silent_wav(
+        self, output_path: str, duration: float = _DEFAULT_SILENCE_DURATION_S
+    ) -> None:
+        """Generate a short silent WAV file matching the model's sample rate.
+
+        Args:
+            output_path: The path to save the output WAV file.
+            duration: The duration of the silence in seconds.
+
+        Returns:
+            None.
+        """
+        sample_rate = self.tts.synthesizer.output_sample_rate
+        num_frames = int(sample_rate * duration)
+        with wave.open(output_path, "w") as wf:
+            wf.setnchannels(1)
+            wf.setsampwidth(self._SAMPLE_WIDTH_BYTES)
+            wf.setframerate(sample_rate)
+            wf.writeframes(b"\0" * num_frames * self._SAMPLE_WIDTH_BYTES)
+
     def generate_audio(self, text: str, file_name_no_ext: Optional[str] = None) -> str:
         """
         Generate speech audio file using CoquiTTS.
@@ -67,8 +91,17 @@ class TTSEngine(TTSInterface):
             Path to generated audio file
         """
         try:
-            # Generate output path
+            # Sanitize: strip and check for pronounceable content
+            text = text.strip()
             output_path = self.generate_cache_file_name(file_name_no_ext, "wav")
+
+            if not text or not any(c.isalnum() for c in text):
+                logger.warning(
+                    f"coqui_tts: Skipping non-pronounceable text: "
+                    f"'{text[:100]}{'...' if len(text) > 100 else ''}'"
+                )
+                self._generate_silent_wav(output_path)
+                return output_path
 
             # Generate speech based on speaker mode
             if self.is_multi_speaker and self.speaker_wav:
