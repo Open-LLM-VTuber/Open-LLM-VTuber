@@ -11,7 +11,12 @@ from loguru import logger
 from upgrade_codes.upgrade_manager import UpgradeManager
 
 from src.open_llm_vtuber.server import WebSocketServer
-from src.open_llm_vtuber.config_manager import Config, read_yaml, validate_config
+from src.open_llm_vtuber.config_manager import (
+    Config,
+    read_yaml,
+    validate_config,
+    deep_merge,
+)
 
 os.environ["HF_HOME"] = str(Path(__file__).parent / "models")
 os.environ["MODELSCOPE_CACHE"] = str(Path(__file__).parent / "models")
@@ -137,6 +142,35 @@ def run(console_log_level: str):
 
     # Load configurations from yaml file
     config: Config = validate_config(read_yaml("conf.yaml"))
+
+    # Apply default character config override if specified
+    default_char = config.system_config.default_character_config
+    if default_char:
+        try:
+            characters_dir = Path(config.system_config.config_alts_dir).resolve()
+            alt_path = (characters_dir / default_char).resolve()
+            alt_path.relative_to(characters_dir)
+
+            if not alt_path.is_file():
+                logger.error(f"Default character config not found: {alt_path}")
+            else:
+                alt_data = read_yaml(str(alt_path)).get("character_config")
+                if alt_data:
+                    merged = deep_merge(
+                        config.character_config.model_dump(by_alias=True),
+                        alt_data,
+                    )
+                    new_config_data = config.model_dump(by_alias=True)
+                    new_config_data["character_config"] = merged
+                    config = validate_config(new_config_data)
+                    logger.info(f"Applied default character config: {default_char}")
+                else:
+                    logger.warning(f"No character_config found in {alt_path}")
+        except ValueError:
+            logger.error(
+                f"Invalid default character config path (path traversal attempt): {default_char}"
+            )
+
     server_config = config.system_config
 
     if server_config.enable_proxy:
