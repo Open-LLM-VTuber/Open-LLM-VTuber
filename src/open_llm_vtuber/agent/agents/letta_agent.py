@@ -79,8 +79,6 @@ class LettaAgent(AgentInterface):
                 continue
             elif token.message_type == "assistant_message":
                 # This part is the result that needs to be displayed, it is the final result
-                # logger.info('Test message')
-                # logger.info(token)
                 token = token.content
             else:
                 continue

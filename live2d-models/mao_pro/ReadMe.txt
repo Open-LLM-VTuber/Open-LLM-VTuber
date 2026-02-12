@@ -1,4 +1,3 @@
-
 ============================================================
 
     Sample Model
@@ -13,7 +12,6 @@
 
     ※”Motions for magic effects and facial expressions”, which are not used in conjunction with the general motions for facial expressions, are also included.
 
-
 ------------------------------
     License Agreement
 ------------------------------
@@ -26,14 +24,12 @@
     For more information on licensing, please see the following page.
     https://www.live2d.com/en/download/sample-data/
 
-
 ------------------------------
     Creator
 ------------------------------
 
     - Illustration: Live2D Inc.
     - Modeling: Live2D Inc.
-
 
 ------------------------------
     Sample Data Composition
@@ -49,8 +45,6 @@
         - Physical calculation setting file (.physics3.json)
         - Pose setting file (.pose3.json)
         - Display auxiliary file (.cdi3.json)
-
-
 ------------------------------
     Release Note
 ------------------------------
@@ -73,3 +67,5 @@
 
     - 2022-06-23
         - Released.
+
+
