@@ -33,9 +33,7 @@ ENGLISH README | [中文 README](./README.CN.md) | [한국어 README](./README.K
 >
 > 调查问卷(中文): https://wj.qq.com/s2/16150415/f50a/
 
-
-
-> :warning: This project is in its early stages and is currently under **active development**.
+> :warning: This project is undergoing a major redevelopment for v2.0.0, and active maintenance of the current version is limited. We value community input and will consider incorporating suggestions into v2.0.0. Development progress for v2.0.0 can be viewed in the [v2.0.0 branch](https://github.com/Open-LLM-VTuber/Open-LLM-VTuber/tree/v2.0.0).
 
 > :warning: If you want to run the server remotely and access it on a different machine, such as running the server on your computer and access it on your phone, you will need to configure `https`, because the microphone on the front end will only launch in a secure context (a.k.a. https or localhost). See [MDN Web Doc](https://developer.mozilla.org/en-US/docs/Web/API/MediaDevices/getUserMedia). Therefore, you should configure https with a reverse proxy to access the page on a remote machine (non-localhost).
 
