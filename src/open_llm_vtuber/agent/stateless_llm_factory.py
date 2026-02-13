@@ -31,6 +31,13 @@ class LLMFactory:
             or llm_provider == "groq_llm"
             or llm_provider == "mistral_llm"
             or llm_provider == "lmstudio_llm"
+            or llm_provider == "siliconflow_llm"
+            or llm_provider == "aliyun_bailian_llm"
+            or llm_provider == "moonshot_llm"
+            or llm_provider == "openrouter_llm"
+            or llm_provider == "minimax_llm"
+            or llm_provider == "steepspeed_llm"
+            or llm_provider == "volcengine_llm"
         ):
             return OpenAICompatibleLLM(
                 model=kwargs.get("model"),

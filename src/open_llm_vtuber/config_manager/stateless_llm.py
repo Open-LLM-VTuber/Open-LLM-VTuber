@@ -141,6 +141,23 @@ class OpenAIConfig(OpenAICompatibleConfig):
         "system", alias="interrupt_method"
     )
 
+# Extend OpenAI-compatible provider configuration classes
+
+class AliyunBailianConfig(OpenAICompatibleConfig):
+    """Configuration for Aliyun Bailian API."""
+    base_url: str = Field("https://dashscope.aliyuncs.com/compatible-mode/v1", alias="base_url")
+
+class DeepseekConfig(OpenAICompatibleConfig):
+    """Configuration for Deepseek API."""
+    base_url: str = Field("https://api.deepseek.com/v1", alias="base_url")
+
+class GroqConfig(OpenAICompatibleConfig):
+    """Configuration for Groq API."""
+
+    base_url: str = Field("https://api.groq.com/openai/v1", alias="base_url")
+    interrupt_method: Literal["system", "user"] = Field(
+        "system", alias="interrupt_method"
+    )
 
 class GeminiConfig(OpenAICompatibleConfig):
     """Configuration for Gemini API."""
@@ -152,35 +169,41 @@ class GeminiConfig(OpenAICompatibleConfig):
         "user", alias="interrupt_method"
     )
 
+class MinimaxConfig(OpenAICompatibleConfig):
+    """Configuration for Minimax API."""
+    base_url: str = Field("https://api.minimax.chat/v1", alias="base_url")
+
+class MoonshotConfig(OpenAICompatibleConfig):
+    """Configuration for Moonshot API."""
+    base_url: str = Field("https://api.moonshot.cn/v1", alias="base_url")
 
 class MistralConfig(OpenAICompatibleConfig):
     """Configuration for Mistral API."""
-
     base_url: str = Field("https://api.mistral.ai/v1", alias="base_url")
     interrupt_method: Literal["system", "user"] = Field(
         "user", alias="interrupt_method"
     )
 
+class OpenRouterConfig(OpenAICompatibleConfig):
+    """Configuration for OpenRouter API."""
+    base_url: str = Field("https://openrouter.ai/api/v1", alias="base_url")
+
+class SiliconFlowConfig(OpenAICompatibleConfig):
+    """Configuration for SiliconFlow API."""
+    base_url: str = Field("https://api.siliconflow.cn", alias="base_url")
+
+class SteepSpeedConfig(OpenAICompatibleConfig):
+    """Configuration for SteepSpeed API."""
+    base_url: str = Field("https://api.stepfun.com/v1", alias="base_url")
+
+class VolcEngineConfig(OpenAICompatibleConfig):
+    """Configuration for VolcEngine API."""
+    base_url: str = Field("https://ark.cn-beijing.volces.com/api/v3", alias="base_url")
 
 class ZhipuConfig(OpenAICompatibleConfig):
     """Configuration for Zhipu API."""
-
     base_url: str = Field("https://open.bigmodel.cn/api/paas/v4/", alias="base_url")
 
-
-class DeepseekConfig(OpenAICompatibleConfig):
-    """Configuration for Deepseek API."""
-
-    base_url: str = Field("https://api.deepseek.com/v1", alias="base_url")
-
-
-class GroqConfig(OpenAICompatibleConfig):
-    """Configuration for Groq API."""
-
-    base_url: str = Field("https://api.groq.com/openai/v1", alias="base_url")
-    interrupt_method: Literal["system", "user"] = Field(
-        "system", alias="interrupt_method"
-    )
 
 
 class ClaudeConfig(StatelessLLMBaseConfig):
@@ -249,6 +272,15 @@ class StatelessLLMConfigs(I18nMixin, BaseModel):
     claude_llm: ClaudeConfig | None = Field(None, alias="claude_llm")
     llama_cpp_llm: LlamaCppConfig | None = Field(None, alias="llama_cpp_llm")
     mistral_llm: MistralConfig | None = Field(None, alias="mistral_llm")
+    
+# New OpenAI-compatible provider configurations
+    siliconflow_llm: SiliconFlowConfig | None = Field(None, alias="siliconflow_llm")
+    aliyun_bailian_llm: AliyunBailianConfig | None = Field(None, alias="aliyun_bailian_llm")
+    moonshot_llm: MoonshotConfig | None = Field(None, alias="moonshot_llm")
+    openrouter_llm: OpenRouterConfig | None = Field(None, alias="openrouter_llm")
+    minimax_llm: MinimaxConfig | None = Field(None, alias="minimax_llm")
+    steepspeed_llm: SteepSpeedConfig | None = Field(None, alias="steepspeed_llm")
+    volcengine_llm: VolcEngineConfig | None = Field(None, alias="volcengine_llm")
 
     DESCRIPTIONS: ClassVar[dict[str, Description]] = {
         "stateless_llm_with_template": Description(
@@ -281,5 +313,26 @@ class StatelessLLMConfigs(I18nMixin, BaseModel):
         ),
         "llama_cpp_llm": Description(
             en="Configuration for local Llama.cpp", zh="本地Llama.cpp配置"
+        ),
+        "siliconflow_llm": Description(
+            en="Configuration for SiliconFlow API", zh="SiliconFlow API 配置"
+        ),
+        "aliyun_bailian_llm": Description(
+            en="Configuration for Aliyun Bailian API", zh="阿里云百炼 API 配置"
+        ),
+        "moonshot_llm": Description(
+            en="Configuration for Moonshot API", zh="月之暗面 API 配置"
+        ),
+        "openrouter_llm": Description(
+            en="Configuration for OpenRouter API", zh="OpenRouter API 配置"
+        ),
+        "minimax_llm": Description(
+            en="Configuration for Minimax API", zh="Minimax API 配置"
+        ),
+        "steepspeed_llm": Description(
+            en="Configuration for SteepSpeed API", zh="阶跃星辰 API 配置"
+        ),
+        "volcengine_llm": Description(
+            en="Configuration for VolcEngine API", zh="火山引擎 API 配置"
         ),
     }

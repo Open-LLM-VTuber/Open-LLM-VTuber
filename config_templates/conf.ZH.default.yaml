@@ -169,6 +169,48 @@ character_config:
         model: 'llama-3.3-70b-versatile' # 使用的模型
         temperature: 1.0 # 温度，介于 0 到 2 之间
 
+      # 硅基流动 SiliconFlow API 配置
+      siliconflow_llm:
+        llm_api_key: 'Your SiliconFlow API key' # SiliconFlow API 密钥
+        model: 'deepseek-ai/DeepSeek-V3.1' # 使用的模型
+        temperature: 1.0 # 温度，介于 0 到 2 之间
+
+      # 阿里云百炼 API 配置
+      aliyun_bailian_llm:
+        llm_api_key: 'Your Aliyun Bailian API key' # 阿里云百炼 API 密钥
+        model: 'qwen3-235b-a22b-instruct-2507' # 使用的模型
+        temperature: 1.0 # 温度，介于 0 到 2 之间
+
+      # 月之暗面 API 配置
+      moonshot_llm:
+        llm_api_key: 'Your Moonshot API key' # 月之暗面 API 密钥
+        model: 'kimi-k2-0905-preview' # 使用的模型
+        temperature: 1.0 # 温度，介于 0 到 2 之间
+
+      # OpenRouter API 配置
+      openrouter_llm:
+        llm_api_key: 'Your OpenRouter API key' # OpenRouter API 密钥
+        model: 'mistralai/mistral-7b-instruct:free' # 使用的模型
+        temperature: 1.0 # 温度，介于 0 到 2 之间
+
+      # Minimax API 配置
+      minimax_llm:
+        llm_api_key: 'Your Minimax API key' # Minimax API 密钥
+        model: 'MiniMax-M2' # 使用的模型
+        temperature: 1.0 # 温度，介于 0 到 2 之间
+
+      # 阶跃星辰 API 配置
+      steepspeed_llm:
+        llm_api_key: 'Your SteepSpeed API key' # 阶跃星辰 API 密钥
+        model: 'step-3' # 使用的模型
+        temperature: 1.0 # 温度，介于 0 到 2 之间
+
+      # 火山引擎 API 配置
+      volcengine_llm:
+        llm_api_key: 'Your VolcEngine API key' # 火山引擎 API 密钥
+        model: 'doubao-seed-1-6-flash-250828' # 使用的模型
+        temperature: 1.0 # 温度，介于 0 到 2 之间
+
   # === 自动语音识别 ===
   asr_config:
     # 语音转文本模型选项：'faster_whisper', 'whisper_cpp', 'whisper', 'azure_asr', 'fun_asr', 'groq_whisper_asr', 'sherpa_onnx_asr'

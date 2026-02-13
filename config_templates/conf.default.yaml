@@ -170,6 +170,48 @@ character_config:
         model: 'llama-3.3-70b-versatile'
         temperature: 1.0 # value between 0 to 2
 
+      # SiliconFlow API Configuration
+      siliconflow_llm:
+        llm_api_key: 'Your SiliconFlow API key'
+        model: 'deepseek-ai/DeepSeek-V3.1'
+        temperature: 1.0 # value between 0 to 2
+
+      # Aliyun Bailian API Configuration
+      aliyun_bailian_llm:
+        llm_api_key: 'Your Aliyun Bailian API key'
+        model: 'qwen3-235b-a22b-instruct-2507'
+        temperature: 1.0 # value between 0 to 2
+
+      # Moonshot API Configuration
+      moonshot_llm:
+        llm_api_key: 'Your Moonshot API key'
+        model: 'kimi-k2-0905-preview'
+        temperature: 1.0 # value between 0 to 2
+
+      # OpenRouter API Configuration
+      openrouter_llm:
+        llm_api_key: 'Your OpenRouter API key'
+        model: 'mistralai/mistral-7b-instruct:free'
+        temperature: 1.0 # value between 0 to 2
+
+      # Minimax API Configuration
+      minimax_llm:
+        llm_api_key: 'Your Minimax API key'
+        model: 'MiniMax-M2'
+        temperature: 1.0 # value between 0 to 2
+
+      # SteepSpeed API Configuration
+      steepspeed_llm:
+        llm_api_key: 'Your SteepSpeed API key'
+        model: 'step-3'
+        temperature: 1.0 # value between 0 to 2
+
+      # VolcEngine API Configuration
+      volcengine_llm:
+        llm_api_key: 'Your VolcEngine API key'
+        model: 'doubao-seed-1-6-flash-250828'
+        temperature: 1.0 # value between 0 to 2
+
   # === Automatic Speech Recognition ===
   asr_config:
     # speech to text model options: 'faster_whisper', 'whisper_cpp', 'whisper', 'azure_asr', 'fun_asr', 'groq_whisper_asr', 'sherpa_onnx_asr'
