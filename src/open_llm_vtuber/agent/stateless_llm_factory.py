@@ -30,6 +30,7 @@ class LLMFactory:
             or llm_provider == "deepseek_llm"
             or llm_provider == "groq_llm"
             or llm_provider == "mistral_llm"
+            or llm_provider == "edenai_llm"
             or llm_provider == "lmstudio_llm"
         ):
             return OpenAICompatibleLLM(

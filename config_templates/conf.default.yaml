@@ -57,7 +57,7 @@ character_config:
         # examples: 
         # 'openai_compatible_llm', 'llama_cpp_llm', 'claude_llm', 'ollama_llm'
         # 'openai_llm', 'gemini_llm', 'zhipu_llm', 'deepseek_llm', 'groq_llm'
-        # 'mistral_llm', 'lmstudio_llm', and more
+        # 'mistral_llm', 'edenai_llm', 'lmstudio_llm', and more
         llm_provider: 'ollama_llm'
         # let ai speak as soon as the first comma is received on the first sentence
         # to reduced latency.
@@ -163,6 +163,14 @@ character_config:
       mistral_llm:
         llm_api_key: 'Your Mistral API key'
         model: 'pixtral-large-latest'
+        temperature: 1.0 # value between 0 to 2
+
+      # Eden AI: OpenAI-compatible gateway, 600+ models, one key, EU/GDPR.
+      # Models use provider/model naming (e.g. anthropic/claude-sonnet-4-5).
+      edenai_llm:
+        base_url: 'https://api.edenai.run/v3'
+        llm_api_key: 'Your Eden AI API key'
+        model: 'openai/gpt-4o-mini'
         temperature: 1.0 # value between 0 to 2
 
       groq_llm:

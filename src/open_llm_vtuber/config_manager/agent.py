@@ -27,6 +27,7 @@ class BasicMemoryAgentConfig(I18nMixin, BaseModel):
         "deepseek_llm",
         "groq_llm",
         "mistral_llm",
+        "edenai_llm",
     ] = Field(..., alias="llm_provider")
 
     faster_first_response: Optional[bool] = Field(True, alias="faster_first_response")
