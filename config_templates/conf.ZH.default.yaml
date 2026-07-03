@@ -58,7 +58,7 @@ character_config:
         # 例如：
         # 'openai_compatible_llm', 'llama_cpp_llm', 'claude_llm', 'ollama_llm'
         # 'openai_llm', 'gemini_llm', 'zhipu_llm', 'deepseek_llm', 'groq_llm'
-        # 'mistral_llm', 'lmstudio_llm' 之类的
+        # 'mistral_llm', 'edenai_llm', 'lmstudio_llm' 之类的
         llm_provider: 'ollama_llm' # 使用的 LLM 提供商
         # 是否在第一句回应时遇上逗号就直接生成音频以减少首句延迟（默认：True）
         faster_first_response: True
@@ -162,6 +162,14 @@ character_config:
       mistral_llm:
         llm_api_key: 'Your Mistral API key' # Mistral API 密钥
         model: 'pixtral-large-latest' # 使用的模型
+        temperature: 1.0 # 温度，介于 0 到 2 之间
+
+      # Eden AI：兼容 OpenAI 的网关，600+ 模型，一个密钥，符合欧盟/GDPR。
+      # 模型使用 provider/model 命名（例如 anthropic/claude-sonnet-4-5）。
+      edenai_llm:
+        base_url: 'https://api.edenai.run/v3' # Eden AI 端点
+        llm_api_key: 'Your Eden AI API key' # Eden AI API 密钥
+        model: 'openai/gpt-4o-mini' # 使用的模型
         temperature: 1.0 # 温度，介于 0 到 2 之间
 
       groq_llm:

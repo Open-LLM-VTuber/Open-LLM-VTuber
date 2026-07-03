@@ -162,6 +162,19 @@ class MistralConfig(OpenAICompatibleConfig):
     )
 
 
+class EdenAIConfig(OpenAICompatibleConfig):
+    """Configuration for Eden AI (OpenAI-compatible gateway, 600+ models, EU/GDPR).
+
+    Models use `provider/model` naming, e.g. `openai/gpt-4o-mini`,
+    `anthropic/claude-sonnet-4-5`, `google/gemini-2.5-flash`.
+    """
+
+    base_url: str = Field("https://api.edenai.run/v3", alias="base_url")
+    interrupt_method: Literal["system", "user"] = Field(
+        "user", alias="interrupt_method"
+    )
+
+
 class ZhipuConfig(OpenAICompatibleConfig):
     """Configuration for Zhipu API."""
 
@@ -249,6 +262,7 @@ class StatelessLLMConfigs(I18nMixin, BaseModel):
     claude_llm: ClaudeConfig | None = Field(None, alias="claude_llm")
     llama_cpp_llm: LlamaCppConfig | None = Field(None, alias="llama_cpp_llm")
     mistral_llm: MistralConfig | None = Field(None, alias="mistral_llm")
+    edenai_llm: EdenAIConfig | None = Field(None, alias="edenai_llm")
 
     DESCRIPTIONS: ClassVar[dict[str, Description]] = {
         "stateless_llm_with_template": Description(
@@ -270,6 +284,10 @@ class StatelessLLMConfigs(I18nMixin, BaseModel):
         ),
         "mistral_llm": Description(
             en="Configuration for Mistral API", zh="Mistral API 配置"
+        ),
+        "edenai_llm": Description(
+            en="Configuration for Eden AI (OpenAI-compatible, EU/GDPR)",
+            zh="Eden AI 配置（兼容 OpenAI，符合欧盟/GDPR）",
         ),
         "zhipu_llm": Description(en="Configuration for Zhipu API", zh="Zhipu API 配置"),
         "deepseek_llm": Description(
