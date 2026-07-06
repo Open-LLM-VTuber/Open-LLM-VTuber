@@ -1,4 +1,8 @@
+import re
 from typing import AsyncIterator, List, Dict, Any
+
+from loguru import logger
+
 from .agent_interface import AgentInterface
 from ..output_types import SentenceOutput
 from ..transformers import (
@@ -109,19 +113,55 @@ class LettaAgent(AgentInterface):
 
         return "\n".join(message_parts)
 
+    @staticmethod
+    def _parse_data_url(data_url: str) -> str | None:
+        """Extract the raw base64 payload from a data URL."""
+        match = re.match(r"^data:image/[^;]+;base64,(.+)$", data_url)
+        if not match:
+            return None
+        return match.group(1)
+
     def _to_messages(self, input_data: BatchInput) -> List[Dict[str, Any]]:
         """
-        Prepare messages list without image support.
+        Prepare messages with image support in Letta's native content-part format.
         """
         messages = []
+        text_content = self._to_text_prompt(input_data)
 
         if input_data.images:
             content = []
-            text_content = self._to_text_prompt(input_data)
             content.append({"type": "text", "text": text_content})
+
+            for img_data in input_data.images:
+                if isinstance(img_data.data, str):
+                    raw_b64 = self._parse_data_url(img_data.data)
+                    if raw_b64 is not None:
+                        content.append(
+                            {
+                                "type": "image",
+                                "source": {
+                                    "type": "base64",
+                                    "data": raw_b64,
+                                    "media_type": img_data.mime_type,
+                                },
+                            }
+                        )
+                    else:
+                        logger.warning(
+                            f"Unrecognised image data format, skipping. "
+                            f"Expected a data: URL, got {img_data.data[:80]}…"
+                        )
+                        content.append({"type": "text", "text": "[Image]"})
+                else:
+                    logger.warning(
+                        f"Unexpected image data type ({type(img_data.data).__name__}), "
+                        f"skipping."
+                    )
+                    content.append({"type": "text", "text": "[Image]"})
+
             user_message = {"role": "user", "content": content}
         else:
-            user_message = {"role": "user", "content": self._to_text_prompt(input_data)}
+            user_message = {"role": "user", "content": text_content}
 
         messages.append(user_message)
 
