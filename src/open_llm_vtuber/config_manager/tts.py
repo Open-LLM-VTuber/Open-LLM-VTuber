@@ -481,6 +481,95 @@ class OpenAITTSConfig(I18nMixin):
     }
 
 
+class VoicePresetConfig(I18nMixin):
+    """Preset voice — pick a named voice from the model's voice catalog."""
+
+    name: str = Field(..., alias="name")
+
+    DESCRIPTIONS: ClassVar[Dict[str, Description]] = {
+        "name": Description(
+            en="Preset voice name (e.g. 'vivian'). Available names depend on the model.",
+            zh="预设语音名称（如 'vivian'）。可用名称取决于模型。",
+        ),
+    }
+
+
+class VoiceCloneConfig(I18nMixin):
+    """Voice cloning — reference audio + its transcript."""
+
+    audio: str = Field(..., alias="audio")
+    text: str = Field(..., alias="text")
+
+    DESCRIPTIONS: ClassVar[Dict[str, Description]] = {
+        "audio": Description(
+            en="Reference audio URL or data URI, e.g. file:///audio/voice.wav",
+            zh="参考音频 URL 或 data URI，例如 file:///audio/voice.wav",
+        ),
+        "text": Description(
+            en="Transcript of the reference audio",
+            zh="参考音频的文本转录",
+        ),
+    }
+
+
+class VoiceDesignConfig(I18nMixin):
+    """Voice design — natural-language description of the desired voice."""
+
+    prompt: str = Field(..., alias="prompt")
+
+    DESCRIPTIONS: ClassVar[Dict[str, Description]] = {
+        "prompt": Description(
+            en="Free-form voice description, e.g. 'female, energetic, slight rasp'",
+            zh="自由形式的语音描述，例如 'female, energetic, slight rasp'",
+        ),
+    }
+
+
+class VllmOmniTTSConfig(I18nMixin):
+    """Configuration for vLLM-Omni TTS.
+
+    Pick a model and exactly one voice-selection block (voice_preset,
+    voice_clone, or voice_design). Each handler validates that the chosen
+    mode is compatible with the model.
+    """
+
+    base_url: str = Field("http://localhost:8091/v1", alias="base_url")
+    model: str = Field(..., alias="model")
+    language: Optional[str] = Field(None, alias="language")
+    voice_preset: Optional[VoicePresetConfig] = Field(None, alias="voice_preset")
+    voice_clone: Optional[VoiceCloneConfig] = Field(None, alias="voice_clone")
+    voice_design: Optional[VoiceDesignConfig] = Field(None, alias="voice_design")
+
+    DESCRIPTIONS: ClassVar[Dict[str, Description]] = {
+        "base_url": Description(
+            en="Base URL of the vLLM-Omni server",
+            zh="vLLM-Omni 服务器的基础 URL",
+        ),
+        "model": Description(
+            en="Full HuggingFace model identifier as loaded by vLLM-Omni "
+            "(e.g. 'Qwen/Qwen3-TTS-12Hz-1.7B-Base'). Selects the handler.",
+            zh="vLLM-Omni 加载的完整 HuggingFace 模型标识符 "
+            "（例如 'Qwen/Qwen3-TTS-12Hz-1.7B-Base'）。用于选择处理器。",
+        ),
+        "language": Description(
+            en="Language hint: Auto, English, Chinese, Spanish, etc.",
+            zh="语言提示：Auto、English、Chinese、Spanish 等",
+        ),
+        "voice_preset": Description(
+            en="Voice-selection mode: pick a named preset voice",
+            zh="语音选择模式：选择一个命名预设语音",
+        ),
+        "voice_clone": Description(
+            en="Voice-selection mode: clone from a reference audio + transcript",
+            zh="语音选择模式：从参考音频和文本进行语音克隆",
+        ),
+        "voice_design": Description(
+            en="Voice-selection mode: free-form voice description prompt",
+            zh="语音选择模式：自由形式的语音描述提示",
+        ),
+    }
+
+
 class SparkTTSConfig(I18nMixin):
     """Configuration for Spark TTS."""
 
@@ -702,6 +791,7 @@ class TTSConfig(I18nMixin):
         "elevenlabs_tts",
         "cartesia_tts",
         "piper_tts",
+        "vllm_omni_tts",
     ] = Field(..., alias="tts_model")
 
     azure_tts: Optional[AzureTTSConfig] = Field(None, alias="azure_tts")
@@ -726,6 +816,7 @@ class TTSConfig(I18nMixin):
     elevenlabs_tts: ElevenLabsTTSConfig | None = Field(None, alias="elevenlabs_tts")
     cartesia_tts: CartesiaTTSConfig | None = Field(None, alias="cartesia_tts")
     piper_tts: Optional[PiperTTSConfig] = Field(None, alias="piper_tts")
+    vllm_omni_tts: Optional[VllmOmniTTSConfig] = Field(None, alias="vllm_omni_tts")
 
     DESCRIPTIONS: ClassVar[Dict[str, Description]] = {
         "tts_model": Description(
@@ -769,6 +860,10 @@ class TTSConfig(I18nMixin):
             en="Configuration for Cartesia TTS", zh="Cartesia TTS 配置"
         ),
         "piper_tts": Description(en="Configuration for Piper TTS", zh="Piper TTS 配置"),
+        "vllm_omni_tts": Description(
+            en="Configuration for vLLM-Omni TTS (Qwen3-TTS)",
+            zh="vLLM-Omni TTS（Qwen3-TTS）配置",
+        ),
     }
 
     @model_validator(mode="after")
@@ -813,4 +908,6 @@ class TTSConfig(I18nMixin):
 
         elif tts_model == "piper_tts" and values.piper_tts is not None:
             values.piper_tts.model_validate(values.piper_tts.model_dump())
+        elif tts_model == "vllm_omni_tts" and values.vllm_omni_tts is not None:
+            values.vllm_omni_tts.model_validate(values.vllm_omni_tts.model_dump())
         return values

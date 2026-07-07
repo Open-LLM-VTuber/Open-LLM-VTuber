@@ -274,7 +274,7 @@ character_config:
     #   'azure_tts', 'pyttsx3_tts', 'edge_tts', 'bark_tts',
     #   'cosyvoice_tts', 'melo_tts', 'coqui_tts', 'piper_tts',
     #   'fish_api_tts', 'x_tts', 'gpt_sovits_tts', 'sherpa_onnx_tts'
-    #   'minimax_tts', 'elevenlabs_tts', 'cartesia_tts'
+    #   'minimax_tts', 'elevenlabs_tts', 'cartesia_tts', 'vllm_omni_tts'
 
     siliconflow_tts:
       api_url: "https://api.siliconflow.cn/v1/audio/speech"
@@ -447,6 +447,28 @@ character_config:
       emotion: 'neutral' # 情感指导
       volume: 1.0 # 语音音量（0.5 到 2.0）
       speed: 1.0 # 语音速度（0.6 到 1.5）
+
+    vllm_omni_tts: # 通过 OpenAI 兼容 API 的 vLLM-Omni TTS（需要 vllm-omni 服务器）
+      base_url: 'http://localhost:8091/v1'
+      # vLLM-Omni 加载的完整 HuggingFace 模型标识符。用于选择处理器。
+      model: 'Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice'
+      language: 'Auto' # 语言：Auto、Chinese、English、Japanese、Korean 等
+
+      # 在下面三种语音选择模式中选择一种。每个处理器会校验所选模式
+      # 与模型是否兼容，不兼容时会立即报错。
+
+      # 模式 1 —— 通过名称选择预设语音。
+      voice_preset:
+        name: 'vivian'
+
+      # 模式 2 —— 通过参考音频 + 文本进行语音克隆。
+      # voice_clone:
+      #   audio: 'file:///audio/voice.wav'
+      #   text: '参考音频的文本转录。'
+
+      # 模式 3 —— 自由形式的语音描述提示。
+      # voice_design:
+      #   prompt: 'female, energetic, slight rasp'
 
   # =================== Voice Activity Detection ===================
   vad_config:

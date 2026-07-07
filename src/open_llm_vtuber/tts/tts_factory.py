@@ -211,6 +211,10 @@ class TTSFactory:
                 normalize_audio=kwargs.get("normalize_audio"),
                 use_cuda=kwargs.get("use_cuda"),
             )
+        elif engine_type == "vllm_omni_tts":
+            from .vllm_omni_tts import TTSEngine as VllmOmniTTSEngine
+
+            return VllmOmniTTSEngine(**kwargs)
         else:
             raise ValueError(f"Unknown TTS engine type: {engine_type}")
 

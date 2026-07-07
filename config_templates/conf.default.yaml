@@ -277,7 +277,7 @@ character_config:
     #   'azure_tts', 'pyttsx3_tts', 'edge_tts', 'bark_tts',
     #   'cosyvoice_tts', 'melo_tts', 'coqui_tts', 'piper_tts',
     #   'fish_api_tts', 'x_tts', 'gpt_sovits_tts', 'sherpa_onnx_tts'
-    #   'minimax_tts', 'elevenlabs_tts', 'cartesia_tts'
+    #   'minimax_tts', 'elevenlabs_tts', 'cartesia_tts', 'vllm_omni_tts'
 
     azure_tts:
       api_key: 'azure-api-key'
@@ -452,6 +452,28 @@ character_config:
       emotion: 'neutral' # Emotional guidance
       volume: 1.0 # Voice volume (0.5 to 2.0)
       speed: 1.0 # Voice speed (0.6 to 1.5)
+
+    vllm_omni_tts: # vLLM-Omni TTS via OpenAI-compatible API (requires vllm-omni server)
+      base_url: 'http://localhost:8091/v1'
+      # Full HuggingFace identifier as loaded by vLLM-Omni. Selects the handler.
+      model: 'Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice'
+      language: 'Auto' # Language: Auto, Chinese, English, Japanese, Korean, etc.
+
+      # Pick ONE voice-selection block below. Each handler validates that the
+      # chosen mode is compatible with the model and errors otherwise.
+
+      # Mode 1 — preset voice by name.
+      voice_preset:
+        name: 'vivian'
+
+      # Mode 2 — voice cloning from a reference clip + transcript.
+      # voice_clone:
+      #   audio: 'file:///audio/voice.wav'
+      #   text: 'Transcript of the reference audio.'
+
+      # Mode 3 — free-form voice description prompt.
+      # voice_design:
+      #   prompt: 'female, energetic, slight rasp'
 
   # =================== Voice Activity Detection ===================
   vad_config:
