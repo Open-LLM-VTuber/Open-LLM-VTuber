@@ -1,16 +1,40 @@
 import asyncio
 import json
 import re
+import time
 import uuid
 from datetime import datetime
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Union
 from loguru import logger
 
 from ..agent.output_types import DisplayText, Actions
 from ..live2d_model import Live2dModel
 from ..tts.tts_interface import TTSInterface
-from ..utils.stream_audio import prepare_audio_payload
+from ..utils.stream_audio import (
+    prepare_audio_payload,
+    prepare_stream_start_payload,
+    prepare_stream_chunk_payload,
+    prepare_stream_end_payload,
+)
 from .types import WebSocketSend
+
+
+class _StreamHandle:
+    """
+    A streamed-audio sentence occupying one sequence slot in the ordered
+    sender. Chunk payloads are produced by the TTS task and consumed by the
+    sender once this handle's sequence number is up; a ``None`` sentinel
+    marks the end of the stream.
+    """
+
+    def __init__(self, start_payload: Dict) -> None:
+        self.start_payload = start_payload
+        self.stream_id: str = start_payload["stream_id"]
+        self.chunks: asyncio.Queue[Optional[Dict]] = asyncio.Queue()
+
+    def finish(self) -> None:
+        """Signal that no more chunks will be produced."""
+        self.chunks.put_nowait(None)
 
 
 class TTSTaskManager:
@@ -19,8 +43,8 @@ class TTSTaskManager:
     def __init__(self) -> None:
         self.task_list: List[asyncio.Task] = []
         self._lock = asyncio.Lock()
-        # Queue to store ordered payloads
-        self._payload_queue: asyncio.Queue[Dict] = asyncio.Queue()
+        # Queue to store ordered payloads (complete dicts or _StreamHandles)
+        self._payload_queue: asyncio.Queue[Union[Dict, _StreamHandle]] = asyncio.Queue()
         # Task to handle sending payloads in order
         self._sender_task: Optional[asyncio.Task] = None
         # Counter for maintaining order
@@ -94,7 +118,7 @@ class TTSTaskManager:
         Process and send payloads in correct order.
         Runs continuously until all payloads are processed.
         """
-        buffered_payloads: Dict[int, Dict] = {}
+        buffered_payloads: Dict[int, Union[Dict, _StreamHandle]] = {}
 
         while True:
             try:
@@ -105,13 +129,34 @@ class TTSTaskManager:
                 # Send payloads in order
                 while self._next_sequence_to_send in buffered_payloads:
                     next_payload = buffered_payloads.pop(self._next_sequence_to_send)
-                    await websocket_send(json.dumps(next_payload))
+                    if isinstance(next_payload, _StreamHandle):
+                        await self._send_stream(next_payload, websocket_send)
+                    else:
+                        await websocket_send(json.dumps(next_payload))
                     self._next_sequence_to_send += 1
 
                 self._payload_queue.task_done()
 
             except asyncio.CancelledError:
                 break
+
+    async def _send_stream(
+        self, handle: _StreamHandle, websocket_send: WebSocketSend
+    ) -> None:
+        """
+        Send one streamed sentence: start payload, then chunks as they become
+        available from the TTS task, then the end payload. Blocks the ordered
+        sender until this stream completes, which keeps wire order strictly
+        sequential (later sentences keep synthesizing concurrently — their
+        chunks simply buffer in their own handles meanwhile).
+        """
+        await websocket_send(json.dumps(handle.start_payload))
+        while True:
+            chunk_payload = await handle.chunks.get()
+            if chunk_payload is None:
+                break
+            await websocket_send(json.dumps(chunk_payload))
+        await websocket_send(json.dumps(prepare_stream_end_payload(handle.stream_id)))
 
     async def _send_silent_payload(
         self,
@@ -137,6 +182,16 @@ class TTSTaskManager:
         sequence_number: int,
     ) -> None:
         """Process TTS generation and queue the result for ordered delivery"""
+        if callable(getattr(tts_engine, "async_generate_audio_streaming", None)):
+            await self._process_tts_streaming(
+                tts_text=tts_text,
+                display_text=display_text,
+                actions=actions,
+                tts_engine=tts_engine,
+                sequence_number=sequence_number,
+            )
+            return
+
         audio_file_path = None
         try:
             audio_file_path = await self._generate_audio(tts_engine, tts_text)
@@ -163,6 +218,66 @@ class TTSTaskManager:
                 tts_engine.remove_file(audio_file_path)
                 logger.debug("Audio cache file cleaned.")
 
+    async def _process_tts_streaming(
+        self,
+        tts_text: str,
+        display_text: DisplayText,
+        actions: Optional[Actions],
+        tts_engine: TTSInterface,
+        sequence_number: int,
+    ) -> None:
+        """
+        Stream TTS audio chunk by chunk instead of waiting for a full file.
+
+        The stream handle is enqueued at this sentence's sequence slot only
+        once the first chunk arrives (the sample rate is known then, and the
+        subtitle appears when audio is actually ready). If the engine fails
+        before producing any audio, fall back to a silent display payload.
+        """
+        stream_id = str(uuid.uuid4())
+        handle: Optional[_StreamHandle] = None
+        start_time = time.perf_counter()
+
+        logger.debug(f"🏃Streaming audio for '''{tts_text}'''...")
+        try:
+            async for chunk in tts_engine.async_generate_audio_streaming(tts_text):
+                chunk_payload, sample_rate = prepare_stream_chunk_payload(
+                    stream_id, chunk
+                )
+                if handle is None:
+                    logger.debug(
+                        f"First TTS chunk after {time.perf_counter() - start_time:.2f}s "
+                        f"for '''{tts_text}'''"
+                    )
+                    start_payload = prepare_stream_start_payload(
+                        stream_id=stream_id,
+                        sample_rate=sample_rate,
+                        display_text=display_text,
+                        actions=actions,
+                    )
+                    handle = _StreamHandle(start_payload)
+                    await self._payload_queue.put((handle, sequence_number))
+                handle.chunks.put_nowait(chunk_payload)
+
+        except Exception as e:
+            logger.error(f"Error streaming TTS audio: {e}")
+            if handle is None:
+                # Nothing was streamed — show the text silently so the
+                # sentence isn't lost and the sequence slot is filled.
+                payload = prepare_audio_payload(
+                    audio_path=None,
+                    display_text=display_text,
+                    actions=actions,
+                )
+                await self._payload_queue.put((payload, sequence_number))
+                return
+
+        finally:
+            # Always unblock the sender, including on mid-stream errors and
+            # task cancellation — otherwise it would wait for chunks forever.
+            if handle is not None:
+                handle.finish()
+
     async def _generate_audio(self, tts_engine: TTSInterface, text: str) -> str:
         """Generate audio file from text"""
         logger.debug(f"🏃Generating audio for '''{text}'''...")
@@ -173,6 +288,12 @@ class TTSTaskManager:
 
     def clear(self) -> None:
         """Clear all pending tasks and reset state"""
+        # Cancel in-flight TTS tasks before dropping the references —
+        # otherwise a task from an interrupted turn keeps running and
+        # enqueues its (stale) payload into the replaced queue below,
+        # leaking a sentence from the previous turn into the next one.
+        for task in self.task_list:
+            task.cancel()
         self.task_list.clear()
         if self._sender_task:
             self._sender_task.cancel()

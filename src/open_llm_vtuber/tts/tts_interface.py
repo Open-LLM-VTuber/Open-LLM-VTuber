@@ -6,6 +6,21 @@ from loguru import logger
 
 
 class TTSInterface(metaclass=abc.ABCMeta):
+    """
+    Interface for TTS engines.
+
+    Optional streaming protocol: an engine may additionally implement
+
+        async def async_generate_audio_streaming(self, text: str)
+
+    as an async generator yielding ``(chunk, sample_rate)`` tuples, where
+    ``chunk`` is either a ``numpy.ndarray`` of float32 samples in [-1.0, 1.0]
+    or raw little-endian int16 PCM ``bytes`` (mono). When present, the
+    conversation pipeline streams audio to the frontend chunk by chunk
+    instead of waiting for the full sentence file, reducing time-to-first-
+    audio. Engines that don't implement it keep the file-based path.
+    """
+
     async def async_generate_audio(self, text: str, file_name_no_ext=None) -> str:
         """
         Asynchronously generate speech audio file using TTS.

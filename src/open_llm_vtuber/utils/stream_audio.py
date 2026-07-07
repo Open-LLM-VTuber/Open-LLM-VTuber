@@ -4,6 +4,11 @@ from pydub.utils import make_chunks
 from ..agent.output_types import Actions
 from ..agent.output_types import DisplayText
 
+# Payload types for chunked TTS audio streaming. A streamed sentence is
+# delivered as one "audio-stream-start" (carrying display text/actions like
+# the legacy "audio" payload), N "audio-stream-chunk" messages of raw int16
+# PCM, and a closing "audio-stream-end".
+
 
 def _get_volume_by_chunks(audio: AudioSegment, chunk_length_ms: int) -> list:
     """
@@ -80,6 +85,67 @@ def prepare_audio_payload(
     }
 
     return payload
+
+
+def prepare_stream_start_payload(
+    stream_id: str,
+    sample_rate: int,
+    display_text: DisplayText = None,
+    actions: Actions = None,
+    forwarded: bool = False,
+) -> dict[str, any]:
+    """
+    Prepare the payload announcing a new streamed-audio sentence.
+
+    Carries the same display/action metadata as the legacy "audio" payload
+    so the frontend can show subtitles and expressions when playback starts.
+    """
+    if isinstance(display_text, DisplayText):
+        display_text = display_text.to_dict()
+
+    return {
+        "type": "audio-stream-start",
+        "stream_id": stream_id,
+        "sample_rate": sample_rate,
+        "display_text": display_text,
+        "actions": actions.to_dict() if actions else None,
+        "forwarded": forwarded,
+    }
+
+
+def prepare_stream_chunk_payload(stream_id: str, chunk) -> tuple[dict[str, any], int]:
+    """
+    Convert one TTS chunk into an "audio-stream-chunk" payload.
+
+    Accepts ``(data, sample_rate)`` where ``data`` is either raw little-endian
+    int16 PCM bytes or a numpy float32 array in [-1.0, 1.0] (mono).
+
+    Returns:
+        (payload, sample_rate)
+    """
+    data, sample_rate = chunk
+    if isinstance(data, (bytes, bytearray)):
+        pcm_bytes = bytes(data)
+    else:
+        import numpy as np
+
+        arr = np.clip(np.asarray(data, dtype=np.float32), -1.0, 1.0)
+        pcm_bytes = (arr * 32767.0).astype(np.int16).tobytes()
+
+    payload = {
+        "type": "audio-stream-chunk",
+        "stream_id": stream_id,
+        "chunk": base64.b64encode(pcm_bytes).decode("utf-8"),
+    }
+    return payload, int(sample_rate)
+
+
+def prepare_stream_end_payload(stream_id: str) -> dict[str, any]:
+    """Prepare the payload closing a streamed-audio sentence."""
+    return {
+        "type": "audio-stream-end",
+        "stream_id": stream_id,
+    }
 
 
 # Example usage:
