@@ -127,7 +127,8 @@ class TTSFactory:
             return MinimaxTTSEngine(
                 group_id=kwargs.get("group_id"),
                 api_key=kwargs.get("api_key"),
-                model=kwargs.get("model", "speech-02-turbo"),
+                api_url=kwargs.get("api_url", "https://api.minimax.io/v1/t2a_v2"),
+                model=kwargs.get("model", "speech-2.8-hd"),
                 voice_id=kwargs.get("voice_id", "male-qn-qingse"),
                 pronunciation_dict=kwargs.get("pronunciation_dict", ""),
             )

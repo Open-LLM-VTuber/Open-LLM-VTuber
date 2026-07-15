@@ -523,13 +523,17 @@ class MinimaxTTSConfig(I18nMixin):
 
     group_id: str = Field(..., alias="group_id")
     api_key: str = Field(..., alias="api_key")
-    model: str = Field("speech-02-turbo", alias="model")
+    api_url: str = Field("https://api.minimax.io/v1/t2a_v2", alias="api_url")
+    model: str = Field("speech-2.8-hd", alias="model")
     voice_id: str = Field("male-qn-qingse", alias="voice_id")
     pronunciation_dict: str = Field("", alias="pronunciation_dict")
 
     DESCRIPTIONS: ClassVar[Dict[str, Description]] = {
         "group_id": Description(en="Minimax group_id", zh="Minimax 的 group_id"),
         "api_key": Description(en="Minimax API key", zh="Minimax 的 API key"),
+        "api_url": Description(
+            en="MiniMax speech API endpoint", zh="MiniMax speech API endpoint"
+        ),
         "model": Description(en="Minimax model name", zh="Minimax 模型名称"),
         "voice_id": Description(en="Minimax voice id", zh="Minimax 语音 id"),
         "pronunciation_dict": Description(

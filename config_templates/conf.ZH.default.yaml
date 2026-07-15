@@ -417,12 +417,13 @@ character_config:
       api_key: 'not-needed' # 如果服务器需要，可填写 API 密钥
       base_url: 'http://localhost:8880/v1' # TTS 服务器的基础 URL 地址
       file_extension: 'mp3' # 音频文件格式（'mp3' 或 'wav'）
-    # 详细文档见：https://platform.minimaxi.com/document/Announcement
+    # For more details, see: https://platform.minimaxi.com/docs/api-reference/speech-t2a-http
     minimax_tts:
       group_id: '' # minimax 的 group_id
       api_key: '' # minimax 的 api_key
-      # 支持的模型: 'speech-02-hd', 'speech-02-turbo'（推荐使用 'speech-02-turbo'）
-      model: 'speech-02-turbo' # minimax 模型名称
+      api_url: 'https://api.minimaxi.com/v1/t2a_v2' # Speech synthesis API endpoint
+      # Recommended model: 'speech-2.8-hd'. See the documentation above for all supported models.
+      model: 'speech-2.8-hd' # MiniMax model name
       voice_id: 'female-shaonv' # minimax 语音 id，默认 'female-shaonv'
       # 自定义发音字典，默认为空。
       # 示例: '{"tone": ["测试/(ce4)(shi4)", "危险/dangerous"]}'

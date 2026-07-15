@@ -9,12 +9,14 @@ class TTSEngine(TTSInterface):
         self,
         group_id: str,
         api_key: str,
-        model: str = "speech-02-turbo",
+        api_url: str = "https://api.minimax.io/v1/t2a_v2",
+        model: str = "speech-2.8-hd",
         voice_id: str = "male-qn-qingse",
         pronunciation_dict: str = "",
     ):
         self.group_id = group_id
         self.api_key = api_key
+        self.api_url = api_url
         self.model = model
         self.voice_id = voice_id
         self.pronunciation_dict = pronunciation_dict
@@ -27,7 +29,7 @@ class TTSEngine(TTSInterface):
         import json
 
         file_name = self.generate_cache_file_name(file_name_no_ext, self.file_extension)
-        url = "https://api.minimax.chat/v1/t2a_v2?GroupId=" + self.group_id
+        params = {"GroupId": self.group_id} if self.group_id else None
         headers = {
             "accept": "application/json, text/plain, */*",
             "content-type": "application/json",
@@ -66,7 +68,13 @@ class TTSEngine(TTSInterface):
 
         try:
             response = requests.request(
-                "POST", url, stream=True, headers=headers, data=json.dumps(body)
+                "POST",
+                self.api_url,
+                params=params,
+                stream=True,
+                headers=headers,
+                data=json.dumps(body),
+                timeout=120,
             )
             audio = b""
             for chunk in response.raw:

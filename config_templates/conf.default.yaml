@@ -422,12 +422,13 @@ character_config:
       base_url: 'http://localhost:8880/v1' # Base URL of the TTS server
       file_extension: 'mp3' # Audio file format ('mp3' or 'wav')
 
-    # For more details, see: https://platform.minimaxi.com/document/Announcement
+    # For more details, see: https://platform.minimax.io/docs/api-reference/speech-t2a-http
     minimax_tts:
       group_id: '' # Your minimax group_id
       api_key: '' # Your minimax api_key
-      # Supported models: 'speech-02-hd', 'speech-02-turbo' (recommended: 'speech-02-turbo')
-      model: 'speech-02-turbo' # minimax model name
+      api_url: 'https://api.minimax.io/v1/t2a_v2' # Speech synthesis API endpoint
+      # Recommended model: 'speech-2.8-hd'. See the documentation above for all supported models.
+      model: 'speech-2.8-hd' # minimax model name
       voice_id: 'female-shaonv' # minimax voice id, default is 'female-shaonv'
       # Custom pronunciation dictionary, default empty.
       # Example: '{"tone": ["测试/(ce4)(shi4)", "危险/dangerous"]}'
