@@ -16,7 +16,7 @@ class VoiceRecognition(ASRInterface):
         self,
         subscription_key=os.getenv("AZURE_API_Key"),
         region=os.getenv("AZURE_REGION"),
-        languages=["en-US", "zh-CN"],
+        languages=["en-US", "zh-CN", "pt-BR"],
         callback: Callable = logger.info,
     ):
         if not subscription_key or not region:

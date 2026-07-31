@@ -177,7 +177,7 @@ character_config:
     azure_asr:
       api_key: 'azure_api_key' # Azure API 密钥
       region: 'eastus' # 区域
-      languages: ['en-US', 'zh-CN']  # 要检测的语言列表
+      languages: ['en-US', 'zh-CN', 'pt-BR']  # 要检测的语言列表
 
     # Faster Whisper 配置
     faster_whisper:
