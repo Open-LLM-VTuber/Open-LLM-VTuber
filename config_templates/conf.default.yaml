@@ -178,7 +178,7 @@ character_config:
     azure_asr:
       api_key: 'azure_api_key'
       region: 'eastus'
-      languages: ['en-US', 'zh-CN'] # List of languages to detect
+      languages: ['en-US', 'zh-CN', 'pt-BR'] # List of languages to detect
 
     # Faster whisper config
     faster_whisper:
