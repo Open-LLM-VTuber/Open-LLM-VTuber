@@ -48,6 +48,10 @@ bilibili = [
     "Brotli~=1.1.0",
     "yarl>=1.12.0,<2.0"
 ]
+packaging = [
+    "PyInstaller>=6.0.0",
+    "Pillow>=12.3.0",
+]
 
 [tool.pixi.project]
 channels = ["conda-forge"]

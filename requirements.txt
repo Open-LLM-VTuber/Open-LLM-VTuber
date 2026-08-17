@@ -257,6 +257,10 @@ platformdirs==4.5.1
     # via virtualenv
 pre-commit==4.5.1
     # via open-llm-vtuber
+pillow==11.4.0
+    # via open-llm-vtuber
+pyinstaller==6.14.2
+    # via open-llm-vtuber
 propcache==0.4.1
     # via
     #   aiohttp
