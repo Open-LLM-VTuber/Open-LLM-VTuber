@@ -1,0 +1,65 @@
+# Local development / self-hosting setup for Open-LLM-VTuber.
+#
+# Quick start:
+#   1. git submodule update --init --recursive     # frontend is a submodule; the image is broken without it
+#   2. cp config_templates/conf.default.yaml conf/conf.yaml
+#   3. edit conf/conf.yaml (API keys, character, TTS/ASR backends)
+#   4. docker compose up --build
+#   5. open http://localhost:12393
+#
+# The image entrypoint hard-requires /app/conf/conf.yaml and exits 1 without it.
+
+services:
+  open-llm-vtuber:
+    build:
+      context: .
+      dockerfile: dockerfile
+    image: open-llm-vtuber:local
+    container_name: open-llm-vtuber
+    restart: unless-stopped
+    ports:
+      # Host:container. conf.yaml must keep host 0.0.0.0 so the container
+      # is reachable from outside its network namespace.
+      - "12393:12393"
+    volumes:
+      # User config: conf.yaml, plus optional model_dict.json, live2d-models/,
+      # characters/, avatars/, backgrounds/ which the entrypoint symlinks in.
+      - ./conf:/app/conf
+      # Downloaded ASR/TTS weights. Persisted so they survive a rebuild —
+      # without this you re-download Whisper/sherpa models on every image change.
+      - ./models:/app/models
+      # Chat history is written to /app/chat_history and is lost on rebuild otherwise.
+      - ./chat_history:/app/chat_history
+    extra_hosts:
+      # Lets the container reach services on the host (ollama, llama.cpp,
+      # LM Studio, GPT-SoVITS). On Linux this mapping is not automatic.
+      # Pair with base_url: http://host.docker.internal:11434/v1 in conf.yaml.
+      - "host.docker.internal:host-gateway"
+    environment:
+      # run_server.py points HF_HOME/MODELSCOPE_CACHE at ./models already;
+      # set HF_ENDPOINT here if you need the mirror (equivalent to --hf_mirror).
+      # HF_ENDPOINT: https://hf-mirror.com
+      TZ: ${TZ:-UTC}
+    healthcheck:
+      # The frontend catch-all mount serves index.html at /.
+      test: ["CMD", "curl", "-fsS", "http://localhost:12393/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 120s
+
+  # Same service with NVIDIA GPU passthrough, for local Whisper / sherpa-onnx /
+  # llama.cpp inference. Requires the NVIDIA Container Toolkit on the host.
+  #   docker compose --profile gpu up --build open-llm-vtuber-gpu
+  open-llm-vtuber-gpu:
+    profiles: ["gpu"]
+    extends:
+      service: open-llm-vtuber
+    container_name: open-llm-vtuber-gpu
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
