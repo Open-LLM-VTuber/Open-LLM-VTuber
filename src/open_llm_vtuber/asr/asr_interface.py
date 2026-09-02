@@ -1,6 +1,7 @@
 import abc
-import numpy as np
 import asyncio
+
+import numpy as np
 
 
 class ASRInterface(metaclass=abc.ABCMeta):

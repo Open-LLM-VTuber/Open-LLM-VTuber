@@ -1,11 +1,13 @@
-from loguru import logger
-from upgrade_codes.upgrade_core.language import select_language
-from upgrade_codes.config_sync import ConfigSynchronizer
-from upgrade_codes.upgrade_core.upgrade_utils import UpgradeUtility
 import os
-from datetime import datetime
 import sys
-from upgrade_codes.upgrade_core.constants import USER_CONF, TEXTS
+from datetime import datetime
+
+from loguru import logger
+
+from upgrade_codes.config_sync import ConfigSynchronizer
+from upgrade_codes.upgrade_core.constants import TEXTS, USER_CONF
+from upgrade_codes.upgrade_core.language import select_language
+from upgrade_codes.upgrade_core.upgrade_utils import UpgradeUtility
 
 
 class UpgradeManager:
@@ -20,14 +22,14 @@ class UpgradeManager:
     def check_user_config_exists(self):
         if not os.path.exists(USER_CONF):
             print(self.texts[self.lang]["no_config_fatal"])
-            exit(1)
+            sys.exit(1)
 
     def _configure_logger(self):
         logger.remove()
         log_dir = "logs"
         os.makedirs(log_dir, exist_ok=True)
         log_file = os.path.join(
-            log_dir, f"upgrade_{datetime.now().strftime('%Y-%m-%d-%H-%M')}.log"
+            log_dir, f"upgrade_{datetime.now().strftime('%Y-%m-%d-%H-%M')}.log"  # noqa: DTZ005
         )
 
         logger.add(

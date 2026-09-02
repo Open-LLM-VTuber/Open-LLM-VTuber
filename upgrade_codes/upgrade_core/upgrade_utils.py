@@ -3,8 +3,10 @@ import platform
 import subprocess
 import sys
 import time
+from collections.abc import Callable
+from typing import Any
+
 from upgrade_codes.upgrade_core.constants import TEXTS, TEXTS_COMPARE
-from typing import Callable, Any
 
 
 class UpgradeUtility:
@@ -32,14 +34,14 @@ class UpgradeUtility:
                 False,
                 f"Command failed with error code {e.returncode}\nError: {e.stderr}",
             )
-        except Exception as e:
-            return False, f"Unexpected error: {str(e)}"
+        except Exception as e:  # noqa: BLE001 (intentional broad catch in runtime)
+            return False, f"Unexpected error: {e!s}"
 
     def check_git_installed(self):
         """Check if Git is installed"""
         command = "where git" if sys.platform == "win32" else "which git"
         try:
-            result = subprocess.run(command, shell=True, capture_output=True, text=True)
+            result = subprocess.run(command, shell=True, capture_output=True, text=True)  # noqa: PLW1510
             return result.returncode == 0
         except subprocess.SubprocessError:
             return False
@@ -139,7 +141,7 @@ class UpgradeUtility:
                             ).format(item=item)
                         )
                 return False
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 (intentional broad catch in runtime)
             msg = self.texts_compare.get(
                 "compare_error", "[ERROR] {name} comparison error: {error}"
             )

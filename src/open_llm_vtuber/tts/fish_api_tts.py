@@ -1,6 +1,8 @@
 from typing import Literal
+
 from fish_audio_sdk import Session, TTSRequest
 from loguru import logger
+
 from .tts_interface import TTSInterface
 
 
@@ -46,14 +48,17 @@ class TTSEngine(TTSInterface):
 
         try:
             with open(file_name, "wb") as f:
-                for chunk in self.session.tts(
-                    TTSRequest(
-                        text=text, reference_id=self.reference_id, latency=self.latency
+                f.writelines(
+                    self.session.tts(
+                        TTSRequest(
+                            text=text,
+                            reference_id=self.reference_id,
+                            latency=self.latency,
+                        )
                     )
-                ):
-                    f.write(chunk)
+                )
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 (intentional broad catch in runtime)
             logger.critical(f"\nError: Fish TTS API fail to generate audio: {e}")
             return None
 

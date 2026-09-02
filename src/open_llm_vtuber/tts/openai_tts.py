@@ -58,7 +58,7 @@ class TTSEngine(TTSInterface):
             logger.info(
                 f"OpenAI-compatible TTS Engine initialized, targeting endpoint: {base_url}"
             )
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 (intentional broad catch in runtime)
             logger.critical(f"Failed to initialize OpenAI client: {e}")
             self.client = None  # Ensure client is None if init fails
 
@@ -103,7 +103,7 @@ class TTSEngine(TTSInterface):
                 f"Successfully generated audio file via compatible endpoint: {speech_file_path}"
             )
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 (intentional broad catch in runtime)
             logger.critical(f"Error: OpenAI TTS unable to generate audio: {e}")
             # Clean up potentially incomplete file
             if speech_file_path.exists():

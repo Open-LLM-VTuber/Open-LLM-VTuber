@@ -1,10 +1,12 @@
 import os
+import platform
 import sys
 import time
-import platform
+
 from bark import SAMPLE_RATE, generate_audio, preload_models
 from loguru import logger
 from scipy.io.wavfile import write as write_wav
+
 from .tts_interface import TTSInterface
 
 current_dir = os.path.dirname(os.path.abspath(__file__))

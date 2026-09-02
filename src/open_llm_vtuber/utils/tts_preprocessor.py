@@ -1,6 +1,8 @@
 import re
 import unicodedata
+
 from loguru import logger
+
 from ..translate.translate_interface import TranslateInterface
 
 
@@ -33,7 +35,7 @@ def tts_filter(
     if ignore_asterisks:
         try:
             text = filter_asterisks(text)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 (intentional broad catch in runtime)
             logger.warning(f"Error ignoring asterisks: {e}")
             logger.warning(f"Text: {text}")
             logger.warning("Skipping...")
@@ -41,28 +43,28 @@ def tts_filter(
     if ignore_brackets:
         try:
             text = filter_brackets(text)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 (intentional broad catch in runtime)
             logger.warning(f"Error ignoring brackets: {e}")
             logger.warning(f"Text: {text}")
             logger.warning("Skipping...")
     if ignore_parentheses:
         try:
             text = filter_parentheses(text)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 (intentional broad catch in runtime)
             logger.warning(f"Error ignoring parentheses: {e}")
             logger.warning(f"Text: {text}")
             logger.warning("Skipping...")
     if ignore_angle_brackets:
         try:
             text = filter_angle_brackets(text)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 (intentional broad catch in runtime)
             logger.warning(f"Error ignoring angle brackets: {e}")
             logger.warning(f"Text: {text}")
             logger.warning("Skipping...")
     if remove_special_char:
         try:
             text = remove_special_characters(text)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 (intentional broad catch in runtime)
             logger.warning(f"Error removing special characters: {e}")
             logger.warning(f"Text: {text}")
             logger.warning("Skipping...")
@@ -71,7 +73,7 @@ def tts_filter(
             logger.info("Translating...")
             text = translator.translate(text)
             logger.info(f"Translated: {text}")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 (intentional broad catch in runtime)
             logger.critical(f"Error translating: {e}")
             logger.critical(f"Text: {text}")
             logger.warning("Skipping...")
@@ -94,12 +96,7 @@ def remove_special_characters(text: str) -> str:
 
     def is_valid_char(char: str) -> bool:
         category = unicodedata.category(char)
-        return (
-            category.startswith("L")
-            or category.startswith("N")
-            or category.startswith("P")
-            or char.isspace()
-        )
+        return category.startswith(("L", "N", "P")) or char.isspace()
 
     filtered_text = "".join(char for char in normalized_text if is_valid_char(char))
     return filtered_text

@@ -1,8 +1,10 @@
 # upgrade/constants.py
 # CURRENT_SCRIPT_VERSION = "0.2.0"
-from ruamel.yaml import YAML
-from src.open_llm_vtuber.config_manager.utils import load_text_file_with_guess_encoding
 import os
+
+from ruamel.yaml import YAML
+
+from src.open_llm_vtuber.config_manager.utils import load_text_file_with_guess_encoding
 
 USER_CONF = "conf.yaml"
 BACKUP_CONF = "conf.yaml.backup"

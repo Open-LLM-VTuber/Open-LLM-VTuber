@@ -1,41 +1,41 @@
-from typing import Any, Dict, List, Optional, Union
 import asyncio
 import json
-from loguru import logger
-from fastapi import WebSocket
+from typing import Any
+
 import numpy as np
+from fastapi import WebSocket
+from loguru import logger
 
 from ..agent.output_types import AudioOutput, SentenceOutput
-
+from ..chat_history_manager import store_message
+from ..service_context import ServiceContext
 from .conversation_utils import (
+    EMOJI_LIST,
+    cleanup_conversation,
     create_batch_input,
+    finalize_conversation_turn,
     process_agent_output,
     process_user_input,
-    finalize_conversation_turn,
-    cleanup_conversation,
-    EMOJI_LIST,
 )
+from .tts_manager import TTSTaskManager
 from .types import (
+    BroadcastContext,
     BroadcastFunc,
     GroupConversationState,
-    BroadcastContext,
     WebSocketSend,
 )
-from ..service_context import ServiceContext
-from ..chat_history_manager import store_message
-from .tts_manager import TTSTaskManager
 
 
 async def process_group_conversation(
-    client_contexts: Dict[str, ServiceContext],
-    client_connections: Dict[str, WebSocket],
+    client_contexts: dict[str, ServiceContext],
+    client_connections: dict[str, WebSocket],
     broadcast_func: BroadcastFunc,
-    group_members: List[str],
+    group_members: list[str],
     initiator_client_uid: str,
-    user_input: Union[str, np.ndarray],
-    images: Optional[List[Dict[str, Any]]] = None,
+    user_input: str | np.ndarray,
+    images: list[dict[str, Any]] | None = None,
     session_emoji: str = np.random.choice(EMOJI_LIST),
-    metadata: Optional[Dict[str, Any]] = None,
+    metadata: dict[str, Any] | None = None,
 ) -> None:
     """Process group conversation
 
@@ -128,10 +128,10 @@ async def process_group_conversation(
                     tts_manager=tts_managers[current_member_uid],
                     metadata=current_metadata,
                 )
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 (intentional broad catch in runtime)
                 logger.error(f"Error in group member turn: {e}")
                 await handle_member_error(
-                    broadcast_func, group_members, f"Error in conversation: {str(e)}"
+                    broadcast_func, group_members, f"Error in conversation: {e!s}"
                 )
 
     except asyncio.CancelledError:
@@ -142,7 +142,7 @@ async def process_group_conversation(
     except Exception as e:
         logger.error(f"Error in group conversation chain: {e}")
         await handle_member_error(
-            broadcast_func, group_members, f"Fatal error in conversation: {str(e)}"
+            broadcast_func, group_members, f"Fatal error in conversation: {e!s}"
         )
         raise
     finally:
@@ -154,7 +154,7 @@ async def process_group_conversation(
 
 
 def init_group_conversation_state(
-    group_members: List[str], session_emoji: str
+    group_members: list[str], session_emoji: str
 ) -> GroupConversationState:
     """Initialize group conversation state"""
     return GroupConversationState(
@@ -166,7 +166,7 @@ def init_group_conversation_state(
 
 
 def init_group_conversation_contexts(
-    client_contexts: Dict[str, ServiceContext],
+    client_contexts: dict[str, ServiceContext],
 ) -> None:
     """Initialize group conversation context for each AI participant"""
     ai_names = [ctx.character_config.character_name for ctx in client_contexts.values()]
@@ -189,11 +189,11 @@ def init_group_conversation_contexts(
 
 
 async def process_group_input(
-    user_input: Union[str, np.ndarray],
+    user_input: str | np.ndarray,
     initiator_context: ServiceContext,
     initiator_ws_send: WebSocketSend,
     broadcast_func: BroadcastFunc,
-    group_members: List[str],
+    group_members: list[str],
     initiator_client_uid: str,
 ) -> str:
     """Process and broadcast user input to group"""
@@ -208,7 +208,7 @@ async def process_group_input(
 
 async def broadcast_transcription(
     broadcast_func: BroadcastFunc,
-    group_members: List[str],
+    group_members: list[str],
     text: str,
     exclude_uid: str,
 ) -> None:
@@ -226,13 +226,13 @@ async def broadcast_transcription(
 async def handle_group_member_turn(
     current_member_uid: str,
     state: GroupConversationState,
-    client_contexts: Dict[str, ServiceContext],
-    client_connections: Dict[str, WebSocket],
+    client_contexts: dict[str, ServiceContext],
+    client_connections: dict[str, WebSocket],
     broadcast_func: BroadcastFunc,
-    group_members: List[str],
-    images: Optional[List[Dict[str, Any]]],
+    group_members: list[str],
+    images: list[dict[str, Any]] | None,
     tts_manager: TTSTaskManager,
-    metadata: Optional[Dict[str, Any]] = None,
+    metadata: dict[str, Any] | None = None,
 ) -> None:
     """Handle a single group member's conversation turn"""
     # Update current speaker before processing
@@ -299,8 +299,7 @@ async def handle_group_member_turn(
                 name=context.character_config.character_name,
                 avatar=context.character_config.avatar,
             )
-        else:
-            logger.debug("Skipping storing AI response to history (proactive speak)")
+        logger.debug("Skipping storing AI response to history (proactive speak)")
 
     state.memory_index[current_member_uid] = len(state.conversation_history)
     state.group_queue.append(current_member_uid)
@@ -310,7 +309,7 @@ async def handle_group_member_turn(
 
 
 async def broadcast_thinking_state(
-    broadcast_func: BroadcastFunc, group_members: List[str]
+    broadcast_func: BroadcastFunc, group_members: list[str]
 ) -> None:
     """Broadcast thinking state to group"""
     await broadcast_func(
@@ -325,7 +324,7 @@ async def broadcast_thinking_state(
 
 async def handle_member_error(
     broadcast_func: BroadcastFunc,
-    group_members: List[str],
+    group_members: list[str],
     error_message: str,
 ) -> None:
     """Handle and broadcast member error"""
@@ -343,8 +342,8 @@ async def process_member_response(
     batch_input: Any,
     current_ws_send: WebSocketSend,
     tts_manager: TTSTaskManager,
-    broadcast_func: Optional[BroadcastFunc] = None,
-    group_members: Optional[List[str]] = None,
+    broadcast_func: BroadcastFunc | None = None,
+    group_members: list[str] | None = None,
 ) -> str:
     """Process group member's response, handling text/audio and tool status events."""
     full_response = ""
@@ -383,11 +382,11 @@ async def process_member_response(
                     f"Received unexpected item type from agent chat stream: {type(output_item)}"
                 )
 
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 (intentional broad catch in runtime)
         logger.exception(f"Error processing group member response stream: {e}")
         await current_ws_send(
             json.dumps(
-                {"type": "error", "message": f"Error processing response: {str(e)}"}
+                {"type": "error", "message": f"Error processing response: {e!s}"}
             )
         )
 

@@ -1,8 +1,9 @@
 import base64
+
 from pydub import AudioSegment
 from pydub.utils import make_chunks
-from ..agent.output_types import Actions
-from ..agent.output_types import DisplayText
+
+from ..agent.output_types import Actions, DisplayText
 
 
 def _get_volume_by_chunks(audio: AudioSegment, chunk_length_ms: int) -> list:
@@ -62,7 +63,7 @@ def prepare_audio_payload(
     try:
         audio = AudioSegment.from_file(audio_path)
         audio_bytes = audio.export(format="wav").read()
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 (intentional broad catch in runtime)
         raise ValueError(
             f"Error loading or converting generated audio file to wav file '{audio_path}': {e}"
         )

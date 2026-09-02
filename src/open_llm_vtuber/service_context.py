@@ -1,41 +1,40 @@
-import os
 import json
-from typing import Callable
-from loguru import logger
+import os
+from collections.abc import Callable
+
 from fastapi import WebSocket
+from loguru import logger
 
 from prompts import prompt_loader
-from .live2d_model import Live2dModel
-from .asr.asr_interface import ASRInterface
-from .tts.tts_interface import TTSInterface
-from .vad.vad_interface import VADInterface
-from .agent.agents.agent_interface import AgentInterface
-from .translate.translate_interface import TranslateInterface
 
-from .mcpp.server_registry import ServerRegistry
-from .mcpp.tool_manager import ToolManager
-from .mcpp.mcp_client import MCPClient
-from .mcpp.tool_executor import ToolExecutor
-from .mcpp.tool_adapter import ToolAdapter
-
-from .asr.asr_factory import ASRFactory
-from .tts.tts_factory import TTSFactory
-from .vad.vad_factory import VADFactory
 from .agent.agent_factory import AgentFactory
-from .translate.translate_factory import TranslateFactory
-
+from .agent.agents.agent_interface import AgentInterface
+from .asr.asr_factory import ASRFactory
+from .asr.asr_interface import ASRInterface
 from .config_manager import (
-    Config,
     AgentConfig,
-    CharacterConfig,
-    SystemConfig,
     ASRConfig,
+    CharacterConfig,
+    Config,
+    SystemConfig,
+    TranslatorConfig,
     TTSConfig,
     VADConfig,
-    TranslatorConfig,
     read_yaml,
     validate_config,
 )
+from .live2d_model import Live2dModel
+from .mcpp.mcp_client import MCPClient
+from .mcpp.server_registry import ServerRegistry
+from .mcpp.tool_adapter import ToolAdapter
+from .mcpp.tool_executor import ToolExecutor
+from .mcpp.tool_manager import ToolManager
+from .translate.translate_factory import TranslateFactory
+from .translate.translate_interface import TranslateInterface
+from .tts.tts_factory import TTSFactory
+from .tts.tts_interface import TTSInterface
+from .vad.vad_factory import VADFactory
+from .vad.vad_interface import VADInterface
 
 
 class ServiceContext:
@@ -146,7 +145,7 @@ class ServiceContext:
                 )
                 logger.info("ToolManager initialized with dynamically fetched tools.")
 
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 (intentional broad catch in runtime)
                 logger.error(
                     f"Failed during dynamic MCP tool construction: {e}", exc_info=True
                 )
@@ -211,8 +210,8 @@ class ServiceContext:
         translate_engine: TranslateInterface | None,
         mcp_server_registery: ServerRegistry | None = None,
         tool_adapter: ToolAdapter | None = None,
-        send_text: Callable = None,
-        client_uid: str = None,
+        send_text: Callable | None = None,
+        client_uid: str | None = None,
     ) -> None:
         """
         Load the ServiceContext with the reference of the provided instances.
@@ -316,7 +315,7 @@ class ServiceContext:
         try:
             self.live2d_model = Live2dModel(live2d_model_name)
             self.character_config.live2d_model_name = live2d_model_name
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 (intentional broad catch in runtime)
             logger.critical(f"Error initializing Live2D: {e}")
             logger.critical("Try to proceed without Live2D...")
 
@@ -552,11 +551,11 @@ class ServiceContext:
                 json.dumps(
                     {
                         "type": "error",
-                        "message": f"Error switching configuration: {str(e)}",
+                        "message": f"Error switching configuration: {e!s}",
                     }
                 )
             )
-            raise e
+            raise
 
 
 def deep_merge(dict1, dict2):

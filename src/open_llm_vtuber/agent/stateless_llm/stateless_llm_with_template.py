@@ -4,80 +4,27 @@ compatible endpoints for language generation where the language model is not
 trained using a ChatML format.
 """
 
-import requests
 import json
+from collections.abc import AsyncIterator
+from typing import Any
+
+import requests
 from jinja2 import Template
 from loguru import logger
-from typing import AsyncIterator, List, Dict, Any
 
 from .stateless_llm_interface import StatelessLLMInterface
 
-
 TEMPLATES = {
     "LLAMA3": {
-        "template": "".join(
-            [
-                "{{ bos_token }}",
-                "{% for message in messages %}",
-                "    {{ '<|start_header_id|>' + message['role'] + '<|end_header_id|>\n\n'+ message['content'] | trim + '<|eot_id|>' }}",
-                "{% endfor %}",
-                "{% if add_generation_prompt %}",
-                "    {{ '<|start_header_id|>assistant<|end_header_id|>\n\n' }}",
-                "{% endif %}",
-            ]
-        ),
+        "template": "{{ bos_token }}{% for message in messages %}    {{ '<|start_header_id|>' + message['role'] + '<|end_header_id|>\n\n'+ message['content'] | trim + '<|eot_id|>' }}{% endfor %}{% if add_generation_prompt %}    {{ '<|start_header_id|>assistant<|end_header_id|>\n\n' }}{% endif %}",
         "eot_token": "<|eot_id|>",
     },
     "CHATML": {
-        "template": "".join(
-            [
-                "{{ bos_token }}",
-                "{% for message in messages %}",
-                "    {{ '<|im_start|>' + message['role'] + '\n' + message['content'] | trim + '<|im_end|>\n' }}",
-                "{% endfor %}",
-                "{% if add_generation_prompt %}",
-                "    {{ '<|im_start|>assistant\n' }}",
-                "{% endif %}",
-            ]
-        ),
+        "template": "{{ bos_token }}{% for message in messages %}    {{ '<|im_start|>' + message['role'] + '\n' + message['content'] | trim + '<|im_end|>\n' }}{% endfor %}{% if add_generation_prompt %}    {{ '<|im_start|>assistant\n' }}{% endif %}",
         "eot_token": "<|im_end|>",
     },
     "ALPACA": {
-        "template": "".join(
-            [
-                """
-{{ (messages|selectattr('role', 'equalto', 'system')|list|last).content|trim if (messages|selectattr('role', 'equalto', 'system')|list) else '' }}
-
-{% for message in messages %}
-{% if message['role'] == 'user' %}
-### Instruction:
-{{ message['content']|trim -}}
-{% if not loop.last %}
-
-
-{% endif %}
-{% elif message['role'] == 'assistant' %}
-### Response:
-{{ message['content']|trim -}}
-{% if not loop.last %}
-
-
-{% endif %}
-{% elif message['role'] == 'user_context' %}
-### Input:
-{{ message['content']|trim -}}
-{% if not loop.last %}
-
-
-{% endif %}
-{% endif %}
-{% endfor %}
-{% if add_generation_prompt and messages[-1]['role'] != 'assistant' %}
-### Response:
-{% endif %}
-        """
-            ]
-        ),
+        "template": """\n{{ (messages|selectattr('role', 'equalto', 'system')|list|last).content|trim if (messages|selectattr('role', 'equalto', 'system')|list) else '' }}\n\n{% for message in messages %}\n{% if message['role'] == 'user' %}\n### Instruction:\n{{ message['content']|trim -}}\n{% if not loop.last %}\n\n\n{% endif %}\n{% elif message['role'] == 'assistant' %}\n### Response:\n{{ message['content']|trim -}}\n{% if not loop.last %}\n\n\n{% endif %}\n{% elif message['role'] == 'user_context' %}\n### Input:\n{{ message['content']|trim -}}\n{% if not loop.last %}\n\n\n{% endif %}\n{% endif %}\n{% endfor %}\n{% if add_generation_prompt and messages[-1]['role'] != 'assistant' %}\n### Response:\n{% endif %}\n        """,
         "eot_token": "###",
     },
 }
@@ -119,7 +66,7 @@ class AsyncLLMWithTemplate(StatelessLLMInterface):
         )
 
     async def chat_completion(
-        self, messages: List[Dict[str, Any]], system: str = None
+        self, messages: list[dict[str, Any]], system: str | None = None
     ) -> AsyncIterator[str]:
         """
         Generates a chat completion using the OpenAI API asynchronously.
@@ -141,7 +88,7 @@ class AsyncLLMWithTemplate(StatelessLLMInterface):
         stream = None
         try:
             # If system prompt is provided, add it to the messages
-            messages_with_system: List[Dict[str, Any]] = messages
+            messages_with_system: list[dict[str, Any]] = messages
             if system:
                 messages_with_system = [
                     {"role": "system", "content": system},
@@ -152,12 +99,12 @@ class AsyncLLMWithTemplate(StatelessLLMInterface):
                 bos_token=bos_token,
                 add_generation_prompt=True,
             )
-            data: Dict = {
+            data: dict = {
                 "stream": True,
                 "temperature": self.temperature,
                 "prompt": prompt,
             }
-            with requests.post(
+            with requests.post(  # noqa: ASYNC210
                 self.completion_url, headers=self.prompt_headers, json=data, stream=True
             ) as response:
                 for line in response.iter_lines():
@@ -168,7 +115,7 @@ class AsyncLLMWithTemplate(StatelessLLMInterface):
                             if next_token == self.eot_token:
                                 break
                             yield next_token
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 (intentional broad catch in runtime)
             logger.error(f"LLM API WITH TEMPLATE: Error occurred: {e}")
             logger.info(f"Base URL: {self.base_url}")
             logger.info(f"Model: {self.model}")
@@ -190,6 +137,6 @@ class AsyncLLMWithTemplate(StatelessLLMInterface):
         return line
 
     def _process_line(self, line):
-        if not (("stop" in line) and (line["stop"])):
+        if not (line.get("stop")):
             token = line["content"]
             return token

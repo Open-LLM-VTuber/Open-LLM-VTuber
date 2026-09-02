@@ -1,10 +1,9 @@
-from typing import Type
 from .tts_interface import TTSInterface
 
 
 class TTSFactory:
     @staticmethod
-    def get_tts_engine(engine_type, **kwargs) -> Type[TTSInterface]:
+    def get_tts_engine(engine_type, **kwargs) -> type[TTSInterface]:
         if engine_type == "azure_tts":
             from .azure_tts import TTSEngine as AzureTTSEngine
 
@@ -155,6 +154,21 @@ class TTSFactory:
                 ),  # Will use default "mp3" if not in kwargs
             )
 
+        elif engine_type == "openai_compat_tts":
+            from .openai_compat_tts import TTSEngine as OpenAICompatTTSEngine
+
+            # Plain-requests, OpenAI-compatible /v1/audio/speech endpoint
+            # (fully offline when pointed at a local server). kwargs mirror the
+            # OpenAICompatTTSConfig field names (model_dump() is passed by the caller).
+            return OpenAICompatTTSEngine(
+                base_url=kwargs.get("base_url", "http://localhost:8880/v1"),
+                model=kwargs.get("model", "kokoro"),
+                voice=kwargs.get("voice", "af_sky"),
+                api_key=kwargs.get("api_key", "not-needed"),
+                file_extension=kwargs.get("file_extension", "mp3"),
+                speed=kwargs.get("speed", 1.0),
+                timeout=kwargs.get("timeout", 60),
+            )
         elif engine_type == "spark_tts":
             #         api_url: str = "http://127.0.0.1:7860/",
             #         prompt_wav_upload: str = "voice_clone/voice_clone_voice.wav",

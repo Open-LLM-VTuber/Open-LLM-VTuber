@@ -1,15 +1,14 @@
-from typing import Type, Literal
+from typing import Literal
+
 from loguru import logger
 
+from ..mcpp.tool_executor import ToolExecutor
+from ..mcpp.tool_manager import ToolManager
 from .agents.agent_interface import AgentInterface
 from .agents.basic_memory_agent import BasicMemoryAgent
-from .stateless_llm_factory import LLMFactory as StatelessLLMFactory
 from .agents.hume_ai import HumeAIAgent
 from .agents.letta_agent import LettaAgent
-
-from ..mcpp.tool_manager import ToolManager
-from ..mcpp.tool_executor import ToolExecutor
-from typing import Optional
+from .stateless_llm_factory import LLMFactory as StatelessLLMFactory
 
 
 class AgentFactory:
@@ -22,7 +21,7 @@ class AgentFactory:
         live2d_model=None,
         tts_preprocessor_config=None,
         **kwargs,
-    ) -> Type[AgentInterface]:
+    ) -> type[AgentInterface]:
         """Create an agent based on the configuration.
 
         Args:
@@ -63,8 +62,8 @@ class AgentFactory:
             tool_prompts = kwargs.get("system_config", {}).get("tool_prompts", {})
 
             # Extract MCP components/data needed by BasicMemoryAgent from kwargs
-            tool_manager: Optional[ToolManager] = kwargs.get("tool_manager")
-            tool_executor: Optional[ToolExecutor] = kwargs.get("tool_executor")
+            tool_manager: ToolManager | None = kwargs.get("tool_manager")
+            tool_executor: ToolExecutor | None = kwargs.get("tool_executor")
             mcp_prompt_string: str = kwargs.get("mcp_prompt_string", "")
 
             # Create the agent with the LLM and live2d_model

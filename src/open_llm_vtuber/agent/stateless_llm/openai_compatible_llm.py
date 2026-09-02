@@ -3,22 +3,24 @@ This class is responsible for handling asynchronous interaction with OpenAI API 
 endpoints for language generation.
 """
 
-from typing import AsyncIterator, List, Dict, Any
+from collections.abc import AsyncIterator
+from typing import Any
+
+from loguru import logger
 from openai import (
-    AsyncStream,
-    AsyncOpenAI,
-    APIError,
-    APIConnectionError,
-    RateLimitError,
-    NotGiven,
     NOT_GIVEN,
+    APIConnectionError,
+    APIError,
+    AsyncOpenAI,
+    AsyncStream,
+    NotGiven,
+    RateLimitError,
 )
 from openai.types.chat import ChatCompletionChunk
 from openai.types.chat.chat_completion_chunk import ChoiceDeltaToolCall
-from loguru import logger
 
-from .stateless_llm_interface import StatelessLLMInterface
 from ...mcpp.types import ToolCallObject
+from .stateless_llm_interface import StatelessLLMInterface
 
 
 class AsyncLLM(StatelessLLMInterface):
@@ -59,10 +61,10 @@ class AsyncLLM(StatelessLLMInterface):
 
     async def chat_completion(
         self,
-        messages: List[Dict[str, Any]],
-        system: str = None,
-        tools: List[Dict[str, Any]] | NotGiven = NOT_GIVEN,
-    ) -> AsyncIterator[str | List[ChoiceDeltaToolCall]]:
+        messages: list[dict[str, Any]],
+        system: str | None = None,
+        tools: list[dict[str, Any]] | NotGiven = NOT_GIVEN,
+    ) -> AsyncIterator[str | list[ChoiceDeltaToolCall]]:
         """
         Generates a chat completion using the OpenAI API asynchronously.
 

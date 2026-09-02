@@ -1,18 +1,16 @@
-import json
 import datetime
-from loguru import logger
+import json
+from collections.abc import AsyncIterator
 from typing import (
-    Dict,
     Any,
-    List,
     Literal,
-    Union,
-    AsyncIterator,
 )
 
-from .types import ToolCallObject
+from loguru import logger
+
 from .mcp_client import MCPClient
 from .tool_manager import ToolManager
+from .types import ToolCallObject
 
 
 class ToolExecutor:
@@ -24,7 +22,7 @@ class ToolExecutor:
         self._mcp_client = mcp_client
         self._tool_manager = tool_manager
 
-    def parse_tool_call(self, call: Union[Dict[str, Any], ToolCallObject]) -> tuple:
+    def parse_tool_call(self, call: dict[str, Any] | ToolCallObject) -> tuple:
         """Parse tool call from different formats.
 
         Returns:
@@ -81,7 +79,7 @@ class ToolExecutor:
         tool_id: str,
         result_content: str,
         is_error: bool,
-    ) -> Dict[str, Any] | None:
+    ) -> dict[str, Any] | None:
         """Format tool result for LLM API."""
         if caller_mode == "Claude":
             # Claude expects content as a list of blocks or a simple string
@@ -122,8 +120,8 @@ class ToolExecutor:
         return None
 
     def process_tool_from_prompt_json(
-        self, data: List[Dict[str, Any]]
-    ) -> List[Dict[str, Any]]:
+        self, data: list[dict[str, Any]]
+    ) -> list[dict[str, Any]]:
         """Process tool data from JSON in prompt mode."""
         parsed_tools = []
         for item in data:
@@ -146,7 +144,7 @@ class ToolExecutor:
                     logger.error(
                         "Failed to decode arguments JSON in prompt mode tool call"
                     )
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001 (intentional broad catch in runtime)
                     logger.error(f"Error processing prompt mode tool dict: {e}")
             else:
                 logger.warning("Skipping invalid tool structure in prompt mode JSON")
@@ -154,9 +152,9 @@ class ToolExecutor:
 
     async def execute_tools(
         self,
-        tool_calls: Union[List[Dict[str, Any]], List[ToolCallObject]],
+        tool_calls: list[dict[str, Any]] | list[ToolCallObject],
         caller_mode: Literal["Claude", "OpenAI", "Prompt"],
-    ) -> AsyncIterator[Dict[str, Any]]:
+    ) -> AsyncIterator[dict[str, Any]]:
         """Execute tools and yield status updates."""
         tool_results_for_llm = []
 
@@ -302,7 +300,7 @@ class ToolExecutor:
 
     async def run_single_tool(
         self, tool_name: str, tool_id: str, tool_input: Any
-    ) -> tuple[bool, str, Dict[str, Any], List[Dict[str, Any]]]:
+    ) -> tuple[bool, str, dict[str, Any], list[dict[str, Any]]]:
         """Run a single tool using MCPClient.
 
         Returns:
@@ -373,7 +371,7 @@ class ToolExecutor:
                 text_content = f"Error executing tool '{tool_name}': {e}"
                 content_items = [{"type": "error", "text": text_content}]
                 is_error = True
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 (intentional broad catch in runtime)
                 logger.exception(f"Unexpected error executing tool '{tool_name}': {e}")
                 text_content = f"Unexpected error executing tool '{tool_name}': {e}"
                 content_items = [{"type": "error", "text": text_content}]

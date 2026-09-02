@@ -2,8 +2,8 @@
 import os
 from pathlib import Path
 
-from loguru import logger
 from elevenlabs.client import ElevenLabs
+from loguru import logger
 
 from .tts_interface import TTSInterface
 
@@ -65,7 +65,7 @@ class TTSEngine(TTSInterface):
         except Exception as e:
             logger.critical(f"Failed to initialize ElevenLabs client: {e}")
             self.client = None
-            raise e
+            raise
 
     def generate_audio(
         self, text: str, file_name_no_ext: str | None = None
@@ -109,8 +109,7 @@ class TTSEngine(TTSInterface):
 
             # Write the audio data to file
             with open(speech_file_path, "wb") as f:
-                for chunk in audio:
-                    f.write(chunk)
+                f.writelines(audio)
 
             logger.info(
                 f"Successfully generated audio file via ElevenLabs: {speech_file_path}"
@@ -126,7 +125,7 @@ class TTSEngine(TTSInterface):
                     logger.error(
                         f"Could not remove incomplete file {speech_file_path}: {rm_err}"
                     )
-            raise e
+            raise
 
         return str(speech_file_path)
 

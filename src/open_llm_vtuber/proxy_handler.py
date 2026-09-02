@@ -1,10 +1,10 @@
 import asyncio
 import json
 import uuid
-from typing import Dict, Optional
+
+import aiohttp
 from fastapi import WebSocket
 from loguru import logger
-import aiohttp
 from starlette.websockets import WebSocketDisconnect
 
 from .proxy_message_queue import ProxyMessageQueue
@@ -24,17 +24,17 @@ class ProxyHandler:
             server_url: The WebSocket URL of the actual server
         """
         self.server_url = server_url
-        self.server_ws: Optional[aiohttp.ClientWebSocketResponse] = None
-        self.clients: Dict[str, WebSocket] = {}
+        self.server_ws: aiohttp.ClientWebSocketResponse | None = None
+        self.clients: dict[str, WebSocket] = {}
         self.connected = False
-        self.server_task: Optional[asyncio.Task] = None
+        self.server_task: asyncio.Task | None = None
         self.lock = asyncio.Lock()
 
         # Initialize message queue manager
         self.message_queue = ProxyMessageQueue()
-        self._heartbeat_task: Optional[asyncio.Task] = None
+        self._heartbeat_task: asyncio.Task | None = None
         self._running = True
-        self._session: Optional[aiohttp.ClientSession] = None
+        self._session: aiohttp.ClientSession | None = None
 
     async def connect_to_server(self):
         """Establish a WebSocket connection to the actual server"""
@@ -81,10 +81,10 @@ class ProxyHandler:
                     logger.info("Connection lost, attempting to reconnect...")
                     try:
                         await self.connect_to_server()
-                    except Exception as e:
+                    except Exception as e:  # noqa: BLE001 (intentional broad catch in runtime)
                         logger.error(f"Reconnection failed: {e}")
                         await asyncio.sleep(5)  # Wait before retry
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 (intentional broad catch in runtime)
                 logger.error(f"Error in connection maintenance: {e}")
                 self.connected = False
                 await asyncio.sleep(5)
@@ -113,7 +113,7 @@ class ProxyHandler:
             try:
                 init_request = {"type": "request-init-config", "client_id": client_id}
                 await self.forward_to_server(init_request, client_id)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 (intentional broad catch in runtime)
                 logger.error(f"Failed to request initialization: {e}")
 
         try:
@@ -140,7 +140,7 @@ class ProxyHandler:
 
         except WebSocketDisconnect:
             await self.handle_client_disconnect(client_id)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 (intentional broad catch in runtime)
             logger.error(f"Error handling client connection: {e}")
             await self.handle_client_disconnect(client_id)
 
@@ -189,7 +189,7 @@ class ProxyHandler:
         self.message_queue.clear()
         logger.info("Proxy disconnected from server")
 
-    async def forward_to_server(self, message: dict, sender_id: Optional[str] = None):
+    async def forward_to_server(self, message: dict, sender_id: str | None = None):
         """
         Forward a message from a client to the server.
 
@@ -238,10 +238,10 @@ class ProxyHandler:
                         break
                     elif msg.type == aiohttp.WSMsgType.CLOSED:
                         break
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001 (intentional broad catch in runtime)
                     logger.error(f"Error processing server message: {e}")
                     await asyncio.sleep(1)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 (intentional broad catch in runtime)
             logger.error(f"Error forwarding server messages: {e}")
         finally:
             self.connected = False
@@ -249,7 +249,7 @@ class ProxyHandler:
             logger.info("Server message forwarding ended")
 
     async def broadcast_to_clients(
-        self, message: dict, exclude_client: Optional[str] = None
+        self, message: dict, exclude_client: str | None = None
     ):
         """
         Broadcast a message to all connected clients.
@@ -285,7 +285,7 @@ class ProxyHandler:
 
             try:
                 await websocket.send_json(message)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 (intentional broad catch in runtime)
                 logger.error(f"Error sending to client {client_id}: {e}")
                 disconnected_clients.append(client_id)
 
@@ -293,9 +293,7 @@ class ProxyHandler:
         for client_id in disconnected_clients:
             await self.handle_client_disconnect(client_id)
 
-    async def forward_with_broadcast(
-        self, message: dict, sender_id: Optional[str] = None
-    ):
+    async def forward_with_broadcast(self, message: dict, sender_id: str | None = None):
         """
         Forward message to server and handle any necessary broadcasting
 

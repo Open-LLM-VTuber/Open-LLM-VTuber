@@ -1,4 +1,5 @@
 import copy
+
 import yaml
 
 
@@ -63,12 +64,9 @@ class to_v_1_2_1:
 
             upgraded = copy.deepcopy(model)
 
-            if name in upgrades:
-                if name == "mao_pro":
-                    upgraded["url"] = (
-                        "/live2d-models/mao_pro/runtime/mao_pro.model3.json"
-                    )
-                    upgraded["kScale"] = 0.5
+            if name in upgrades and name == "mao_pro":
+                upgraded["url"] = "/live2d-models/mao_pro/runtime/mao_pro.model3.json"
+                upgraded["kScale"] = 0.5
 
             new_models.append(upgraded)
 
@@ -108,7 +106,7 @@ class to_v_1_2_1:
                     data, f, allow_unicode=True, sort_keys=False, default_style="'"
                 )  # Auto formatting with '
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 (intentional broad catch in runtime)
             raise RuntimeError(f"Failed to upgrade conf.yaml: {e}")
 
     def _migrate_field(self, config_section: dict, field_name: str):

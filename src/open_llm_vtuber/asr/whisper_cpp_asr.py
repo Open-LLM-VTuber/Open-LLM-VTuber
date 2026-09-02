@@ -1,7 +1,7 @@
-from pywhispercpp.model import Model
-
 import numpy as np
 from loguru import logger
+from pywhispercpp.model import Model
+
 from .asr_interface import ASRInterface
 
 
@@ -13,7 +13,7 @@ class VoiceRecognition(ASRInterface):
         language: str = "en",
         print_realtime=False,
         print_progress=False,
-        prompt: str = None,
+        prompt: str | None = None,
     ) -> None:
         self.model = Model(
             model=model_name,

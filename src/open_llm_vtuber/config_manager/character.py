@@ -1,13 +1,14 @@
 # config_manager/character.py
+from typing import ClassVar
+
 from pydantic import Field, field_validator
-from typing import Dict, ClassVar
-from .i18n import I18nMixin, Description
-from .asr import ASRConfig
-from .tts import TTSConfig
-from .vad import VADConfig
-from .tts_preprocessor import TTSPreprocessorConfig
 
 from .agent import AgentConfig
+from .asr import ASRConfig
+from .i18n import Description, I18nMixin
+from .tts import TTSConfig
+from .tts_preprocessor import TTSPreprocessorConfig
+from .vad import VADConfig
 
 
 class CharacterConfig(I18nMixin):
@@ -28,7 +29,7 @@ class CharacterConfig(I18nMixin):
         ..., alias="tts_preprocessor_config"
     )
 
-    DESCRIPTIONS: ClassVar[Dict[str, Description]] = {
+    DESCRIPTIONS: ClassVar[dict[str, Description]] = {
         "conf_name": Description(
             en="Name of the character configuration", zh="角色配置名称"
         ),

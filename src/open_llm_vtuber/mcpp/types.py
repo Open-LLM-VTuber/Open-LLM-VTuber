@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 from datetime import timedelta
-from typing import Optional, Any
+from typing import Any
 
 
 @dataclass
@@ -19,9 +19,9 @@ class MCPServer:
     name: str
     command: str
     args: list[str] = field(default_factory=list)
-    env: Optional[dict[str, str]] = None
+    env: dict[str, str] | None = None
     cwd: str | None = None
-    timeout: Optional[timedelta] = timedelta(seconds=30)
+    timeout: timedelta | None = timedelta(seconds=30)
     description: str = "No description available."
 
 
@@ -38,7 +38,7 @@ class FormattedTool:
 
     input_schema: dict[str, Any]
     related_server: str
-    generic_schema: Optional[dict[str, Any]] = None
+    generic_schema: dict[str, Any] | None = None
     description: str = "No description available."
 
 
@@ -70,7 +70,7 @@ class ToolCallObject:
         function (ToolCallFunctionObject): Function information for the tool call.
     """
 
-    id: Optional[str] = None
+    id: str | None = None
     type: str = "function"
     index: int = 0
     function: ToolCallFunctionObject = field(default_factory=ToolCallFunctionObject)

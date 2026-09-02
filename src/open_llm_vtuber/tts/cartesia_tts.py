@@ -1,12 +1,15 @@
 from __future__ import annotations
 
+import os
+
 # src/open_llm_vtuber/tts/cartesia_tts.py
 from pathlib import Path
 from typing import Literal
-import os
 
 from loguru import logger
+
 from open_llm_vtuber.config_manager.tts import CartesiaEmotions, CartesiaLanguages
+
 from .tts_interface import TTSInterface
 
 try:
@@ -89,7 +92,7 @@ class TTSEngine(TTSInterface):
         except Exception as e:
             logger.critical(f"Failed to initialize Cartesia client: {e}")
             self.client = None
-            raise e
+            raise
 
     def generate_audio(self, text: str, file_name_no_ext: str | None = None) -> str:
         """
@@ -132,8 +135,7 @@ class TTSEngine(TTSInterface):
             )
 
             with open(speech_file_path, "wb") as f:
-                for chunk in audio:
-                    f.write(chunk)
+                f.writelines(audio)
 
             logger.info(
                 f"Successfully generated audio file via Cartesia: {speech_file_path}"
@@ -148,7 +150,7 @@ class TTSEngine(TTSInterface):
                     logger.error(
                         f"Could not remove incomplete file {speech_file_path}: {rm_err}"
                     )
-            raise e
+            raise
 
         return str(speech_file_path)
 

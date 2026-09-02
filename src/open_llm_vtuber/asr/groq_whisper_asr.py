@@ -1,8 +1,10 @@
 import io
 import wave
+
 import numpy as np
-from loguru import logger
 from groq import Groq
+from loguru import logger
+
 from .asr_interface import ASRInterface
 
 

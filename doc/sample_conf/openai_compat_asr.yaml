@@ -1,0 +1,14 @@
+# OpenAI-compatible ASR engine — sample configuration
+#
+# Point `base_url` at any server that implements POST /v1/audio/transcriptions
+# (e.g. a local faster-whisper wrapper such as the GLaDOS local ASR server).
+# Runs fully OFFLINE when pointed at a local endpoint — no API key, no cloud.
+#
+# This file is validated by tests/test_openai_compat_sample_conf.py:
+# its keys must exactly match VoiceRecognition.__init__ arguments. If you add
+# or remove a parameter on the engine, update this file or the test fails.
+base_url: "http://localhost:8733/v1"
+model: "base"
+api_key: "local"
+language: "en"   # leave empty (null) for auto-detect
+timeout: 60

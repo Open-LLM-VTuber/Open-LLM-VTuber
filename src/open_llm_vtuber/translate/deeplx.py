@@ -1,6 +1,8 @@
 import json
+
 import httpx
 from loguru import logger
+
 from .translate_interface import TranslateInterface
 
 
@@ -23,6 +25,6 @@ class DeepLXTranslate(TranslateInterface):
         except Exception as e:
             logger.critical(f"Error translating text '{text}'. Error message: {e}")
             logger.critical(f"Response: {req}")
-            raise e
+            raise
 
         return res

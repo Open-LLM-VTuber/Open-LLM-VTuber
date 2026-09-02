@@ -1,6 +1,7 @@
 # config_manager/i18n.py
-from typing import Dict, ClassVar
-from pydantic import BaseModel, Field, ConfigDict
+from typing import ClassVar
+
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class MultiLingualString(BaseModel):
@@ -83,7 +84,7 @@ class I18nMixin(BaseModel):
 
     model_config = ConfigDict(populate_by_name=True)
 
-    DESCRIPTIONS: ClassVar[Dict[str, Description]] = {}
+    DESCRIPTIONS: ClassVar[dict[str, Description]] = {}
 
     @classmethod
     def get_field_description(
@@ -122,7 +123,7 @@ class I18nMixin(BaseModel):
         return None
 
     @classmethod
-    def get_field_options(cls, field_name: str) -> list | Dict | None:
+    def get_field_options(cls, field_name: str) -> list | dict | None:
         """
         Retrieves the options for a field, if any are defined.
 
@@ -133,7 +134,6 @@ class I18nMixin(BaseModel):
             The options for the field, which can be a list or a dictionary, or None if no options are defined.
         """
         field = cls.model_fields.get(field_name)
-        if field:
-            if hasattr(field, "options"):
-                return field.options
+        if field and hasattr(field, "options"):
+            return field.options
         return None

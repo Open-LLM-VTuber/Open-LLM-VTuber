@@ -54,16 +54,7 @@ class TencentTranslate(TranslateInterface):
         )
         signed_headers = "content-type;host;x-tc-action"
         hashed_request_payload = hashlib.sha256(payload.encode("utf-8")).hexdigest()
-        canonical_request = "\n".join(
-            [
-                "POST",
-                canonical_uri,
-                canonical_querystring,
-                canonical_headers,
-                signed_headers,
-                hashed_request_payload,
-            ]
-        )
+        canonical_request = f"POST\n{canonical_uri}\n{canonical_querystring}\n{canonical_headers}\n{signed_headers}\n{hashed_request_payload}"
 
         credential_scope = f"{date}/{self.service}/tc3_request"
         hashed_canonical_request = hashlib.sha256(
@@ -118,4 +109,4 @@ class TencentTranslate(TranslateInterface):
             return res.get("Response", {}).get("TargetText", "Translation failed")
         except Exception as e:
             logger.critical(f"API call error: {e}")
-            raise e
+            raise

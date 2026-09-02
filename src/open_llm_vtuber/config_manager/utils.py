@@ -1,19 +1,20 @@
 # config_manager/utils.py
-import yaml
-from pathlib import Path
-from typing import Union, Dict, Any, TypeVar
-from pydantic import BaseModel, ValidationError
 import os
 import re
+from pathlib import Path
+from typing import Any, TypeVar
+
 import chardet
+import yaml
 from loguru import logger
+from pydantic import BaseModel, ValidationError
 
 from .main import Config
 
 T = TypeVar("T", bound=BaseModel)
 
 
-def read_yaml(config_path: str) -> Dict[str, Any]:
+def read_yaml(config_path: str) -> dict[str, Any]:
     """
     Read the specified YAML configuration file with environment variable substitution
     and guess encoding. Return the configuration data as a dictionary.
@@ -34,7 +35,7 @@ def read_yaml(config_path: str) -> Dict[str, Any]:
 
     content = load_text_file_with_guess_encoding(config_path)
     if not content:
-        raise IOError(f"Failed to read configuration file: {config_path}")
+        raise OSError(f"Failed to read configuration file: {config_path}")
 
     # Replace environment variables
     pattern = re.compile(r"\$\{(\w+)\}")
@@ -49,7 +50,7 @@ def read_yaml(config_path: str) -> Dict[str, Any]:
         return yaml.safe_load(content)
     except yaml.YAMLError as e:
         logger.critical(f"Error parsing YAML file: {e}")
-        raise e
+        raise
 
 
 def validate_config(config_data: dict) -> Config:
@@ -71,7 +72,7 @@ def validate_config(config_data: dict) -> Config:
         logger.critical(f"Error validating configuration: {e}")
         logger.error("Configuration data:")
         logger.error(config_data)
-        raise e
+        raise
 
 
 def load_text_file_with_guess_encoding(file_path: str) -> str | None:
@@ -99,12 +100,12 @@ def load_text_file_with_guess_encoding(file_path: str) -> str | None:
         detected = chardet.detect(raw_data)
         if detected["encoding"]:
             return raw_data.decode(detected["encoding"])
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 (intentional broad catch in runtime)
         logger.error(f"Error detecting encoding for config file {file_path}: {e}")
     return None
 
 
-def save_config(config: BaseModel, config_path: Union[str, Path]):
+def save_config(config: BaseModel, config_path: str | Path):
     """
     Saves a Pydantic model to a YAML configuration file.
 

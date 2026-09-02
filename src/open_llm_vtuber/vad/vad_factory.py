@@ -1,10 +1,9 @@
-from typing import Type
 from .vad_interface import VADInterface
 
 
 class VADFactory:
     @staticmethod
-    def get_vad_engine(engine_type, **kwargs) -> Type[VADInterface]:
+    def get_vad_engine(engine_type, **kwargs) -> type[VADInterface]:
         if engine_type is None:
             return None
         if engine_type == "silero_vad":

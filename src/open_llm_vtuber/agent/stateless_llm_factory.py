@@ -1,19 +1,17 @@
-from typing import Type
-
 from loguru import logger
 
+from .stateless_llm.claude_llm import AsyncLLM as ClaudeLLM
+from .stateless_llm.ollama_llm import OllamaLLM
+from .stateless_llm.openai_compatible_llm import AsyncLLM as OpenAICompatibleLLM
 from .stateless_llm.stateless_llm_interface import StatelessLLMInterface
 from .stateless_llm.stateless_llm_with_template import (
     AsyncLLMWithTemplate as StatelessLLMWithTemplate,
 )
-from .stateless_llm.openai_compatible_llm import AsyncLLM as OpenAICompatibleLLM
-from .stateless_llm.ollama_llm import OllamaLLM
-from .stateless_llm.claude_llm import AsyncLLM as ClaudeLLM
 
 
 class LLMFactory:
     @staticmethod
-    def create_llm(llm_provider, **kwargs) -> Type[StatelessLLMInterface]:
+    def create_llm(llm_provider, **kwargs) -> type[StatelessLLMInterface]:
         """Create an LLM based on the configuration.
 
         Args:

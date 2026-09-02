@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from enum import Enum
-from typing import List, Optional, Dict, Any
+from typing import Any
 
 
 class ImageSource(Enum):
@@ -64,13 +64,11 @@ class TextData:
 
     source: TextSource
     content: str
-    from_name: Optional[str] = None
+    from_name: str | None = None
 
 
 class BaseInput:
     """Base class for all input types"""
-
-    pass
 
 
 @dataclass
@@ -88,7 +86,7 @@ class BatchInput(BaseInput):
             - 'skip_history': Boolean flag indicating if this input should be skipped in local history storage
     """
 
-    texts: List[TextData]
-    images: Optional[List[ImageData]] = None
-    files: Optional[List[FileData]] = None
-    metadata: Optional[Dict[str, Any]] = None
+    texts: list[TextData]
+    images: list[ImageData] | None = None
+    files: list[FileData] | None = None
+    metadata: dict[str, Any] | None = None

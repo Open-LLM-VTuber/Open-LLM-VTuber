@@ -1,61 +1,63 @@
-from typing import Dict, List, Optional, Callable, TypedDict
-from fastapi import WebSocket, WebSocketDisconnect
 import asyncio
 import json
+from collections.abc import Callable
 from enum import Enum
+from typing import TypedDict
+
 import numpy as np
+from fastapi import WebSocket, WebSocketDisconnect
 from loguru import logger
 
-from .service_context import ServiceContext
 from .chat_group import (
     ChatGroupManager,
-    handle_group_operation,
-    handle_client_disconnect,
     broadcast_to_group,
+    handle_client_disconnect,
+    handle_group_operation,
 )
-from .message_handler import message_handler
-from .utils.stream_audio import prepare_audio_payload
 from .chat_history_manager import (
     create_new_history,
-    get_history,
     delete_history,
+    get_history,
     get_history_list,
 )
-from .config_manager.utils import scan_config_alts_directory, scan_bg_directory
+from .config_manager.utils import scan_bg_directory, scan_config_alts_directory
 from .conversations.conversation_handler import (
     handle_conversation_trigger,
     handle_group_interrupt,
     handle_individual_interrupt,
 )
+from .message_handler import message_handler
+from .service_context import ServiceContext
+from .utils.stream_audio import prepare_audio_payload
 
 
 class MessageType(Enum):
     """Enum for WebSocket message types"""
 
-    GROUP = ["add-client-to-group", "remove-client-from-group"]
-    HISTORY = [
+    GROUP = ["add-client-to-group", "remove-client-from-group"]  # noqa: RUF012
+    HISTORY = [  # noqa: RUF012
         "fetch-history-list",
         "fetch-and-set-history",
         "create-new-history",
         "delete-history",
     ]
-    CONVERSATION = ["mic-audio-end", "text-input", "ai-speak-signal"]
-    CONFIG = ["fetch-configs", "switch-config"]
-    CONTROL = ["interrupt-signal", "audio-play-start"]
-    DATA = ["mic-audio-data"]
+    CONVERSATION = ["mic-audio-end", "text-input", "ai-speak-signal"]  # noqa: RUF012
+    CONFIG = ["fetch-configs", "switch-config"]  # noqa: RUF012
+    CONTROL = ["interrupt-signal", "audio-play-start"]  # noqa: RUF012
+    DATA = ["mic-audio-data"]  # noqa: RUF012
 
 
 class WSMessage(TypedDict, total=False):
     """Type definition for WebSocket messages"""
 
     type: str
-    action: Optional[str]
-    text: Optional[str]
-    audio: Optional[List[float]]
-    images: Optional[List[str]]
-    history_uid: Optional[str]
-    file: Optional[str]
-    display_text: Optional[dict]
+    action: str | None
+    text: str | None
+    audio: list[float] | None
+    images: list[str] | None
+    history_uid: str | None
+    file: str | None
+    display_text: dict | None
 
 
 class WebSocketHandler:
@@ -63,17 +65,17 @@ class WebSocketHandler:
 
     def __init__(self, default_context_cache: ServiceContext):
         """Initialize the WebSocket handler with default context"""
-        self.client_connections: Dict[str, WebSocket] = {}
-        self.client_contexts: Dict[str, ServiceContext] = {}
+        self.client_connections: dict[str, WebSocket] = {}
+        self.client_contexts: dict[str, ServiceContext] = {}
         self.chat_group_manager = ChatGroupManager()
-        self.current_conversation_tasks: Dict[str, Optional[asyncio.Task]] = {}
+        self.current_conversation_tasks: dict[str, asyncio.Task | None] = {}
         self.default_context_cache = default_context_cache
-        self.received_data_buffers: Dict[str, np.ndarray] = {}
+        self.received_data_buffers: dict[str, np.ndarray] = {}
 
         # Message handlers mapping
         self._message_handlers = self._init_message_handlers()
 
-    def _init_message_handlers(self) -> Dict[str, Callable]:
+    def _init_message_handlers(self) -> dict[str, Callable]:
         """Initialize message type to handler mapping"""
         return {
             "add-client-to-group": self._handle_group_operation,
@@ -222,7 +224,7 @@ class WebSocketHandler:
                 except json.JSONDecodeError:
                     logger.error("Invalid JSON received")
                     continue
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001 (intentional broad catch in runtime)
                     logger.error(f"Error processing message: {e}")
                     await websocket.send_text(
                         json.dumps({"type": "error", "message": str(e)})
@@ -331,7 +333,7 @@ class WebSocketHandler:
         message_handler.cleanup_client(client_uid)
 
     async def broadcast_to_group(
-        self, group_members: list[str], message: dict, exclude_uid: str = None
+        self, group_members: list[str], message: dict, exclude_uid: str | None = None
     ) -> None:
         """Broadcasts a message to group members"""
         await broadcast_to_group(
@@ -608,5 +610,5 @@ class WebSocketHandler:
         """Handle heartbeat messages from clients"""
         try:
             await websocket.send_json({"type": "heartbeat-ack"})
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 (intentional broad catch in runtime)
             logger.error(f"Error sending heartbeat acknowledgment: {e}")

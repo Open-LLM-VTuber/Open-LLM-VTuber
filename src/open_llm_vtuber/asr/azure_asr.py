@@ -1,12 +1,14 @@
-import os
-from typing import Callable
-import numpy as np
-from loguru import logger
-import azure.cognitiveservices.speech as speechsdk
-from .asr_interface import ASRInterface
-import soundfile as sf
-import uuid
 import asyncio
+import os
+import uuid
+from collections.abc import Callable
+
+import azure.cognitiveservices.speech as speechsdk
+import numpy as np
+import soundfile as sf
+from loguru import logger
+
+from .asr_interface import ASRInterface
 
 CACHE_DIR = "cache"
 
@@ -14,11 +16,13 @@ CACHE_DIR = "cache"
 class VoiceRecognition(ASRInterface):
     def __init__(
         self,
-        subscription_key=os.getenv("AZURE_API_Key"),
-        region=os.getenv("AZURE_REGION"),
-        languages=["en-US", "zh-CN"],
+        subscription_key=os.getenv("AZURE_API_Key"),  # noqa: B008
+        region=os.getenv("AZURE_REGION"),  # noqa: B008
+        languages=None,
         callback: Callable = logger.info,
     ):
+        if languages is None:
+            languages = ["en-US", "zh-CN"]
         if not subscription_key or not region:
             raise ValueError(
                 "Azure Speech Services requires both subscription_key and region. "
@@ -110,7 +114,7 @@ class VoiceRecognition(ASRInterface):
                 )
                 if cancellation_details.reason == speechsdk.CancellationReason.Error:
                     logger.error(f"Error details: {cancellation_details.error_details}")
-                raise Exception(
+                raise Exception(  # noqa: TRY002
                     f"Speech Recognition failed: {cancellation_details.reason}"
                 )
 
@@ -121,7 +125,7 @@ class VoiceRecognition(ASRInterface):
             try:
                 if os.path.exists(temp_file):
                     os.remove(temp_file)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 (intentional broad catch in runtime)
                 logger.debug(f"Failed to remove temporary file {temp_file}: {e}")
 
     def transcribe_np(self, audio: np.ndarray) -> str:

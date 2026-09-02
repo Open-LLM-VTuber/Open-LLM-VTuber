@@ -1,10 +1,10 @@
 """MCP Server Manager for Open-LLM-Vtuber."""
 
-import shutil
 import json
-
+import shutil
 from pathlib import Path
-from typing import Dict, Optional, Union, Any
+from typing import Any
+
 from loguru import logger
 
 from .types import MCPServer
@@ -28,11 +28,11 @@ class ServerRegistry:
                 f"MCPSR: File '{config_path}' does not exist, or is not a json file."
             )
 
-        self.config: Dict[str, Union[str, dict]] = json.loads(
+        self.config: dict[str, str | dict] = json.loads(
             config_path.read_text(encoding="utf-8")
         )
 
-        self.servers: Dict[str, MCPServer] = {}
+        self.servers: dict[str, MCPServer] = {}
 
         self.npx_available = self._detect_runtime("npx")
         self.uvx_available = self._detect_runtime("uvx")
@@ -43,11 +43,11 @@ class ServerRegistry:
     def _detect_runtime(self, target: str) -> bool:
         """Check if a runtime is available in the system PATH."""
         founded = shutil.which(target)
-        return True if founded else False
+        return bool(founded)
 
     def load_servers(self) -> None:
         """Load servers from the config file."""
-        servers_config: Dict[str, Dict[str, Any]] = self.config.get("mcp_servers", {})
+        servers_config: dict[str, dict[str, Any]] = self.config.get("mcp_servers", {})
         if servers_config == {}:
             logger.warning("MCPSR: No servers found in the config file.")
             return
@@ -73,12 +73,11 @@ class ServerRegistry:
                     )
                     continue
 
-            elif command == "node":
-                if not self.node_available:
-                    logger.warning(
-                        f"MCPSR: node is not available. Cannot load server '{server_name}'."
-                    )
-                    continue
+            elif command == "node" and not self.node_available:
+                logger.warning(
+                    f"MCPSR: node is not available. Cannot load server '{server_name}'."
+                )
+                continue
 
             self.servers[server_name] = MCPServer(
                 name=server_name,
@@ -98,6 +97,6 @@ class ServerRegistry:
         except KeyError:
             logger.warning(f"MCPSR: Server '{server_name}' not found. Cannot remove.")
 
-    def get_server(self, server_name: str) -> Optional[MCPServer]:
+    def get_server(self, server_name: str) -> MCPServer | None:
         """Get the server by name."""
         return self.servers.get(server_name, None)

@@ -1,7 +1,9 @@
-import sys
 import os
+import sys
+
 import azure.cognitiveservices.speech as speechsdk
 from loguru import logger
+
 from .tts_interface import TTSInterface
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -125,7 +127,7 @@ class TTSEngine(TTSInterface):
         elif speech_synthesis_result.reason == speechsdk.ResultReason.Canceled:
             cancellation_details = speech_synthesis_result.cancellation_details
             logger.info(f"Speech synthesis canceled: {cancellation_details.reason}")
-            if cancellation_details.reason == speechsdk.CancellationReason.Error:
+            if cancellation_details.reason == speechsdk.CancellationReason.Error:  # noqa: SIM102
                 if cancellation_details.error_details:
                     logger.error(f"Error details: {cancellation_details.error_details}")
                     logger.error(

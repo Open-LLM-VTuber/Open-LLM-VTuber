@@ -1,8 +1,9 @@
 import os
-from typing import Optional
-from TTS.api import TTS
-from loguru import logger
+
 import torch
+from loguru import logger
+from TTS.api import TTS
+
 from .tts_interface import TTSInterface
 
 
@@ -13,10 +14,10 @@ class TTSEngine(TTSInterface):
 
     def __init__(
         self,
-        model_name: Optional[str] = None,
-        speaker_wav: Optional[str] = None,
-        language: Optional[str] = "en",
-        device: Optional[str] = None,
+        model_name: str | None = None,
+        speaker_wav: str | None = None,
+        language: str | None = "en",
+        device: str | None = None,
     ):
         """
         Initialize CoquiTTS engine.
@@ -52,10 +53,10 @@ class TTSEngine(TTSInterface):
                 hasattr(self.tts, "speakers") and self.tts.speakers is not None
             )
 
-        except Exception as e:
-            raise RuntimeError(f"Failed to initialize CoquiTTS model: {str(e)}")
+        except Exception as e:  # noqa: BLE001 (intentional broad catch in runtime)
+            raise RuntimeError(f"Failed to initialize CoquiTTS model: {e!s}")
 
-    def generate_audio(self, text: str, file_name_no_ext: Optional[str] = None) -> str:
+    def generate_audio(self, text: str, file_name_no_ext: str | None = None) -> str:
         """
         Generate speech audio file using CoquiTTS.
 
@@ -90,8 +91,8 @@ class TTSEngine(TTSInterface):
 
             return output_path
 
-        except Exception as e:
-            raise RuntimeError(f"Failed to generate audio: {str(e)}")
+        except Exception as e:  # noqa: BLE001 (intentional broad catch in runtime)
+            raise RuntimeError(f"Failed to generate audio: {e!s}")
 
     @staticmethod
     def list_available_models() -> list:
@@ -103,8 +104,8 @@ class TTSEngine(TTSInterface):
         """
         try:
             return TTS().list_models()
-        except Exception as e:
-            raise RuntimeError(f"Failed to list available models: {str(e)}")
+        except Exception as e:  # noqa: BLE001 (intentional broad catch in runtime)
+            raise RuntimeError(f"Failed to list available models: {e!s}")
 
     def get_speaker_info(self) -> dict:
         """
@@ -124,5 +125,5 @@ class TTSEngine(TTSInterface):
                 if hasattr(self.tts, "languages")
                 else None,
             }
-        except Exception as e:
-            raise RuntimeError(f"Failed to get speaker information: {str(e)}")
+        except Exception as e:  # noqa: BLE001 (intentional broad catch in runtime)
+            raise RuntimeError(f"Failed to get speaker information: {e!s}")

@@ -7,8 +7,8 @@ the installation of dependencies.
 import os
 import platform
 import subprocess
-from pathlib import Path
 import urllib.request
+from pathlib import Path
 
 
 class InstallationManager:

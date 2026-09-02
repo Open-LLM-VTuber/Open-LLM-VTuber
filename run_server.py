@@ -1,17 +1,18 @@
-import os
-import sys
-import atexit
-import asyncio
 import argparse
+import asyncio
+import atexit
+import os
 import subprocess
+import sys
 from pathlib import Path
+
 import tomli
 import uvicorn
 from loguru import logger
-from upgrade_codes.upgrade_manager import UpgradeManager
 
-from src.open_llm_vtuber.server import WebSocketServer
 from src.open_llm_vtuber.config_manager import Config, read_yaml, validate_config
+from src.open_llm_vtuber.server import WebSocketServer
+from upgrade_codes.upgrade_manager import UpgradeManager
 
 os.environ["HF_HOME"] = str(Path(__file__).parent / "models")
 os.environ["MODELSCOPE_CACHE"] = str(Path(__file__).parent / "models")
@@ -96,7 +97,7 @@ def check_frontend_submodule(lang=None):
                         + "It's a Git submodule — you shouldn't modify it directly.  \n"
                         + "If you did, discard your changes with `git restore frontend`, then try again.\n"
                     )
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 (intentional broad catch in runtime)
             if lang == "zh":
                 logger.critical(
                     f'初始化子模块失败: {e}。\n怀疑你跟 GitHub 之间有网络问题。你之后可能会在浏览器中看到 {{"detail":"Not Found"}} 的错误提示。请检查我们的快速入门指南和常见问题页面以获取更多信息。\n'
@@ -130,7 +131,7 @@ def run(console_log_level: str):
     # Sync user config with default config
     try:
         upgrade_manager.sync_user_config()
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 (intentional broad catch in runtime)
         logger.error(f"Error syncing user config: {e}")
 
     atexit.register(WebSocketServer.clean_cache)
@@ -150,7 +151,7 @@ def run(console_log_level: str):
     try:
         asyncio.run(server.initialize())
         logger.info("Server context initialized successfully.")
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 (intentional broad catch in runtime)
         logger.error(f"Failed to initialize server context: {e}")
         sys.exit(1)  # Exit if initialization fails
 

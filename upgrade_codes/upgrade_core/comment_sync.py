@@ -1,6 +1,6 @@
 # upgrade/comment_sync.py
-from typing import Dict
 from logging import Logger
+
 from ruamel.yaml import YAML
 from ruamel.yaml.comments import CommentedMap
 
@@ -12,7 +12,7 @@ class CommentSynchronizer:
         user_path: str,
         logger: Logger,
         yaml: YAML,
-        texts_compare: Dict[str, str],
+        texts_compare: dict[str, str],
     ):
         self.default_path = default_path
         self.user_path = user_path
@@ -38,7 +38,7 @@ class CommentSynchronizer:
                 for key in default_node:
                     if key in user_node:
                         current_path = f"{path}.{key}" if path else key
-                        if hasattr(default_node, "ca") and hasattr(user_node, "ca"):
+                        if hasattr(default_node, "ca") and hasattr(user_node, "ca"):  # noqa: SIM102
                             if key in default_node.ca.items:
                                 user_node.ca.items[key] = default_node.ca.items[key]
                         sync_comments(default_node[key], user_node[key], current_path)
@@ -52,5 +52,5 @@ class CommentSynchronizer:
                 self.yaml.dump(user_tree, f)
 
             self.logger.info(self.texts_compare["comment_sync_success"])
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 (intentional broad catch in runtime)
             self.logger.error(self.texts_compare["comment_sync_error"].format(error=e))

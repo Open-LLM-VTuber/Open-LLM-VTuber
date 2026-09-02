@@ -1,26 +1,28 @@
+import logging
 import os
 import shutil
+
+from packaging import version
+from ruamel.yaml import YAML
+
+from src.open_llm_vtuber.config_manager.utils import load_text_file_with_guess_encoding
+from upgrade_codes.upgrade_core.comment_diff_fn import comment_diff_fn
+from upgrade_codes.upgrade_core.comment_sync import CommentSynchronizer
 from upgrade_codes.upgrade_core.constants import (
-    USER_CONF,
     BACKUP_CONF,
-    TEXTS,
-    ZH_DEFAULT_CONF,
     EN_DEFAULT_CONF,
+    TEXTS,
     TEXTS_COMPARE,
     TEXTS_MERGE,
+    USER_CONF,
+    ZH_DEFAULT_CONF,
 )
-import logging
-from ruamel.yaml import YAML
-from src.open_llm_vtuber.config_manager.utils import load_text_file_with_guess_encoding
-from upgrade_codes.upgrade_core.comment_sync import CommentSynchronizer
-from upgrade_codes.version_manager import VersionUpgradeManager
 from upgrade_codes.upgrade_core.upgrade_utils import UpgradeUtility
-from upgrade_codes.upgrade_core.comment_diff_fn import comment_diff_fn
-from packaging import version
+from upgrade_codes.version_manager import VersionUpgradeManager
 
 
 class ConfigSynchronizer:
-    def __init__(self, lang="en", logger=logging.getLogger(__name__)):
+    def __init__(self, lang="en", logger=logging.getLogger(__name__)):  # noqa: B008
         self.lang = lang
         self.texts = TEXTS[lang]
         self.default_path = ZH_DEFAULT_CONF if lang == "zh" else EN_DEFAULT_CONF
@@ -114,7 +116,7 @@ class ConfigSynchronizer:
                     self.logger.info(f"  - {key}")
             else:
                 self.logger.info(self.texts["merged_config_none"])
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 (intentional broad catch in runtime)
             self.logger.error(self.texts["merge_failed"].format(error=e))
 
     def merge_configs(self):
@@ -304,7 +306,7 @@ class ConfigSynchronizer:
                     self.texts["backup_used_version"].format(backup_version=raw_version)
                 )
                 return raw_version
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 (intentional broad catch in runtime)
             self.logger.warning(
                 self.texts["backup_read_error"].format(
                     version=fallback_version, error=e

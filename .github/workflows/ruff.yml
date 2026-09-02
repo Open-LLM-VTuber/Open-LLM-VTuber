@@ -1,8 +1,19 @@
 name: Ruff
+
+# Lint gate for the whole repo. Pinned to ruff 0.16.4 so CI uses the exact
+# same engine as the local dev environment (unpinned, the action pulls the
+# latest ruff, whose new default rules can turn a locally-green tree red).
+# Per the 2026-08-30 sweep, the tree is clean at 0.16.4 (4 import/import-sort
+# fixes applied in feat/tts-openai-compat). New violations fail the build.
 on: [ push, pull_request ]
+
 jobs:
   ruff:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: astral-sh/ruff-action@v3
+      - name: Ruff (pinned to 0.16.4)
+        uses: astral-sh/ruff-action@v3
+        with:
+          version: "0.16.4"
+          args: "check ."

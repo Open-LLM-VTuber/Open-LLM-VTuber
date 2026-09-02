@@ -1,12 +1,13 @@
 import io
 import os
 import re
-import torch
+
 import numpy as np
 import soundfile as sf
+import torch
 from funasr import AutoModel
+
 from .asr_interface import ASRInterface
-from typing import Optional
 
 # Try to import modelscope for local cache detection
 try:
@@ -43,8 +44,8 @@ class VoiceRecognition(ASRInterface):
         language: str = "auto",
         vad_model: str = "fsmn-vad",
         punc_model: str = "ct-punc",
-        ncpu: int = None,
-        hub: str = None,
+        ncpu: int | None = None,
+        hub: str | None = None,
         device: str = "cpu",
         disable_update: bool = True,
         sample_rate: int = 16000,
@@ -71,7 +72,7 @@ class VoiceRecognition(ASRInterface):
         self.use_itn = use_itn
         self.language = language
 
-    def _get_final_model_input(self, alias_or_id: Optional[str]) -> Optional[str]:
+    def _get_final_model_input(self, alias_or_id: str | None) -> str | None:
         """
         Process model input function:
         1. Check mapping table to get canonical ModelScope ID.
@@ -95,7 +96,7 @@ class VoiceRecognition(ASRInterface):
             except ValueError:
                 # Not found in local cache, use original ID
                 pass
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 (intentional broad catch in runtime)
                 print(f"Error occurred while checking '{resolved_id}': {e}")
 
         return final_input_for_automodel

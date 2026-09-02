@@ -1,6 +1,8 @@
 import asyncio
-from typing import Dict, Optional, Deque, Any, Callable
 from collections import deque
+from collections.abc import Callable
+from typing import Any
+
 from loguru import logger
 
 
@@ -12,14 +14,14 @@ class ProxyMessageQueue:
 
     def __init__(self):
         """Initialize the message queue manager"""
-        self.message_queue: Deque[Dict] = deque()
+        self.message_queue: deque[dict] = deque()
         self._conversation_active = False
         self.lock = asyncio.Lock()
         self._consumer_task = None
         self._forward_func = None
         self._running = False
 
-    def initialize(self, forward_func: Callable[[Dict, Optional[str]], Any]):
+    def initialize(self, forward_func: Callable[[dict, str | None], Any]):
         """
         Initialize the queue with a message forwarding function.
 
@@ -29,7 +31,7 @@ class ProxyMessageQueue:
         self._forward_func = forward_func
         logger.debug("Message queue initialized with forward function")
 
-    def queue_message(self, message: Dict, sender_id: Optional[str] = None) -> None:
+    def queue_message(self, message: dict, sender_id: str | None = None) -> None:
         """
         Add a message to the queue.
 
@@ -125,13 +127,13 @@ class ProxyMessageQueue:
                         )
                         break
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 (intentional broad catch in runtime)
             logger.error(f"Error in message consumer loop: {e}")
         finally:
             self._running = False
             logger.debug("Message consumer task ended")
 
-    async def _forward_message(self, message: Dict, sender_id: Optional[str] = None):
+    async def _forward_message(self, message: dict, sender_id: str | None = None):
         """Forward a message using the provided forward function"""
         try:
             if self._forward_func:
@@ -147,7 +149,7 @@ class ProxyMessageQueue:
                 await self._forward_func(message, sender_id)
             else:
                 logger.warning("No forward function available to process message")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 (intentional broad catch in runtime)
             logger.error(f"Error forwarding message: {e}")
             # If forwarding fails, mark conversation as inactive to allow next message
             self._conversation_active = False

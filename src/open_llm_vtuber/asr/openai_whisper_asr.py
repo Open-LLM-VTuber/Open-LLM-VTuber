@@ -1,5 +1,6 @@
 import numpy as np
 import whisper
+
 from .asr_interface import ASRInterface
 
 
@@ -7,9 +8,9 @@ class VoiceRecognition(ASRInterface):
     def __init__(
         self,
         name: str = "base",
-        download_root: str = None,
+        download_root: str | None = None,
         device="cpu",
-        prompt: str = None,
+        prompt: str | None = None,
     ) -> None:
         self.model = whisper.load_model(
             name=name,

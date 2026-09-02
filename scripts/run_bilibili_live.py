@@ -1,14 +1,15 @@
+import asyncio
 import os
 import sys
-import asyncio
+
 from loguru import logger
 
 # Add project root to path to enable imports
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 sys.path.insert(0, project_root)
 
-from src.open_llm_vtuber.live.bilibili_live import BiliBiliLivePlatform
 from src.open_llm_vtuber.config_manager.utils import read_yaml, validate_config
+from src.open_llm_vtuber.live.bilibili_live import BiliBiliLivePlatform
 
 
 async def main():
@@ -46,7 +47,7 @@ async def main():
     except ImportError as e:
         logger.error(f"Failed to import required modules: {e}")
         logger.error("Make sure you have installed blivedm with: pip install blivedm")
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 (intentional broad catch in runtime)
         logger.error(f"Error starting BiliBili Live client: {e}")
         import traceback
 

@@ -1,14 +1,16 @@
 import asyncio
 import http.cookies
-import random
-import traceback
 import json
-from typing import Callable, Dict, Any, List, Optional
-from loguru import logger
+import os
+import random
+import sys
+import traceback
+from collections.abc import Callable
+from typing import Any
+
 import aiohttp
 import websockets
-import sys
-import os
+from loguru import logger
 
 from .live_interface import LivePlatformInterface
 
@@ -20,8 +22,8 @@ try:
     sys.path.insert(0, os.path.join(project_root, "blivedm"))
 
     import blivedm
-    from blivedm.models import web as web_models
     from blivedm.handlers import BaseHandler
+    from blivedm.models import web as web_models
 
     BLIVEDM_AVAILABLE = True
 except ImportError as e:
@@ -36,7 +38,7 @@ class BiliBiliLivePlatform(LivePlatformInterface):
     Connects to a BiliBili live room and forwards danmaku messages to the VTuber.
     """
 
-    def __init__(self, room_ids: List[int], sessdata: str = ""):
+    def __init__(self, room_ids: list[int], sessdata: str = ""):
         """
         Initialize the BiliBili Live platform client.
 
@@ -51,12 +53,12 @@ class BiliBiliLivePlatform(LivePlatformInterface):
 
         self._room_ids = room_ids
         self._sessdata = sessdata
-        self._session: Optional[aiohttp.ClientSession] = None
-        self._client: Optional[blivedm.BLiveClient] = None
-        self._websocket: Optional[websockets.WebSocketClientProtocol] = None
+        self._session: aiohttp.ClientSession | None = None
+        self._client: blivedm.BLiveClient | None = None
+        self._websocket: websockets.WebSocketClientProtocol | None = None
         self._connected = False
         self._running = False
-        self._message_handlers: List[Callable[[Dict[str, Any]], None]] = []
+        self._message_handlers: list[Callable[[dict[str, Any]], None]] = []
         self._conversation_active = False
 
     @property
@@ -71,7 +73,7 @@ class BiliBiliLivePlatform(LivePlatformInterface):
                 return self._connected and self._websocket and self._websocket.open
             else:
                 return self._connected and self._websocket is not None
-        except Exception:
+        except Exception:  # noqa: BLE001 (intentional broad catch in runtime)
             return False
 
     def _init_session(self):
@@ -102,7 +104,7 @@ class BiliBiliLivePlatform(LivePlatformInterface):
             self._connected = True
             logger.info(f"Connected to proxy at {proxy_url}")
             return True
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 (intentional broad catch in runtime)
             logger.error(f"Failed to connect to proxy: {e}")
             return False
 
@@ -117,14 +119,14 @@ class BiliBiliLivePlatform(LivePlatformInterface):
             try:
                 await self._client.stop_and_close()
                 self._client = None
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 (intentional broad catch in runtime)
                 logger.warning(f"Error while stopping BiliBili client: {e}")
 
         # Close WebSocket connection
         if self._websocket:
             try:
                 await self._websocket.close()
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 (intentional broad catch in runtime)
                 logger.warning(f"Error while closing WebSocket: {e}")
 
         # Close HTTP session
@@ -132,7 +134,7 @@ class BiliBiliLivePlatform(LivePlatformInterface):
             try:
                 await self._session.close()
                 self._session = None
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 (intentional broad catch in runtime)
                 logger.warning(f"Error while closing HTTP session: {e}")
 
         self._connected = False
@@ -156,7 +158,7 @@ class BiliBiliLivePlatform(LivePlatformInterface):
         return False
 
     async def register_message_handler(
-        self, handler: Callable[[Dict[str, Any]], None]
+        self, handler: Callable[[dict[str, Any]], None]
     ) -> None:
         """
         Register a callback for handling incoming messages.
@@ -177,7 +179,7 @@ class BiliBiliLivePlatform(LivePlatformInterface):
         try:
             # Send danmaku directly to proxy
             await self._send_to_proxy(danmaku_text)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 (intentional broad catch in runtime)
             logger.error(f"Error forwarding danmaku to proxy: {e}")
 
     async def _send_to_proxy(self, text: str) -> bool:
@@ -199,7 +201,7 @@ class BiliBiliLivePlatform(LivePlatformInterface):
             await self._websocket.send(json.dumps(message))
             logger.info(f"Sent danmaku to VTuber: {text}")
             return True
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 (intentional broad catch in runtime)
             logger.error(f"Error sending message to proxy: {e}")
             self._connected = False
             return False
@@ -237,15 +239,15 @@ class BiliBiliLivePlatform(LivePlatformInterface):
                     logger.warning("WebSocket connection closed by server")
                     self._connected = False
                     break
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001 (intentional broad catch in runtime)
                     logger.error(f"Error receiving message from proxy: {e}")
                     await asyncio.sleep(1)
 
             logger.info("Stopped receiving messages from proxy")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 (intentional broad catch in runtime)
             logger.error(f"Error in message receiving loop: {e}")
 
-    async def handle_incoming_messages(self, message: Dict[str, Any]) -> None:
+    async def handle_incoming_messages(self, message: dict[str, Any]) -> None:
         """
         Process messages received from the VTuber.
 
@@ -256,7 +258,7 @@ class BiliBiliLivePlatform(LivePlatformInterface):
         for handler in self._message_handlers:
             try:
                 await asyncio.to_thread(handler, message)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 (intentional broad catch in runtime)
                 logger.error(f"Error in message handler: {e}")
 
     class VtuberHandler(BaseHandler):
@@ -343,7 +345,7 @@ class BiliBiliLivePlatform(LivePlatformInterface):
 
         except KeyboardInterrupt:
             logger.info("Received keyboard interrupt, shutting down")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 (intentional broad catch in runtime)
             logger.error(f"Error in BiliBili Live run loop: {e}")
             logger.debug(traceback.format_exc())
         finally:

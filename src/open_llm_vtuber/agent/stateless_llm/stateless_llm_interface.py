@@ -1,5 +1,6 @@
 import abc
-from typing import AsyncIterator, List, Dict, Any
+from collections.abc import AsyncIterator
+from typing import Any
 
 
 class StatelessLLMInterface(metaclass=abc.ABCMeta):
@@ -21,9 +22,9 @@ class StatelessLLMInterface(metaclass=abc.ABCMeta):
     @abc.abstractmethod
     async def chat_completion(
         self,
-        messages: List[Dict[str, Any]],
-        system: str = None,
-        tools: List[Dict[str, Any]] = None,
+        messages: list[dict[str, Any]],
+        system: str | None = None,
+        tools: list[dict[str, Any]] | None = None,
     ) -> AsyncIterator[str]:
         """
         Generates a chat completion asynchronously and return an iterator to the response.

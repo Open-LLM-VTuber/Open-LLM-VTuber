@@ -1,15 +1,16 @@
 import asyncio
 import base64
-from typing import AsyncIterator, Optional
 import json
-import websockets
-from loguru import logger
+from collections.abc import AsyncIterator
 from pathlib import Path
 
-from .agent_interface import AgentInterface
-from ..output_types import AudioOutput, Actions, DisplayText
-from ..input_types import BatchInput
+import websockets
+from loguru import logger
+
 from ...chat_history_manager import get_metadata, update_metadate
+from ..input_types import BatchInput
+from ..output_types import Actions, AudioOutput, DisplayText
+from .agent_interface import AgentInterface
 
 
 class HumeAIAgent(AgentInterface):
@@ -24,7 +25,7 @@ class HumeAIAgent(AgentInterface):
         self,
         api_key: str,
         host: str = "api.hume.ai",
-        config_id: Optional[str] = None,
+        config_id: str | None = None,
         idle_timeout: int = 15,
     ):
         """
@@ -53,7 +54,7 @@ class HumeAIAgent(AgentInterface):
         self.cache_dir = Path("./cache")
         self.cache_dir.mkdir(exist_ok=True)
 
-    async def connect(self, resume_chat_group_id: Optional[str] = None):
+    async def connect(self, resume_chat_group_id: str | None = None):
         """
         Establish WebSocket connection with optional chat group resumption
 
@@ -200,7 +201,7 @@ class HumeAIAgent(AgentInterface):
                             audio_data = base64.b64decode(response_data["data"])
                             cache_file = self.cache_dir / f"evi_audio_{msg_id}.wav"
 
-                            with open(cache_file, "wb") as f:
+                            with open(cache_file, "wb") as f:  # noqa: ASYNC230
                                 f.write(audio_data)
                                 logger.debug(f"Saved audio to cache file: {cache_file}")
 
@@ -238,7 +239,6 @@ class HumeAIAgent(AgentInterface):
 
     def handle_interrupt(self, heard_response: str) -> None:
         """Handle user interruption (not implemented for Hume AI)"""
-        pass
 
     def __del__(self):
         """Cleanup WebSocket connection and cache files"""
@@ -252,5 +252,5 @@ class HumeAIAgent(AgentInterface):
         try:
             for file in self.cache_dir.glob("evi_audio_*.wav"):
                 file.unlink()
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 (intentional broad catch in runtime)
             logger.error(f"Error cleaning up cache files: {e}")

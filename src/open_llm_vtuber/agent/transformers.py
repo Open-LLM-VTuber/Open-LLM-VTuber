@@ -1,18 +1,20 @@
-from typing import AsyncIterator, Tuple, Callable, List, Union, Dict, Any
+from collections.abc import AsyncIterator, Callable
 from functools import wraps
-from .output_types import Actions, SentenceOutput, DisplayText
-from ..utils.tts_preprocessor import tts_filter as filter_text
-from ..live2d_model import Live2dModel
-from ..config_manager import TTSPreprocessorConfig
-from ..utils.sentence_divider import SentenceDivider
-from ..utils.sentence_divider import SentenceWithTags, TagState
+from typing import Any
+
 from loguru import logger
+
+from ..config_manager import TTSPreprocessorConfig
+from ..live2d_model import Live2dModel
+from ..utils.sentence_divider import SentenceDivider, SentenceWithTags, TagState
+from ..utils.tts_preprocessor import tts_filter as filter_text
+from .output_types import Actions, DisplayText, SentenceOutput
 
 
 def sentence_divider(
     faster_first_response: bool = True,
     segment_method: str = "pysbd",
-    valid_tags: List[str] = None,
+    valid_tags: list[str] | None = None,
 ):
     """
     Decorator that transforms token stream into sentences with tags
@@ -24,16 +26,14 @@ def sentence_divider(
     """
 
     def decorator(
-        func: Callable[
-            ..., AsyncIterator[Union[str, Dict[str, Any]]]
-        ],  # Expects str or dict
+        func: Callable[..., AsyncIterator[str | dict[str, Any]]],  # Expects str or dict
     ) -> Callable[
-        ..., AsyncIterator[Union[SentenceWithTags, Dict[str, Any]]]
+        ..., AsyncIterator[SentenceWithTags | dict[str, Any]]
     ]:  # Yields SentenceWithTags or dict
         @wraps(func)
         async def wrapper(
             *args, **kwargs
-        ) -> AsyncIterator[Union[SentenceWithTags, Dict[str, Any]]]:
+        ) -> AsyncIterator[SentenceWithTags | dict[str, Any]]:
             divider = SentenceDivider(
                 faster_first_response=faster_first_response,
                 segment_method=segment_method,
@@ -62,16 +62,16 @@ def actions_extractor(live2d_model: Live2dModel):
 
     def decorator(
         func: Callable[
-            ..., AsyncIterator[Union[SentenceWithTags, Dict[str, Any]]]
+            ..., AsyncIterator[SentenceWithTags | dict[str, Any]]
         ],  # Input type hint
     ) -> Callable[
-        ..., AsyncIterator[Union[Tuple[SentenceWithTags, Actions], Dict[str, Any]]]
+        ..., AsyncIterator[tuple[SentenceWithTags, Actions] | dict[str, Any]]
     ]:  # Output type hint
         @wraps(func)
         async def wrapper(
             *args, **kwargs
         ) -> AsyncIterator[
-            Union[Tuple[SentenceWithTags, Actions], Dict[str, Any]]
+            tuple[SentenceWithTags, Actions] | dict[str, Any]
         ]:  # Yield type hint
             stream = func(*args, **kwargs)
             async for item in stream:
@@ -107,19 +107,17 @@ def display_processor():
 
     def decorator(
         func: Callable[
-            ..., AsyncIterator[Union[Tuple[SentenceWithTags, Actions], Dict[str, Any]]]
+            ..., AsyncIterator[tuple[SentenceWithTags, Actions] | dict[str, Any]]
         ],  # Input type hint
     ) -> Callable[
         ...,
-        AsyncIterator[
-            Union[Tuple[SentenceWithTags, DisplayText, Actions], Dict[str, Any]]
-        ],
+        AsyncIterator[tuple[SentenceWithTags, DisplayText, Actions] | dict[str, Any]],
     ]:  # Output type hint
         @wraps(func)
         async def wrapper(
             *args, **kwargs
         ) -> AsyncIterator[
-            Union[Tuple[SentenceWithTags, DisplayText, Actions], Dict[str, Any]]
+            tuple[SentenceWithTags, DisplayText, Actions] | dict[str, Any]
         ]:  # Yield type hint
             stream = func(*args, **kwargs)
 
@@ -166,16 +164,16 @@ def tts_filter(
         func: Callable[
             ...,
             AsyncIterator[
-                Union[Tuple[SentenceWithTags, DisplayText, Actions], Dict[str, Any]]
+                tuple[SentenceWithTags, DisplayText, Actions] | dict[str, Any]
             ],
         ],  # Input type hint
     ) -> Callable[
-        ..., AsyncIterator[Union[SentenceOutput, Dict[str, Any]]]
+        ..., AsyncIterator[SentenceOutput | dict[str, Any]]
     ]:  # Output type hint
         @wraps(func)
         async def wrapper(
             *args, **kwargs
-        ) -> AsyncIterator[Union[SentenceOutput, Dict[str, Any]]]:  # Yield type hint
+        ) -> AsyncIterator[SentenceOutput | dict[str, Any]]:  # Yield type hint
             stream = func(*args, **kwargs)
             config = tts_preprocessor_config or TTSPreprocessorConfig()
 

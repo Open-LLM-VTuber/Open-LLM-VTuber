@@ -1,15 +1,18 @@
-from typing import AsyncIterator, List, Dict, Any
-from .agent_interface import AgentInterface
-from ..output_types import SentenceOutput
-from ..transformers import (
-    sentence_divider,
-    actions_extractor,
-    tts_filter,
-    display_processor,
-)
+from collections.abc import AsyncIterator
+from typing import Any
+
+from letta_client import Letta
+
 from ...config_manager import TTSPreprocessorConfig
 from ..input_types import BatchInput, TextSource
-from letta_client import Letta
+from ..output_types import SentenceOutput
+from ..transformers import (
+    actions_extractor,
+    display_processor,
+    sentence_divider,
+    tts_filter,
+)
+from .agent_interface import AgentInterface
 
 
 class LettaAgent(AgentInterface):
@@ -109,7 +112,7 @@ class LettaAgent(AgentInterface):
 
         return "\n".join(message_parts)
 
-    def _to_messages(self, input_data: BatchInput) -> List[Dict[str, Any]]:
+    def _to_messages(self, input_data: BatchInput) -> list[dict[str, Any]]:
         """
         Prepare messages list without image support.
         """

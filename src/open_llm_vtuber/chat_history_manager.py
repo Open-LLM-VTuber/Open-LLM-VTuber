@@ -1,9 +1,10 @@
+import json
 import os
 import re
-import json
 import uuid
 from datetime import datetime
-from typing import Literal, List, TypedDict, Optional
+from typing import Literal, TypedDict
+
 from loguru import logger
 
 
@@ -12,8 +13,8 @@ class HistoryMessage(TypedDict):
     timestamp: str
     content: str
     # Optional display information for the message
-    name: Optional[str]
-    avatar: Optional[str]
+    name: str | None
+    avatar: str | None
 
 
 def _is_safe_filename(filename: str) -> bool:
@@ -68,7 +69,7 @@ def create_new_history(conf_uid: str) -> str:
 
     # Use uuid.uuid4().hex to generate a UUID without hyphens
     # New format: UUID_YYYY-MM-DD_HH-MM-SS
-    history_uid = f"{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}_{uuid.uuid4().hex}"
+    history_uid = f"{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}_{uuid.uuid4().hex}"  # noqa: DTZ005
     conf_dir = _ensure_conf_dir(conf_uid)  # conf_uid is sanitized here
 
     # Create history file with empty metadata
@@ -77,12 +78,12 @@ def create_new_history(conf_uid: str) -> str:
         initial_data = [
             {
                 "role": "metadata",
-                "timestamp": datetime.now().isoformat(timespec="seconds"),
+                "timestamp": datetime.now().isoformat(timespec="seconds"),  # noqa: DTZ005
             }
         ]
         with open(filepath, "w", encoding="utf-8") as f:
             json.dump(initial_data, f, ensure_ascii=False, indent=2)
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 (intentional broad catch in runtime)
         logger.error(f"Failed to create new history file: {e}")
         return ""
 
@@ -123,11 +124,10 @@ def store_message(
         try:
             with open(filepath, "r", encoding="utf-8") as f:
                 history_data = json.load(f)
-        except Exception:
+        except Exception:  # noqa: BLE001 (intentional broad catch in runtime)
             logger.error(f"Failed to load history file: {filepath}")
-            pass
 
-    now_str = datetime.now().isoformat(timespec="seconds")
+    now_str = datetime.now().isoformat(timespec="seconds")  # noqa: DTZ005
     new_item = {
         "role": role,
         "timestamp": now_str,
@@ -162,7 +162,7 @@ def get_metadata(conf_uid: str, history_uid: str) -> dict:
 
         if history_data and history_data[0]["role"] == "metadata":
             return history_data[0]
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 (intentional broad catch in runtime)
         logger.error(f"Failed to get metadata: {e}")
     return {}
 
@@ -191,7 +191,7 @@ def update_metadate(conf_uid: str, history_uid: str, metadata: dict) -> bool:
             # Create new metadata with timestamp if none exists
             new_metadata = {
                 "role": "metadata",
-                "timestamp": datetime.now().isoformat(timespec="seconds"),
+                "timestamp": datetime.now().isoformat(timespec="seconds"),  # noqa: DTZ005
             }
             new_metadata.update(metadata)  # Add new fields
             history_data.insert(0, new_metadata)
@@ -201,12 +201,12 @@ def update_metadate(conf_uid: str, history_uid: str, metadata: dict) -> bool:
 
         logger.debug(f"Updated metadata for history {history_uid}")
         return True
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 (intentional broad catch in runtime)
         logger.error(f"Failed to set metadata: {e}")
     return False
 
 
-def get_history(conf_uid: str, history_uid: str) -> List[HistoryMessage]:
+def get_history(conf_uid: str, history_uid: str) -> list[HistoryMessage]:
     """Read chat history for the given conf_uid and history_uid"""
     if not conf_uid or not history_uid:
         if not conf_uid:
@@ -226,7 +226,7 @@ def get_history(conf_uid: str, history_uid: str) -> List[HistoryMessage]:
             history_data = json.load(f)
             # Filter out metadata
             return [msg for msg in history_data if msg["role"] != "metadata"]
-    except Exception:
+    except Exception:  # noqa: BLE001 (intentional broad catch in runtime)
         return []
 
 
@@ -242,12 +242,12 @@ def delete_history(conf_uid: str, history_uid: str) -> bool:
             os.remove(filepath)
             logger.debug(f"Successfully deleted history file: {filepath}")
             return True
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 (intentional broad catch in runtime)
         logger.error(f"Failed to delete history file: {e}")
     return False
 
 
-def get_history_list(conf_uid: str) -> List[dict]:
+def get_history_list(conf_uid: str) -> list[dict]:
     """Get list of histories with their latest messages"""
     if not conf_uid:
         return []
@@ -285,7 +285,7 @@ def get_history_list(conf_uid: str) -> List[dict]:
                         ),
                     }
                     histories.append(history_info)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 (intentional broad catch in runtime)
                 logger.error(f"Error reading history file {filename}: {e}")
                 continue
 
@@ -295,7 +295,7 @@ def get_history_list(conf_uid: str) -> List[dict]:
                 try:
                     os.remove(os.path.join(conf_dir, f"{uid}.json"))
                     logger.info(f"Removed empty history file: {uid}")
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001 (intentional broad catch in runtime)
                     logger.error(f"Failed to remove empty history file {uid}: {e}")
 
         histories.sort(
@@ -303,7 +303,7 @@ def get_history_list(conf_uid: str) -> List[dict]:
         )
         return histories
 
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 (intentional broad catch in runtime)
         logger.error(f"Error listing histories: {e}")
         return []
 
@@ -346,7 +346,7 @@ def modify_latest_message(
         logger.debug(f"Successfully modified latest {role} message")
         return True
 
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 (intentional broad catch in runtime)
         logger.error(f"Failed to modify latest message: {e}")
         return False
 
@@ -369,6 +369,6 @@ def rename_history_file(
                 f"Renamed history file from {old_history_uid} to {new_history_uid}"
             )
             return True
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 (intentional broad catch in runtime)
         logger.error(f"Failed to rename history file: {e}")
     return False

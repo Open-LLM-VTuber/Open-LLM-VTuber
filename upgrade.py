@@ -1,6 +1,7 @@
 import time
-from upgrade_codes.upgrade_manager import UpgradeManager
+
 from upgrade_codes.upgrade_core.constants import TEXTS
+from upgrade_codes.upgrade_manager import UpgradeManager
 
 upgrade_manager = UpgradeManager()
 upgrade_manager.check_user_config_exists()

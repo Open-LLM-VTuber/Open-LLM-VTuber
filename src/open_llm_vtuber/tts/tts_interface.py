@@ -1,6 +1,6 @@
 import abc
-import os
 import asyncio
+import os
 
 from loguru import logger
 
@@ -55,7 +55,7 @@ class TTSInterface(metaclass=abc.ABCMeta):
         try:
             logger.debug(f"Removing file {filepath}") if verbose else None
             os.remove(filepath)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 (intentional broad catch in runtime)
             logger.error(f"Failed to remove file {filepath}: {e}")
 
     def generate_cache_file_name(self, file_name_no_ext=None, file_extension="wav"):

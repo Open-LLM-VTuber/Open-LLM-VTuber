@@ -1,4 +1,5 @@
 import json
+
 import chardet
 from loguru import logger
 
@@ -48,7 +49,7 @@ class Live2dModel:
         self.emo_map: dict = {
             k.lower(): v for k, v in self.model_info["emotionMap"].items()
         }
-        self.emo_str: str = " ".join([f"[{key}]," for key in self.emo_map.keys()])
+        self.emo_str: str = " ".join([f"[{key}]," for key in self.emo_map])
         # emo_str is a string of the keys in the emoMap dictionary. The keys are enclosed in square brackets.
         # example: `"[fear], [anger], [disgust], [sadness], [joy], [neutral], [surprise]"`
 
@@ -76,7 +77,7 @@ class Live2dModel:
                     return raw_data.decode(detected_encoding)
                 except UnicodeDecodeError:
                     pass
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 (intentional broad catch in runtime)
             logger.error(f"Error detecting encoding for {file_path}: {e}")
 
         raise UnicodeError(f"Failed to decode {file_path} with any encoding")
@@ -105,26 +106,26 @@ class Live2dModel:
         try:
             file_content = self._load_file_content(self.model_dict_path)
             model_dict = json.loads(file_content)
-        except FileNotFoundError as file_e:
+        except FileNotFoundError:
             logger.critical(
                 f"Model dictionary file not found at {self.model_dict_path}."
             )
-            raise file_e
-        except json.JSONDecodeError as json_e:
+            raise
+        except json.JSONDecodeError:
             logger.critical(
                 f"Error decoding JSON from model dictionary file at {self.model_dict_path}."
             )
-            raise json_e
-        except UnicodeError as uni_e:
+            raise
+        except UnicodeError:
             logger.critical(
                 f"Error reading model dictionary file at {self.model_dict_path}."
             )
-            raise uni_e
-        except Exception as e:
+            raise
+        except Exception:
             logger.critical(
                 f"Error occurred while reading model dictionary file at {self.model_dict_path}."
             )
-            raise e
+            raise
 
         # Find the model in the model_dict
         matched_model = next(
@@ -162,7 +163,7 @@ class Live2dModel:
             if str_to_check[i] != "[":
                 i += 1
                 continue
-            for key in self.emo_map.keys():
+            for key in self.emo_map:
                 emo_tag = f"[{key}]"
                 if str_to_check[i : i + len(emo_tag)] == emo_tag:
                     expression_list.append(self.emo_map[key])
@@ -184,7 +185,7 @@ class Live2dModel:
 
         lower_str = target_str.lower()
 
-        for key in self.emo_map.keys():
+        for key in self.emo_map:
             lower_key = f"[{key}]".lower()
             while lower_key in lower_str:
                 start_index = lower_str.find(lower_key)

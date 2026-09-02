@@ -1,5 +1,6 @@
 import numpy as np
 from faster_whisper import WhisperModel
+
 from .asr_interface import ASRInterface
 
 
@@ -10,11 +11,11 @@ class VoiceRecognition(ASRInterface):
     def __init__(
         self,
         model_path: str = "distil-medium.en",
-        download_root: str = None,
+        download_root: str | None = None,
         language: str = "en",
         device: str = "auto",
         compute_type: str = "int8",
-        prompt: str = None,
+        prompt: str | None = None,
     ) -> None:
         self.MODEL_PATH = model_path
         self.LANG = language
@@ -28,7 +29,7 @@ class VoiceRecognition(ASRInterface):
 
     def transcribe_np(self, audio: np.ndarray) -> str:
         if self.prompt:
-            segments, info = self.model.transcribe(
+            segments, info = self.model.transcribe(  # noqa: RUF059
                 audio,
                 beam_size=5 if self.BEAM_SEARCH else 1,
                 language=self.LANG if self.LANG else None,
@@ -36,7 +37,7 @@ class VoiceRecognition(ASRInterface):
                 initial_prompt=self.prompt,
             )
         else:
-            segments, info = self.model.transcribe(
+            segments, _info = self.model.transcribe(
                 audio,
                 beam_size=5 if self.BEAM_SEARCH else 1,
                 language=self.LANG if self.LANG else None,

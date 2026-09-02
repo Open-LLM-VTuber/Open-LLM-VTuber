@@ -1,6 +1,8 @@
 import os
+
 import requests
 from loguru import logger
+
 from .tts_interface import TTSInterface
 
 
@@ -70,20 +72,19 @@ class TTSEngine(TTSInterface):
             )
             audio = b""
             for chunk in response.raw:
-                if chunk:
-                    if chunk[:5] == b"data:":
-                        try:
-                            data = json.loads(chunk[5:])
-                            if "data" in data and "extra_info" not in data:
-                                if "audio" in data["data"]:
-                                    hex_audio = data["data"]["audio"]
-                                    decoded = bytes.fromhex(hex_audio)
-                                    audio += decoded
-                        except Exception as e:
-                            logger.error(f"Failed to parse audio chunk: {e}")
+                if chunk and chunk[:5] == b"data:":
+                    try:
+                        data = json.loads(chunk[5:])
+                        if "data" in data and "extra_info" not in data:  # noqa: SIM102
+                            if "audio" in data["data"]:
+                                hex_audio = data["data"]["audio"]
+                                decoded = bytes.fromhex(hex_audio)
+                                audio += decoded
+                    except Exception as e:  # noqa: BLE001 (intentional broad catch in runtime)
+                        logger.error(f"Failed to parse audio chunk: {e}")
             with open(file_name, "wb") as f:
                 f.write(audio)
             return file_name
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 (intentional broad catch in runtime)
             logger.error(f"Exception in minimax_tts generate_audio: {e}")
             return None

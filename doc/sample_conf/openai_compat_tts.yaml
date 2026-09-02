@@ -1,0 +1,16 @@
+# OpenAI-compatible TTS engine — sample configuration
+#
+# Point `base_url` at any server that implements POST /v1/audio/speech
+# (e.g. a local Kokoro, fish-speech, or any OpenAI-compatible TTS wrapper).
+# Runs fully OFFLINE when pointed at a local endpoint — no API key, no cloud.
+#
+# This file is validated by tests/test_openai_compat_sample_conf.py:
+# its keys must exactly match TTSEngine.__init__ arguments. If you add or
+# remove a parameter on the engine, update this file or the test fails.
+base_url: "http://localhost:8880/v1"
+model: "kokoro"
+voice: "af_sky"
+api_key: "not-needed"
+file_extension: "mp3"
+speed: 1.0
+timeout: 60

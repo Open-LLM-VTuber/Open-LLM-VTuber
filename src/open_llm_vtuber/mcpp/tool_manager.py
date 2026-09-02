@@ -1,5 +1,6 @@
+from typing import Any, Literal
+
 from loguru import logger
-from typing import Dict, Any, List, Literal
 
 from .types import FormattedTool
 
@@ -9,19 +10,19 @@ class ToolManager:
 
     def __init__(
         self,
-        formatted_tools_openai: List[Dict[str, Any]] = None,
-        formatted_tools_claude: List[Dict[str, Any]] = None,
-        initial_tools_dict: Dict[str, FormattedTool] = None,
+        formatted_tools_openai: list[dict[str, Any]] | None = None,
+        formatted_tools_claude: list[dict[str, Any]] | None = None,
+        initial_tools_dict: dict[str, FormattedTool] | None = None,
     ) -> None:
         """Initialize the Tool Manager with pre-formatted tool lists."""
         # Store the raw tool data (optional, for get_tool)
-        self.tools: Dict[str, FormattedTool] = initial_tools_dict or {}
+        self.tools: dict[str, FormattedTool] = initial_tools_dict or {}
 
         # Store the pre-formatted lists
-        self._formatted_tools_openai: List[Dict[str, Any]] = (
+        self._formatted_tools_openai: list[dict[str, Any]] = (
             formatted_tools_openai or []
         )
-        self._formatted_tools_claude: List[Dict[str, Any]] = (
+        self._formatted_tools_claude: list[dict[str, Any]] = (
             formatted_tools_claude or []
         )
 
@@ -41,7 +42,7 @@ class ToolManager:
 
     def get_formatted_tools(
         self, mode: Literal["OpenAI", "Claude"]
-    ) -> List[Dict[str, Any]] | Any:
+    ) -> list[dict[str, Any]] | Any:
         """Get the pre-formatted list of tools for the specified API mode."""
 
         if mode == "OpenAI":

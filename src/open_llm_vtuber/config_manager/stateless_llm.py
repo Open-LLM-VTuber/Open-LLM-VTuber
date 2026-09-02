@@ -1,7 +1,9 @@
 # config_manager/llm.py
 from typing import ClassVar, Literal
+
 from pydantic import BaseModel, Field
-from .i18n import I18nMixin, Description
+
+from .i18n import Description, I18nMixin
 
 
 class StatelessLLMBaseConfig(I18nMixin):

@@ -1,9 +1,10 @@
 import os
-import requests
 import tarfile
 from pathlib import Path
-from tqdm import tqdm
+
+import requests
 from loguru import logger
+from tqdm import tqdm
 
 
 def get_github_asset_url(owner, repo, release_tag, filename_without_ext):
@@ -153,8 +154,8 @@ def check_and_extract_local_file(url: str, output_dir: str) -> Path | None:
             logger.success(f"Extracted archive to the path: {extracted_dir}")
             os.remove(compressed_path)  # Remove the compressed file
             return extracted_dir
-        except Exception as e:
-            logger.error(f"Fail to extract file: {str(e)}")
+        except Exception as e:  # noqa: BLE001 (intentional broad catch in runtime)
+            logger.error(f"Fail to extract file: {e!s}")
             return None
 
     logger.warning(f"Local file not found or not a tar.bz2 archive: {compressed_path}")

@@ -1,9 +1,9 @@
-import os
-import sys
 import ctypes
 import locale
+import os
 import platform
 import subprocess
+import sys
 
 
 def get_system_language():
@@ -21,13 +21,13 @@ def get_system_language():
                 lang = lang_code.split("_")[0]
                 if lang.startswith("zh"):
                     return "zh"
-        except Exception:
+        except Exception:  # noqa: BLE001,S110 (intentional broad catch in runtime)
             pass
 
     elif os_name == "Darwin":  # macOS
         try:
             # Use defaults command to get the AppleLocale
-            result = subprocess.run(
+            result = subprocess.run(  # noqa: PLW1510
                 ["defaults", "read", "-g", "AppleLocale"],
                 capture_output=True,
                 text=True,
@@ -35,7 +35,7 @@ def get_system_language():
             lang = result.stdout.strip().split("_")[0]
             if lang.startswith("zh"):
                 return "zh"
-        except Exception:
+        except Exception:  # noqa: BLE001,S110 (intentional broad catch in runtime)
             pass
 
     elif os_name == "Linux":

@@ -9,4 +9,3 @@ class VADInterface(ABC):
         :param audio_data: Input audio data
         :return: Returns a sequence of audio bytes containing human voice if voice activity is detected
         """
-        pass

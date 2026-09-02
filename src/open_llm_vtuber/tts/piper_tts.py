@@ -2,6 +2,7 @@ import os
 import wave
 
 from loguru import logger
+
 from .tts_interface import TTSInterface
 
 try:
@@ -112,6 +113,6 @@ class TTSEngine(TTSInterface):
             logger.info(f"Generated audio file: {file_name}")
             return file_name
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 (intentional broad catch in runtime)
             logger.critical(f"Error: Piper TTS unable to generate audio: {e}")
             return None

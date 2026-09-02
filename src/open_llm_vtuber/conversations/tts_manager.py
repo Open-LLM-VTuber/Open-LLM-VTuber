@@ -3,10 +3,10 @@ import json
 import re
 import uuid
 from datetime import datetime
-from typing import List, Optional, Dict
+
 from loguru import logger
 
-from ..agent.output_types import DisplayText, Actions
+from ..agent.output_types import Actions, DisplayText
 from ..live2d_model import Live2dModel
 from ..tts.tts_interface import TTSInterface
 from ..utils.stream_audio import prepare_audio_payload
@@ -17,12 +17,12 @@ class TTSTaskManager:
     """Manages TTS tasks and ensures ordered delivery to frontend while allowing parallel TTS generation"""
 
     def __init__(self) -> None:
-        self.task_list: List[asyncio.Task] = []
+        self.task_list: list[asyncio.Task] = []
         self._lock = asyncio.Lock()
         # Queue to store ordered payloads
-        self._payload_queue: asyncio.Queue[Dict] = asyncio.Queue()
+        self._payload_queue: asyncio.Queue[dict] = asyncio.Queue()
         # Task to handle sending payloads in order
-        self._sender_task: Optional[asyncio.Task] = None
+        self._sender_task: asyncio.Task | None = None
         # Counter for maintaining order
         self._sequence_counter = 0
         self._next_sequence_to_send = 0
@@ -31,7 +31,7 @@ class TTSTaskManager:
         self,
         tts_text: str,
         display_text: DisplayText,
-        actions: Optional[Actions],
+        actions: Actions | None,
         live2d_model: Live2dModel,
         tts_engine: TTSInterface,
         websocket_send: WebSocketSend,
@@ -94,7 +94,7 @@ class TTSTaskManager:
         Process and send payloads in correct order.
         Runs continuously until all payloads are processed.
         """
-        buffered_payloads: Dict[int, Dict] = {}
+        buffered_payloads: dict[int, dict] = {}
 
         while True:
             try:
@@ -116,7 +116,7 @@ class TTSTaskManager:
     async def _send_silent_payload(
         self,
         display_text: DisplayText,
-        actions: Optional[Actions],
+        actions: Actions | None,
         sequence_number: int,
     ) -> None:
         """Queue a silent audio payload"""
@@ -131,7 +131,7 @@ class TTSTaskManager:
         self,
         tts_text: str,
         display_text: DisplayText,
-        actions: Optional[Actions],
+        actions: Actions | None,
         live2d_model: Live2dModel,
         tts_engine: TTSInterface,
         sequence_number: int,
@@ -148,7 +148,7 @@ class TTSTaskManager:
             # Queue the payload with its sequence number
             await self._payload_queue.put((payload, sequence_number))
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 (intentional broad catch in runtime)
             logger.error(f"Error preparing audio payload: {e}")
             # Queue silent payload for error case
             payload = prepare_audio_payload(
@@ -168,7 +168,7 @@ class TTSTaskManager:
         logger.debug(f"🏃Generating audio for '''{text}'''...")
         return await tts_engine.async_generate_audio(
             text=text,
-            file_name_no_ext=f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{str(uuid.uuid4())[:8]}",
+            file_name_no_ext=f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{str(uuid.uuid4())[:8]}",  # noqa: DTZ005
         )
 
     def clear(self) -> None:

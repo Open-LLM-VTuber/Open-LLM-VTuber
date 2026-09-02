@@ -1,4 +1,5 @@
 from io import StringIO
+
 from ruamel.yaml import YAML
 from ruamel.yaml.comments import CommentedMap
 

@@ -1,0 +1,36 @@
+name: pytest
+
+# Test-only CI. Runs the fully offline test suite (tests/ mocks all HTTP and
+# needs no GPU, API key, or running server). It is deliberately SEPARATE from
+# the ruff gate (see ruff.yml): this job fails only on real test regressions,
+# not on lint noise. Runs on every push to main and every PR targeting main,
+# so the merge gate is enforced before code lands on the default branch.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+
+      # Install only what the offline suite needs (avoids pulling heavy runtime
+      # deps like torch). pytest.ini sets pythonpath=src so the in-tree package
+      # imports without an editable install. Use a venv (not `--system`): GitHub
+      # runners have an externally managed system Python (PEP 668), so setup-uv
+      # already provisions a .venv; recreate it cleanly with --clear.
+      - name: Create venv and install test dependencies
+        run: |
+          uv venv --clear .venv
+          uv pip install --python .venv/bin/python pytest numpy requests loguru pydantic ruamel-yaml chardet pyyaml
+
+      - name: Run offline test suite
+        run: .venv/bin/python -m pytest tests/ -q -p no:cacheprovider

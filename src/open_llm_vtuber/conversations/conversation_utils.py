@@ -1,27 +1,28 @@
 import asyncio
-import re
-from typing import Optional, Union, Any, List, Dict
-import numpy as np
 import json
+import re
+from typing import Any
+
+import numpy as np
 from loguru import logger
 
-from ..message_handler import message_handler
-from .types import WebSocketSend, BroadcastContext
-from .tts_manager import TTSTaskManager
-from ..agent.output_types import SentenceOutput, AudioOutput
-from ..agent.input_types import BatchInput, TextData, ImageData, TextSource, ImageSource
+from ..agent.input_types import BatchInput, ImageData, ImageSource, TextData, TextSource
+from ..agent.output_types import AudioOutput, SentenceOutput
 from ..asr.asr_interface import ASRInterface
 from ..live2d_model import Live2dModel
+from ..message_handler import message_handler
 from ..tts.tts_interface import TTSInterface
 from ..utils.stream_audio import prepare_audio_payload
+from .tts_manager import TTSTaskManager
+from .types import BroadcastContext, WebSocketSend
 
 
 # Convert class methods to standalone functions
 def create_batch_input(
     input_text: str,
-    images: Optional[List[Dict[str, Any]]],
+    images: list[dict[str, Any]] | None,
     from_name: str,
-    metadata: Optional[Dict[str, Any]] = None,
+    metadata: dict[str, Any] | None = None,
 ) -> BatchInput:
     """Create batch input for agent processing"""
     return BatchInput(
@@ -43,13 +44,13 @@ def create_batch_input(
 
 
 async def process_agent_output(
-    output: Union[AudioOutput, SentenceOutput],
+    output: AudioOutput | SentenceOutput,
     character_config: Any,
     live2d_model: Live2dModel,
     tts_engine: TTSInterface,
     websocket_send: WebSocketSend,
     tts_manager: TTSTaskManager,
-    translate_engine: Optional[Any] = None,
+    translate_engine: Any | None = None,
 ) -> str:
     """Process agent output with character information and optional translation"""
     output.display_text.name = character_config.character_name
@@ -70,11 +71,11 @@ async def process_agent_output(
             full_response = await handle_audio_output(output, websocket_send)
         else:
             logger.warning(f"Unknown output type: {type(output)}")
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 (intentional broad catch in runtime)
         logger.error(f"Error processing agent output: {e}")
         await websocket_send(
             json.dumps(
-                {"type": "error", "message": f"Error processing response: {str(e)}"}
+                {"type": "error", "message": f"Error processing response: {e!s}"}
             )
         )
 
@@ -87,7 +88,7 @@ async def handle_sentence_output(
     tts_engine: TTSInterface,
     websocket_send: WebSocketSend,
     tts_manager: TTSTaskManager,
-    translate_engine: Optional[Any] = None,
+    translate_engine: Any | None = None,
 ) -> str:
     """Handle sentence output type with optional translation support"""
     full_response = ""
@@ -144,7 +145,7 @@ async def send_conversation_start_signals(websocket_send: WebSocketSend) -> None
 
 
 async def process_user_input(
-    user_input: Union[str, np.ndarray],
+    user_input: str | np.ndarray,
     asr_engine: ASRInterface,
     websocket_send: WebSocketSend,
 ) -> str:
@@ -163,7 +164,7 @@ async def finalize_conversation_turn(
     tts_manager: TTSTaskManager,
     websocket_send: WebSocketSend,
     client_uid: str,
-    broadcast_ctx: Optional[BroadcastContext] = None,
+    broadcast_ctx: BroadcastContext | None = None,
 ) -> None:
     """Finalize a conversation turn"""
     if tts_manager.task_list:
@@ -192,7 +193,7 @@ async def finalize_conversation_turn(
 
 async def send_conversation_end_signal(
     websocket_send: WebSocketSend,
-    broadcast_ctx: Optional[BroadcastContext],
+    broadcast_ctx: BroadcastContext | None,
     session_emoji: str = "😊",
 ) -> None:
     """Send conversation chain end signal"""

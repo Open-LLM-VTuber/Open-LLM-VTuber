@@ -1,7 +1,9 @@
 # config_manager/translate.py
-from typing import Literal, Optional, Dict, ClassVar
-from pydantic import ValidationInfo, Field, model_validator
-from .i18n import I18nMixin, Description
+from typing import ClassVar, Literal
+
+from pydantic import Field, ValidationInfo, model_validator
+
+from .i18n import Description, I18nMixin
 
 # --- Sub-models for specific Translator providers ---
 
@@ -12,7 +14,7 @@ class DeepLXConfig(I18nMixin):
     deeplx_target_lang: str = Field(..., alias="deeplx_target_lang")
     deeplx_api_endpoint: str = Field(..., alias="deeplx_api_endpoint")
 
-    DESCRIPTIONS: ClassVar[Dict[str, Description]] = {
+    DESCRIPTIONS: ClassVar[dict[str, Description]] = {
         "deeplx_target_lang": Description(
             en="Target language code for DeepLX translation",
             zh="DeepLX 翻译的目标语言代码",
@@ -36,7 +38,7 @@ class TencentConfig(I18nMixin):
         ..., description="Target language code for tencent translation"
     )
 
-    DESCRIPTIONS: ClassVar[Dict[str, Description]] = {
+    DESCRIPTIONS: ClassVar[dict[str, Description]] = {
         "secret_id": Description(en="Tencent Secret ID", zh="腾讯服务的Secret ID"),
         "secret_key": Description(en="Tencent Secret Key", zh="腾讯服务的Secret Key"),
         "region": Description(en="Region for Tencent Service", zh="腾讯服务使用的区域"),
@@ -60,10 +62,10 @@ class TranslatorConfig(I18nMixin):
     translate_provider: Literal["deeplx", "tencent"] = Field(
         ..., alias="translate_provider"
     )
-    deeplx: Optional[DeepLXConfig] = Field(None, alias="deeplx")
-    tencent: Optional[TencentConfig] = Field(None, alias="tencent")
+    deeplx: DeepLXConfig | None = Field(None, alias="deeplx")
+    tencent: TencentConfig | None = Field(None, alias="tencent")
 
-    DESCRIPTIONS: ClassVar[Dict[str, Description]] = {
+    DESCRIPTIONS: ClassVar[dict[str, Description]] = {
         "translate_audio": Description(
             en="Enable audio translation (requires DeepLX deployment)",
             zh="启用音频翻译（需要部署 DeepLX）",
@@ -107,7 +109,7 @@ class TTSPreprocessorConfig(I18nMixin):
     ignore_angle_brackets: bool = Field(default=True, alias="ignore_angle_brackets")
     translator_config: TranslatorConfig = Field(..., alias="translator_config")
 
-    DESCRIPTIONS: ClassVar[Dict[str, Description]] = {
+    DESCRIPTIONS: ClassVar[dict[str, Description]] = {
         "remove_special_char": Description(
             en="Remove special characters from the input text",
             zh="从输入文本中删除特殊字符",

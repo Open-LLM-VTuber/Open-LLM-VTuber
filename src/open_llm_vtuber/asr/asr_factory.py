@@ -1,10 +1,9 @@
-from typing import Type
 from .asr_interface import ASRInterface
 
 
 class ASRFactory:
     @staticmethod
-    def get_asr_system(system_name: str, **kwargs) -> Type[ASRInterface]:
+    def get_asr_system(system_name: str, **kwargs) -> type[ASRInterface]:
         if system_name == "faster_whisper":
             from .faster_whisper_asr import VoiceRecognition as FasterWhisperASR
 
@@ -53,6 +52,16 @@ class ASRFactory:
                 api_key=kwargs.get("api_key"),
                 model=kwargs.get("model"),
                 lang=kwargs.get("lang"),
+            )
+        elif system_name == "openai_compat_asr":
+            from .openai_compat_asr import VoiceRecognition as OpenAICompatASR
+
+            return OpenAICompatASR(
+                base_url=kwargs.get("base_url"),
+                model=kwargs.get("model"),
+                api_key=kwargs.get("api_key"),
+                language=kwargs.get("language"),
+                timeout=kwargs.get("timeout", 60),
             )
         elif system_name == "sherpa_onnx_asr":
             from .sherpa_onnx_asr import VoiceRecognition as SherpaOnnxASR

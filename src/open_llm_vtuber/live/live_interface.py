@@ -1,6 +1,7 @@
-from abc import ABC, abstractmethod
 import asyncio
-from typing import Callable, Dict, Any
+from abc import ABC, abstractmethod
+from collections.abc import Callable
+from typing import Any
 
 
 class LivePlatformInterface(ABC):
@@ -22,14 +23,12 @@ class LivePlatformInterface(ABC):
         Returns:
             bool: True if connection successful, False otherwise
         """
-        pass
 
     @abstractmethod
     async def disconnect(self) -> None:
         """
         Disconnect from the proxy server.
         """
-        pass
 
     @abstractmethod
     async def send_message(self, text: str) -> bool:
@@ -42,11 +41,10 @@ class LivePlatformInterface(ABC):
         Returns:
             bool: True if message was sent successfully, False otherwise
         """
-        pass
 
     @abstractmethod
     async def register_message_handler(
-        self, handler: Callable[[Dict[str, Any]], None]
+        self, handler: Callable[[dict[str, Any]], None]
     ) -> None:
         """
         Register a callback function to handle response messages from the VTuber.
@@ -54,7 +52,6 @@ class LivePlatformInterface(ABC):
         Args:
             handler: Callback function that takes a message dict as parameter
         """
-        pass
 
     @abstractmethod
     async def start_receiving(self) -> None:
@@ -62,7 +59,6 @@ class LivePlatformInterface(ABC):
         Start receiving messages from the proxy server.
         This method should typically be run in a separate task.
         """
-        pass
 
     @abstractmethod
     async def run(self) -> None:
@@ -71,7 +67,6 @@ class LivePlatformInterface(ABC):
         This should handle the complete lifecycle including connection,
         message receiving, and clean disconnection.
         """
-        pass
 
     @property
     @abstractmethod
@@ -82,17 +77,15 @@ class LivePlatformInterface(ABC):
         Returns:
             bool: True if connected, False otherwise
         """
-        pass
 
     @abstractmethod
-    async def handle_incoming_messages(self, message: Dict[str, Any]) -> None:
+    async def handle_incoming_messages(self, message: dict[str, Any]) -> None:
         """
         Process incoming messages from the VTuber server.
 
         Args:
             message: The message received from the VTuber
         """
-        pass
 
 
 class MessageQueue:

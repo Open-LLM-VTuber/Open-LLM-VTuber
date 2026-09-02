@@ -1,11 +1,12 @@
 # config_manager/main.py
-from pydantic import BaseModel, Field
-from typing import Dict, ClassVar
+from typing import ClassVar
 
-from .system import SystemConfig
+from pydantic import BaseModel, Field
+
 from .character import CharacterConfig
+from .i18n import Description, I18nMixin
 from .live import LiveConfig
-from .i18n import I18nMixin, Description
+from .system import SystemConfig
 
 
 class Config(I18nMixin, BaseModel):
@@ -17,7 +18,7 @@ class Config(I18nMixin, BaseModel):
     character_config: CharacterConfig = Field(..., alias="character_config")
     live_config: LiveConfig = Field(default=LiveConfig(), alias="live_config")
 
-    DESCRIPTIONS: ClassVar[Dict[str, Description]] = {
+    DESCRIPTIONS: ClassVar[dict[str, Description]] = {
         "system_config": Description(
             en="System configuration settings", zh="系统配置设置"
         ),

@@ -25,7 +25,7 @@ class TTSEngine(TTSInterface):
         if not os.path.exists(self.new_audio_dir):
             os.makedirs(self.new_audio_dir)
 
-    #! This method (pyttsx3) is not thread safe. It will blow if it's called from multiple threads at the same time.
+    #! This method (pyttsx3) is not thread safe. It will blow if it's called from multiple threads at the same time.  # noqa: EXE001,EXE005
     def generate_audio(self, text, file_name_no_ext=None):
         logger.debug(f"Start Generating {file_name_no_ext}")
         file_name = self.generate_cache_file_name(file_name_no_ext, self.file_extension)

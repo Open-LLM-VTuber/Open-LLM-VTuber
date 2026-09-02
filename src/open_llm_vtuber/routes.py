@@ -1,15 +1,17 @@
-import os
 import json
-from uuid import uuid4
-import numpy as np
+import os
 from datetime import datetime
-from fastapi import APIRouter, WebSocket, UploadFile, File, Response
+from uuid import uuid4
+
+import numpy as np
+from fastapi import APIRouter, File, Response, UploadFile, WebSocket
+from loguru import logger
 from starlette.responses import JSONResponse
 from starlette.websockets import WebSocketDisconnect
-from loguru import logger
+
+from .proxy_handler import ProxyHandler
 from .service_context import ServiceContext
 from .websocket_handler import WebSocketHandler
-from .proxy_handler import ProxyHandler
 
 
 def init_client_ws_route(default_context_cache: ServiceContext) -> APIRouter:
@@ -139,7 +141,7 @@ def init_webtool_routes(default_context_cache: ServiceContext) -> APIRouter:
         )
 
     @router.post("/asr")
-    async def transcribe_audio(file: UploadFile = File(...)):
+    async def transcribe_audio(file: UploadFile = File(...)):  # noqa: B008
         """
         Endpoint for transcribing audio using the ASR engine
         """
@@ -168,7 +170,7 @@ def init_webtool_routes(default_context_cache: ServiceContext) -> APIRouter:
                 )
             except ValueError as e:
                 raise ValueError(
-                    f"Audio format error: {str(e)}. Please ensure the file is 16-bit PCM WAV format."
+                    f"Audio format error: {e!s}. Please ensure the file is 16-bit PCM WAV format."
                 )
 
             # Validate audio data
@@ -188,7 +190,7 @@ def init_webtool_routes(default_context_cache: ServiceContext) -> APIRouter:
                 status_code=400,
                 media_type="application/json",
             )
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 (intentional broad catch in runtime)
             logger.error(f"Error during transcription: {e}")
             return Response(
                 content=json.dumps(
@@ -220,7 +222,7 @@ def init_webtool_routes(default_context_cache: ServiceContext) -> APIRouter:
                     # Generate and send audio for each sentence
                     for sentence in sentences:
                         sentence = sentence + "."  # Add back the period
-                        file_name = f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{str(uuid4())[:8]}"
+                        file_name = f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{str(uuid4())[:8]}"  # noqa: DTZ005
                         audio_path = (
                             await default_context_cache.tts_engine.async_generate_audio(
                                 text=sentence, file_name_no_ext=file_name
@@ -241,13 +243,13 @@ def init_webtool_routes(default_context_cache: ServiceContext) -> APIRouter:
                     # Send completion signal
                     await websocket.send_json({"status": "complete"})
 
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001 (intentional broad catch in runtime)
                     logger.error(f"Error generating TTS: {e}")
                     await websocket.send_json({"status": "error", "message": str(e)})
 
         except WebSocketDisconnect:
             logger.info("TTS WebSocket client disconnected")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 (intentional broad catch in runtime)
             logger.error(f"Error in TTS WebSocket connection: {e}")
             await websocket.close()
 

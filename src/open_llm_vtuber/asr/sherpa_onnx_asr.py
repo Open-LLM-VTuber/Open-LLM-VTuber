@@ -1,29 +1,32 @@
 import os
+
 import numpy as np
+import onnxruntime
 import sherpa_onnx
 from loguru import logger
+
 from .asr_interface import ASRInterface
-from .utils import download_and_extract, check_and_extract_local_file
-import onnxruntime
+from .utils import check_and_extract_local_file, download_and_extract
 
 
 class VoiceRecognition(ASRInterface):
     def __init__(
         self,
         model_type: str = "paraformer",  # or "transducer", "nemo_ctc", "wenet_ctc", "whisper", "tdnn_ctc", "sense_voice", "fire_red_asr"
-        encoder: str = None,  # Path to the encoder model, used with transducer
-        decoder: str = None,  # Path to the decoder model, used with transducer
-        joiner: str = None,  # Path to the joiner model, used with transducer
-        paraformer: str = None,  # Path to the model.onnx from Paraformer
-        nemo_ctc: str = None,  # Path to the model.onnx from NeMo CTC
-        wenet_ctc: str = None,  # Path to the model.onnx from WeNet CTC
-        tdnn_model: str = None,  # Path to the model.onnx for the tdnn model of the yesno recipe
-        whisper_encoder: str = None,  # Path to whisper encoder model
-        whisper_decoder: str = None,  # Path to whisper decoder model
-        sense_voice: str = None,  # Path to the model.onnx from SenseVoice
-        fire_red_asr_encoder: str = None,  # Path to FireRedASR encoder model
-        fire_red_asr_decoder: str = None,  # Path to FireRedASR decoder model
-        tokens: str = None,  # Path to tokens.txt
+        encoder: str | None = None,  # Path to the encoder model, used with transducer
+        decoder: str | None = None,  # Path to the decoder model, used with transducer
+        joiner: str | None = None,  # Path to the joiner model, used with transducer
+        paraformer: str | None = None,  # Path to the model.onnx from Paraformer
+        nemo_ctc: str | None = None,  # Path to the model.onnx from NeMo CTC
+        wenet_ctc: str | None = None,  # Path to the model.onnx from WeNet CTC
+        tdnn_model: str
+        | None = None,  # Path to the model.onnx for the tdnn model of the yesno recipe
+        whisper_encoder: str | None = None,  # Path to whisper encoder model
+        whisper_decoder: str | None = None,  # Path to whisper decoder model
+        sense_voice: str | None = None,  # Path to the model.onnx from SenseVoice
+        fire_red_asr_encoder: str | None = None,  # Path to FireRedASR encoder model
+        fire_red_asr_decoder: str | None = None,  # Path to FireRedASR decoder model
+        tokens: str | None = None,  # Path to tokens.txt
         hotwords_file: str = "",  # Path to hotwords file
         hotwords_score: float = 1.5,  # Hotwords score
         modeling_unit: str = "",  # Modeling unit for hotwords

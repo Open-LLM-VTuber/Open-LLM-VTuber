@@ -1,6 +1,8 @@
 import shutil
-from loguru import logger
+
 from gradio_client import Client, file
+from loguru import logger
+
 from .tts_interface import TTSInterface
 
 
@@ -38,7 +40,7 @@ class TTSEngine(TTSInterface):
                     )
                     shutil.copyfile(source_file, file_name)
                     return file_name
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001 (intentional broad catch in runtime)
                     logger.critical(f"Error: Failed to generate audio. {e}")
                     return None
             case "voice_creation":
@@ -52,7 +54,7 @@ class TTSEngine(TTSInterface):
                     )
                     shutil.copyfile(source_file, file_name)
                     return file_name
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001 (intentional broad catch in runtime)
                     logger.critical(f"Error: Failed to generate audio. {e}")
                     return None
             case _:

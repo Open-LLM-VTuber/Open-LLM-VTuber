@@ -1,7 +1,9 @@
-from typing import Dict, List, Optional, Set, Tuple, Callable, Any
-from dataclasses import dataclass
-from fastapi import WebSocket
 import json
+from collections.abc import Callable
+from dataclasses import dataclass
+from typing import Any
+
+from fastapi import WebSocket
 from loguru import logger
 
 
@@ -9,13 +11,13 @@ from loguru import logger
 class Group:
     group_id: str
     owner_uid: str
-    members: Set[str]  # Set of client_uids
+    members: set[str]  # Set of client_uids
 
 
 class ChatGroupManager:
     def __init__(self):
-        self.client_group_map: Dict[str, str] = {}  # client_uid -> group_id
-        self.groups: Dict[str, Group] = {}  # group_id -> Group
+        self.client_group_map: dict[str, str] = {}  # client_uid -> group_id
+        self.groups: dict[str, Group] = {}  # group_id -> Group
 
     def create_group_for_client(self, client_uid: str) -> str:
         group_id = f"group_{client_uid}"
@@ -27,7 +29,7 @@ class ChatGroupManager:
 
     def add_client_to_group(
         self, inviter_uid: str, invitee_uid: str
-    ) -> Tuple[bool, str]:
+    ) -> tuple[bool, str]:
         """
         Add a client to the group of the inviter
         If inviter is not in a group, create one
@@ -38,7 +40,7 @@ class ChatGroupManager:
             return False, f"Invitee {invitee_uid} does not exist"
 
         # Check if invitee is already in a group
-        if invitee_uid in self.client_group_map and self.client_group_map[invitee_uid]:
+        if self.client_group_map.get(invitee_uid):
             return False, f"Invitee {invitee_uid} is already in a group"
 
         # If inviter is not in a group, create one
@@ -63,7 +65,7 @@ class ChatGroupManager:
 
     def remove_client_from_group(
         self, remover_uid: str, target_uid: str
-    ) -> Tuple[bool, str]:
+    ) -> tuple[bool, str]:
         """
         Remove a client from their group
         Returns (success, message)
@@ -96,7 +98,7 @@ class ChatGroupManager:
         logger.info(f"Removed client {target_uid} from group {target_group_id}")
         return True, f"Successfully removed {target_uid} from the group"
 
-    def remove_client(self, client_uid: str) -> List[str]:
+    def remove_client(self, client_uid: str) -> list[str]:
         """
         Remove client from their group and return affected members
 
@@ -135,27 +137,27 @@ class ChatGroupManager:
 
         return affected_members
 
-    def cleanup_disconnected_clients(self, connected_clients: Set[str]):
+    def cleanup_disconnected_clients(self, connected_clients: set[str]):
         """Remove all disconnected clients from groups"""
         disconnected_clients = set(self.client_group_map.keys()) - connected_clients
         for client_uid in disconnected_clients:
             self.remove_client(client_uid)
 
-    def get_client_group(self, client_uid: str) -> Optional[Group]:
+    def get_client_group(self, client_uid: str) -> Group | None:
         """
         Get the group that a client belongs to
         """
         group_id = self.client_group_map.get(client_uid)
         return self.groups.get(group_id) if group_id else None
 
-    def get_group_members(self, client_uid: str) -> List[str]:
+    def get_group_members(self, client_uid: str) -> list[str]:
         """
         Get all members in the client's group
         """
         group = self.get_client_group(client_uid)
         return list(group.members) if group else []
 
-    def get_group_by_id(self, group_id: str) -> Optional[Group]:
+    def get_group_by_id(self, group_id: str) -> Group | None:
         """Get group by group ID"""
         return self.groups.get(group_id)
 
@@ -165,7 +167,7 @@ async def handle_group_operation(
     client_uid: str,
     target_uid: str,
     chat_group_manager: "ChatGroupManager",
-    client_connections: Dict[str, WebSocket],
+    client_connections: dict[str, WebSocket],
     send_group_update: Callable,
 ) -> None:
     """Handle group-related operations"""
@@ -194,7 +196,7 @@ async def handle_group_operation(
                             }
                         )
                     )
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001 (intentional broad catch in runtime)
                     logger.error(f"Failed to update invited member {target_uid}: {e}")
 
         else:  # remove operation
@@ -227,7 +229,7 @@ async def handle_group_operation(
                             }
                         )
                     )
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001 (intentional broad catch in runtime)
                     logger.error(f"Failed to update removed member {target_uid}: {e}")
 
             # Get new group members after operation
@@ -255,14 +257,14 @@ async def handle_group_operation(
                                     }
                                 )
                             )
-                    except Exception as e:
+                    except Exception as e:  # noqa: BLE001 (intentional broad catch in runtime)
                         logger.error(f"Failed to update member {member_uid}: {e}")
 
 
 async def handle_client_disconnect(
     client_uid: str,
     chat_group_manager: "ChatGroupManager",
-    client_connections: Dict[str, WebSocket],
+    client_connections: dict[str, WebSocket],
     send_group_update: Callable,
 ) -> None:
     """Handle client disconnection from group"""
@@ -285,15 +287,15 @@ async def handle_client_disconnect(
 
 
 async def broadcast_to_group(
-    group_members: List[str],
-    message: Dict[str, Any],
-    client_connections: Dict[str, WebSocket],
-    exclude_uid: Optional[str] = None,
+    group_members: list[str],
+    message: dict[str, Any],
+    client_connections: dict[str, WebSocket],
+    exclude_uid: str | None = None,
 ) -> None:
     """Broadcasts a message to all members in a group except the sender"""
     for member_uid in group_members:
         if member_uid != exclude_uid and member_uid in client_connections:
             try:
                 await client_connections[member_uid].send_text(json.dumps(message))
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 (intentional broad catch in runtime)
                 logger.error(f"Failed to broadcast to {member_uid}: {e}")

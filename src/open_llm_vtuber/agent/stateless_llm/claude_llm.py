@@ -4,10 +4,11 @@ for language generation.
 """
 
 import json
-from typing import AsyncIterator, List, Dict, Any
+from collections.abc import AsyncIterator
+from typing import Any
 
+from anthropic import NOT_GIVEN, AsyncAnthropic
 from loguru import logger
-from anthropic import AsyncAnthropic, NOT_GIVEN
 
 from .stateless_llm_interface import StatelessLLMInterface
 
@@ -16,9 +17,9 @@ class AsyncLLM(StatelessLLMInterface):
     def __init__(
         self,
         model: str = "claude-3-haiku-latest",
-        base_url: str = None,
-        llm_api_key: str = None,
-        system: str = None,
+        base_url: str | None = None,
+        llm_api_key: str | None = None,
+        system: str | None = None,
     ):
         """
         Initialize Claude LLM.
@@ -40,7 +41,7 @@ class AsyncLLM(StatelessLLMInterface):
         logger.info(f"Initialized Claude AsyncLLM with model: {self.model}")
         logger.debug(f"Base URL: {base_url}")
 
-    def _convert_message_format(self, message: Dict[str, Any]) -> Dict[str, Any]:
+    def _convert_message_format(self, message: dict[str, Any]) -> dict[str, Any]:
         """Convert message format to Claude's expected format."""
         # Handle potential tool_result content blocks
         if isinstance(message.get("content"), list):
@@ -83,10 +84,10 @@ class AsyncLLM(StatelessLLMInterface):
 
     async def chat_completion(
         self,
-        messages: List[Dict[str, Any]],
-        system: str = None,
-        tools: List[Dict[str, Any]] = None,
-    ) -> AsyncIterator[Dict[str, Any]]:
+        messages: list[dict[str, Any]],
+        system: str | None = None,
+        tools: list[dict[str, Any]] | None = None,
+    ) -> AsyncIterator[dict[str, Any]]:
         """
         Generates a chat completion using the Claude API asynchronously,
         handling text generation and tool use.
@@ -231,15 +232,15 @@ class AsyncLLM(StatelessLLMInterface):
                         # No need to break here, the context manager handles the end
                     elif event.type == "ping":
                         logger.trace("Stream: ping")
-                        pass  # Ignore pings
+                        # Ignore pings
                     # Anthropic SDK might raise errors directly, or via event.type == 'error'
                     # The outer try/except handles SDK-level errors.
 
         except Exception as e:
-            logger.error(f"Claude API error occurred: {str(e)}")
+            logger.error(f"Claude API error occurred: {e!s}")
             logger.info(f"Model: {self.model}")
             # Yield an error event before raising
-            yield {"type": "error", "message": f"Claude API error: {str(e)}"}
+            yield {"type": "error", "message": f"Claude API error: {e!s}"}
             raise
 
         # No finally block needed for stream.close() due to async with

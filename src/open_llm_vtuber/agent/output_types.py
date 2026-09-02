@@ -1,15 +1,14 @@
-from dataclasses import dataclass, asdict
-from typing import List, Optional
 from abc import ABC, abstractmethod
+from dataclasses import asdict, dataclass
 
 
 @dataclass
 class Actions:
     """Represents actions that can be performed alongside text output"""
 
-    expressions: Optional[List[str] | List[int]] = None
-    pictures: Optional[List[str]] = None
-    sounds: Optional[List[str]] = None
+    expressions: list[str] | list[int] | None = None
+    pictures: list[str] | None = None
+    sounds: list[str] | None = None
 
     def to_dict(self) -> dict:
         """Convert Actions object to a dictionary for JSON serialization"""
@@ -22,7 +21,6 @@ class BaseOutput(ABC):
     @abstractmethod
     def __aiter__(self):
         """Make the output iterable"""
-        pass
 
 
 @dataclass
@@ -30,8 +28,8 @@ class DisplayText:
     """Text to be displayed with optional metadata"""
 
     text: str
-    name: Optional[str] = "AI"  # Keep the name field for frontend display
-    avatar: Optional[str] = None
+    name: str | None = "AI"  # Keep the name field for frontend display
+    avatar: str | None = None
 
     def to_dict(self) -> dict:
         """Convert to dictionary for JSON serialization"""

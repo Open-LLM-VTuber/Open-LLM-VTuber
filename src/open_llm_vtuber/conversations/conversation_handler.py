@@ -1,19 +1,20 @@
 import asyncio
 import json
-from typing import Dict, Optional, Callable
+from collections.abc import Callable
 
 import numpy as np
 from fastapi import WebSocket
 from loguru import logger
 
+from prompts import prompt_loader
+
 from ..chat_group import ChatGroupManager
 from ..chat_history_manager import store_message
 from ..service_context import ServiceContext
+from .conversation_utils import EMOJI_LIST
 from .group_conversation import process_group_conversation
 from .single_conversation import process_single_conversation
-from .conversation_utils import EMOJI_LIST
 from .types import GroupConversationState
-from prompts import prompt_loader
 
 
 async def handle_conversation_trigger(
@@ -22,11 +23,11 @@ async def handle_conversation_trigger(
     client_uid: str,
     context: ServiceContext,
     websocket: WebSocket,
-    client_contexts: Dict[str, ServiceContext],
-    client_connections: Dict[str, WebSocket],
+    client_contexts: dict[str, ServiceContext],
+    client_connections: dict[str, WebSocket],
     chat_group_manager: ChatGroupManager,
-    received_data_buffers: Dict[str, np.ndarray],
-    current_conversation_tasks: Dict[str, Optional[asyncio.Task]],
+    received_data_buffers: dict[str, np.ndarray],
+    current_conversation_tasks: dict[str, asyncio.Task | None],
     broadcast_to_group: Callable,
 ) -> None:
     """Handle triggers that start a conversation"""
@@ -42,7 +43,7 @@ async def handle_conversation_trigger(
             else:
                 logger.warning("Proactive speak prompt not configured, using default")
                 user_input = "Please say something."
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 (intentional broad catch in runtime)
             logger.error(f"Error loading proactive speak prompt: {e}")
             user_input = "Please say something."
 
@@ -111,7 +112,7 @@ async def handle_conversation_trigger(
 
 async def handle_individual_interrupt(
     client_uid: str,
-    current_conversation_tasks: Dict[str, Optional[asyncio.Task]],
+    current_conversation_tasks: dict[str, asyncio.Task | None],
     context: ServiceContext,
     heard_response: str,
 ):
@@ -123,7 +124,7 @@ async def handle_individual_interrupt(
 
         try:
             context.agent_engine.handle_interrupt(heard_response)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 (intentional broad catch in runtime)
             logger.error(f"Error handling interrupt: {e}")
 
         if context.history_uid:
@@ -146,9 +147,9 @@ async def handle_individual_interrupt(
 async def handle_group_interrupt(
     group_id: str,
     heard_response: str,
-    current_conversation_tasks: Dict[str, Optional[asyncio.Task]],
+    current_conversation_tasks: dict[str, asyncio.Task | None],
     chat_group_manager: ChatGroupManager,
-    client_contexts: Dict[str, ServiceContext],
+    client_contexts: dict[str, ServiceContext],
     broadcast_to_group: Callable,
 ) -> None:
     """Handles interruption for a group conversation"""
@@ -201,7 +202,7 @@ async def handle_group_interrupt(
                         role="system",
                         content="[Interrupted by user]",
                     )
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001 (intentional broad catch in runtime)
                     logger.error(f"Error handling interrupt for {member_uid}: {e}")
 
     await broadcast_to_group(

@@ -1,9 +1,10 @@
-import sys
 import os
+import sys
 
 import sherpa_onnx
 import soundfile as sf
 from loguru import logger
+
 from .tts_interface import TTSInterface
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -107,6 +108,6 @@ class TTSEngine(TTSInterface):
 
             return file_name
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 (intentional broad catch in runtime)
             logger.critical(f"\nError: sherpa-onnx unable to generate audio: {e}")
             return None

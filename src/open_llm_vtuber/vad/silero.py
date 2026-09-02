@@ -204,7 +204,6 @@ async def vad_main():
             for _bytes in vad.detect_speech(chunk):
                 print(_bytes[:44])
                 # await audio_queue.put(_bytes)
-                pass
 
     async def empty_run():
         while True:

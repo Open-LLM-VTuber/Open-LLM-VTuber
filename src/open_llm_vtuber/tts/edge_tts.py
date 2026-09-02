@@ -1,8 +1,9 @@
-import sys
 import os
+import sys
 
 import edge_tts
 from loguru import logger
+
 from .tts_interface import TTSInterface
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -42,7 +43,7 @@ class TTSEngine(TTSInterface):
         try:
             communicate = edge_tts.Communicate(text, self.voice)
             communicate.save_sync(file_name)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 (intentional broad catch in runtime)
             logger.critical(f"\nError: edge-tts unable to generate audio: {e}")
             logger.critical("It's possible that edge-tts is blocked in your region.")
             return None

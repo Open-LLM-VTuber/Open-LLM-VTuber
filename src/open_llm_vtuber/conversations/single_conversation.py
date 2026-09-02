@@ -1,35 +1,35 @@
-from typing import Union, List, Dict, Any, Optional
 import asyncio
 import json
-from loguru import logger
-import numpy as np
+from typing import Any
 
-from .conversation_utils import (
-    create_batch_input,
-    process_agent_output,
-    send_conversation_start_signals,
-    process_user_input,
-    finalize_conversation_turn,
-    cleanup_conversation,
-    EMOJI_LIST,
-)
-from .types import WebSocketSend
-from .tts_manager import TTSTaskManager
-from ..chat_history_manager import store_message
-from ..service_context import ServiceContext
+import numpy as np
+from loguru import logger
 
 # Import necessary types from agent outputs
-from ..agent.output_types import SentenceOutput, AudioOutput
+from ..agent.output_types import AudioOutput, SentenceOutput
+from ..chat_history_manager import store_message
+from ..service_context import ServiceContext
+from .conversation_utils import (
+    EMOJI_LIST,
+    cleanup_conversation,
+    create_batch_input,
+    finalize_conversation_turn,
+    process_agent_output,
+    process_user_input,
+    send_conversation_start_signals,
+)
+from .tts_manager import TTSTaskManager
+from .types import WebSocketSend
 
 
 async def process_single_conversation(
     context: ServiceContext,
     websocket_send: WebSocketSend,
     client_uid: str,
-    user_input: Union[str, np.ndarray],
-    images: Optional[List[Dict[str, Any]]] = None,
+    user_input: str | np.ndarray,
+    images: list[dict[str, Any]] | None = None,
     session_emoji: str = np.random.choice(EMOJI_LIST),
-    metadata: Optional[Dict[str, Any]] = None,
+    metadata: dict[str, Any] | None = None,
 ) -> str:
     """Process a single-user conversation turn
 
@@ -122,7 +122,7 @@ async def process_single_conversation(
                     )
                     logger.debug(f"Unexpected item content: {output_item}")
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 (intentional broad catch in runtime)
             logger.exception(
                 f"Error processing agent response stream: {e}"
             )  # Log with stack trace
@@ -130,7 +130,7 @@ async def process_single_conversation(
                 json.dumps(
                     {
                         "type": "error",
-                        "message": f"Error processing agent response: {str(e)}",
+                        "message": f"Error processing agent response: {e!s}",
                     }
                 )
             )
@@ -167,7 +167,7 @@ async def process_single_conversation(
     except Exception as e:
         logger.error(f"Error in conversation chain: {e}")
         await websocket_send(
-            json.dumps({"type": "error", "message": f"Conversation error: {str(e)}"})
+            json.dumps({"type": "error", "message": f"Conversation error: {e!s}"})
         )
         raise
     finally:

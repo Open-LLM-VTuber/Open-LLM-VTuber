@@ -1,9 +1,10 @@
 from abc import ABC, abstractmethod
-from typing import AsyncIterator
+from collections.abc import AsyncIterator
+
 from loguru import logger
 
-from ..output_types import BaseOutput
 from ..input_types import BaseInput
+from ..output_types import BaseOutput
 
 
 class AgentInterface(ABC):
@@ -40,7 +41,6 @@ class AgentInterface(ABC):
             """Agent: No interrupt handler set. The agent may not handle interruptions
             correctly. The AI may not be able to understand that it was interrupted."""
         )
-        pass
 
     @abstractmethod
     def set_memory_from_history(self, conf_uid: str, history_uid: str) -> None:
@@ -51,4 +51,3 @@ class AgentInterface(ABC):
             conf_uid: str - Configuration ID
             history_uid: str - History ID
         """
-        pass

@@ -1,26 +1,27 @@
 """Constructs prompts for servers and tools, formats tool information for OpenAI API."""
 
-from typing import Dict, Optional, List, Tuple, Any
+from typing import Any
+
 from loguru import logger
 
-from .types import FormattedTool
 from .mcp_client import MCPClient
 from .server_registry import ServerRegistry
+from .types import FormattedTool
 
 
 class ToolAdapter:
     """Dynamically fetches tool information from enabled MCP servers and formats it."""
 
-    def __init__(self, server_registery: Optional[ServerRegistry] = None) -> None:
+    def __init__(self, server_registery: ServerRegistry | None = None) -> None:
         """Initialize with an ServerRegistry."""
         self.server_registery = server_registery or ServerRegistry()
 
     async def get_server_and_tool_info(
-        self, enabled_servers: List[str]
-    ) -> Tuple[Dict[str, Dict[str, str]], Dict[str, FormattedTool]]:
+        self, enabled_servers: list[str]
+    ) -> tuple[dict[str, dict[str, str]], dict[str, FormattedTool]]:
         """Fetch tool information from specified enabled MCP servers."""
-        servers_info: Dict[str, Dict[str, str]] = {}
-        formatted_tools: Dict[str, FormattedTool] = {}
+        servers_info: dict[str, dict[str, str]] = {}
+        formatted_tools: dict[str, FormattedTool] = {}
 
         if not enabled_servers:
             logger.warning(
@@ -69,7 +70,7 @@ class ToolAdapter:
                     ):  # Ensure entry exists even on error
                         servers_info[server_name] = {}
                     continue  # Continue to next server
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001 (intentional broad catch in runtime)
                     logger.error(
                         f"MC: Unexpected error for server '{server_name}': {e}"
                     )
@@ -83,7 +84,7 @@ class ToolAdapter:
         return servers_info, formatted_tools
 
     def construct_mcp_prompt_string(
-        self, servers_info: Dict[str, Dict[str, str]]
+        self, servers_info: dict[str, dict[str, str]]
     ) -> str:
         """Build a single prompt string describing enabled servers and their tools."""
         full_prompt_content = ""
@@ -135,8 +136,8 @@ class ToolAdapter:
         return full_prompt_content.strip()  # Remove trailing newline
 
     def format_tools_for_api(
-        self, formatted_tools_dict: Dict[str, FormattedTool]
-    ) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+        self, formatted_tools_dict: dict[str, FormattedTool]
+    ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
         """Format tools to OpenAI and Claude function-calling compatible schemas."""
         openai_tools = []
         claude_tools = []
@@ -155,7 +156,7 @@ class ToolAdapter:
                 continue
 
             input_schema = data_object.input_schema
-            properties: Dict[str, Dict[str, str]] = input_schema.get("properties", {})
+            properties: dict[str, dict[str, str]] = input_schema.get("properties", {})
             tool_description = data_object.description or "No description provided."
             required_params = input_schema.get("required", [])
 
@@ -217,8 +218,8 @@ class ToolAdapter:
         return openai_tools, claude_tools
 
     async def get_tools(
-        self, enabled_servers: List[str]
-    ) -> Tuple[str, List[Dict[str, Any]], List[Dict[str, Any]]]:
+        self, enabled_servers: list[str]
+    ) -> tuple[str, list[dict[str, Any]], list[dict[str, Any]]]:
         """Run the dynamic fetching and formatting process."""
         logger.info(
             f"MC: Running dynamic tool construction for servers: {enabled_servers}"

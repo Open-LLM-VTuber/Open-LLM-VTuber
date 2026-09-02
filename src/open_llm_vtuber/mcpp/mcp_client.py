@@ -1,13 +1,15 @@
 """MCP Client for Open-LLM-Vtuber."""
 
+from collections.abc import Callable
 from contextlib import AsyncExitStack
-from typing import Dict, Any, List, Callable
-from loguru import logger
 from datetime import timedelta
+from typing import Any
 
+from loguru import logger
 from mcp import ClientSession, StdioServerParameters
-from mcp.types import Tool
 from mcp.client.stdio import stdio_client
+from mcp.types import Tool
+from typing_extensions import Self
 
 from .server_registry import ServerRegistry
 
@@ -22,13 +24,13 @@ class MCPClient:
     def __init__(
         self,
         server_registery: ServerRegistry,
-        send_text: Callable = None,
-        client_uid: str = None,
+        send_text: Callable | None = None,
+        client_uid: str | None = None,
     ) -> None:
         """Initialize the MCP Client."""
         self.exit_stack: AsyncExitStack = AsyncExitStack()
-        self.active_sessions: Dict[str, ClientSession] = {}
-        self._list_tools_cache: Dict[str, List[Tool]] = {}  # Cache for list_tools
+        self.active_sessions: dict[str, ClientSession] = {}
+        self._list_tools_cache: dict[str, list[Tool]] = {}  # Cache for list_tools
         self._send_text: Callable = send_text
         self._client_uid: str = client_uid
 
@@ -80,7 +82,7 @@ class MCPClient:
                 f"MCPC: Failed to connect to server '{server_name}'."
             ) from e
 
-    async def list_tools(self, server_name: str) -> List[Tool]:
+    async def list_tools(self, server_name: str) -> list[Tool]:
         """List all available tools on the specified server."""
         # Check cache first
         if server_name in self._list_tools_cache:
@@ -99,8 +101,8 @@ class MCPClient:
         return response.tools
 
     async def call_tool(
-        self, server_name: str, tool_name: str, tool_args: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, server_name: str, tool_name: str, tool_args: dict[str, Any]
+    ) -> dict[str, Any]:
         """Call a tool on the specified server.
 
         Returns:
@@ -165,7 +167,7 @@ class MCPClient:
         self.exit_stack = AsyncExitStack()
         logger.info("MCPC: Client instance closed.")
 
-    async def __aenter__(self) -> "MCPClient":
+    async def __aenter__(self) -> Self:
         """Enter the async context manager."""
         return self
 

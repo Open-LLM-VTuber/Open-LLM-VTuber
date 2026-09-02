@@ -1,7 +1,9 @@
 # config_manager/system.py
+from typing import ClassVar
+
 from pydantic import Field, model_validator
-from typing import Dict, ClassVar
-from .i18n import I18nMixin, Description
+
+from .i18n import Description, I18nMixin
 
 
 class SystemConfig(I18nMixin):
@@ -11,10 +13,10 @@ class SystemConfig(I18nMixin):
     host: str = Field(..., alias="host")
     port: int = Field(..., alias="port")
     config_alts_dir: str = Field(..., alias="config_alts_dir")
-    tool_prompts: Dict[str, str] = Field(..., alias="tool_prompts")
+    tool_prompts: dict[str, str] = Field(..., alias="tool_prompts")
     enable_proxy: bool = Field(False, alias="enable_proxy")
 
-    DESCRIPTIONS: ClassVar[Dict[str, Description]] = {
+    DESCRIPTIONS: ClassVar[dict[str, Description]] = {
         "conf_version": Description(en="Configuration version", zh="配置文件版本"),
         "host": Description(en="Server host address", zh="服务器主机地址"),
         "port": Description(en="Server port number", zh="服务器端口号"),

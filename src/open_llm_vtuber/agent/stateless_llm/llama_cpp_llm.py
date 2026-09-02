@@ -3,7 +3,9 @@ This class provides a stateless interface to llama.cpp for language generation.
 """
 
 import asyncio
-from typing import AsyncIterator, List, Dict, Any
+from collections.abc import AsyncIterator
+from typing import Any
+
 from llama_cpp import Llama
 from loguru import logger
 
@@ -32,7 +34,7 @@ class LLM(StatelessLLMInterface):
             raise
 
     async def chat_completion(
-        self, messages: List[Dict[str, Any]], system: str = None
+        self, messages: list[dict[str, Any]], system: str | None = None
     ) -> AsyncIterator[str]:
         """
         Generates a chat completion using llama.cpp asynchronously.

@@ -1,5 +1,6 @@
 import json
-from typing import List, Dict, Any, Optional, Tuple
+from typing import Any
+
 from loguru import logger
 
 
@@ -12,7 +13,7 @@ class StreamJSONDetector:
         self.completed_jsons = []  # Store completed JSON objects
         self.processed_ranges = []  # Store processed intervals [start, end]
 
-    def process_chunk(self, chunk: str) -> List[Dict[str, Any]]:
+    def process_chunk(self, chunk: str) -> list[dict[str, Any]]:
         """Process a single text chunk, return a list of complete JSON objects found in this chunk.
 
         Args:
@@ -57,7 +58,7 @@ class StreamJSONDetector:
                 return True
         return False
 
-    def _try_parse_jsons(self) -> List[Dict[str, Any]]:
+    def _try_parse_jsons(self) -> list[dict[str, Any]]:
         """Try to parse JSON objects from the current buffer.
 
         Returns:
@@ -87,7 +88,7 @@ class StreamJSONDetector:
         self.potential_jsons = remaining_potential
         return new_jsons
 
-    def _extract_json(self, start_idx: int) -> Tuple[Optional[Dict[str, Any]], int]:
+    def _extract_json(self, start_idx: int) -> tuple[dict[str, Any] | None, int]:
         """Try to extract a complete JSON object from the given position.
 
         Args:
@@ -120,7 +121,7 @@ class StreamJSONDetector:
 
         return None, -1
 
-    def get_all_jsons(self) -> List[Dict[str, Any]]:
+    def get_all_jsons(self) -> list[dict[str, Any]]:
         """Get all JSON objects parsed so far.
 
         Returns:

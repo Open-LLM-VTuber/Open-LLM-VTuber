@@ -1,15 +1,15 @@
-from typing import Dict, Optional, Tuple
 import asyncio
-from loguru import logger
 from collections import defaultdict
+
+from loguru import logger
 
 
 class MessageHandler:
     def __init__(self):
-        self._response_events: Dict[
-            str, Dict[Tuple[str, Optional[str]], asyncio.Event]
+        self._response_events: dict[
+            str, dict[tuple[str, str | None], asyncio.Event]
         ] = defaultdict(dict)
-        self._response_data: Dict[str, Dict[Tuple[str, Optional[str]], dict]] = (
+        self._response_data: dict[str, dict[tuple[str, str | None], dict]] = (
             defaultdict(dict)
         )
 
@@ -19,7 +19,7 @@ class MessageHandler:
         response_type: str,
         request_id: str | None = None,
         timeout: float | None = None,
-    ) -> Optional[dict]:
+    ) -> dict | None:
         """
         Wait for a response of specific type and optional request_id from a client.
 

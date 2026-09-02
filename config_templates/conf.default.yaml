@@ -172,7 +172,10 @@ character_config:
 
   # === Automatic Speech Recognition ===
   asr_config:
-    # speech to text model options: 'faster_whisper', 'whisper_cpp', 'whisper', 'azure_asr', 'fun_asr', 'groq_whisper_asr', 'sherpa_onnx_asr'
+    # speech to text model options: 'faster_whisper', 'whisper_cpp', 'whisper', 'azure_asr', 'fun_asr', 'groq_whisper_asr', 'openai_compat_asr', 'sherpa_onnx_asr'
+    # NOTE: 'openai_compat_asr' (new) is opt-in — it requires a local OpenAI-compatible
+    # /v1/audio/transcriptions server. Keep the default on 'sherpa_onnx_asr' so fresh
+    # installs work out of the box without a local ASR endpoint configured.
     asr_model: 'sherpa_onnx_asr'
 
     azure_asr:
@@ -269,6 +272,16 @@ character_config:
       api_key: ''
       model: 'whisper-large-v3-turbo' # or 'whisper-large-v3'
       lang: '' # put nothing and it will be auto
+
+    # OpenAI-compatible ASR (e.g. a local faster-whisper wrapper).
+    # Point base_url at any server implementing /v1/audio/transcriptions.
+    # Keeps speech recognition fully offline when using a local endpoint.
+    openai_compat_asr:
+      base_url: 'http://localhost:8733/v1'
+      model: 'base'
+      api_key: 'local' # dummy value for local servers
+      language: 'en' # put nothing and it will be auto
+      timeout: 60
 
   # =================== Text to Speech ===================
   tts_config:
@@ -422,7 +435,18 @@ character_config:
       base_url: 'http://localhost:8880/v1' # Base URL of the TTS server
       file_extension: 'mp3' # Audio file format ('mp3' or 'wav')
 
-    # For more details, see: https://platform.minimaxi.com/document/Announcement
+    openai_compat_tts: # requests-based OpenAI-compatible TTS (offline-friendly, no SDK dep)
+      # Mirrors openai_compat_asr on the speech-IN side. Points at any server
+      # implementing POST /v1/audio/speech (e.g. local Kokoro, fish-speech).
+      base_url: 'http://localhost:8880/v1' # Base URL of the TTS server
+      model: 'kokoro' # Model name expected by the server (e.g., 'kokoro', 'tts-1')
+      voice: 'af_sky' # Voice name expected by the server (e.g., 'af_sky', 'alloy')
+      api_key: 'not-needed' # API key if required by the server (often a dummy value locally)
+      file_extension: 'mp3' # Audio file format (mp3, wav, ogg, opus, aac, flac)
+      speed: 1.0 # Speech speed multiplier (0.25-4.0)
+      timeout: 60 # Request timeout in seconds
+
+    # For more details, see: https://platform.minimax.com/document/Announcement
     minimax_tts:
       group_id: '' # Your minimax group_id
       api_key: '' # Your minimax api_key

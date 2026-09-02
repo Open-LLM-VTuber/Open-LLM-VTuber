@@ -1,10 +1,12 @@
 import re
-from typing import List, Tuple, AsyncIterator, Optional, Union, Dict, Any
-import pysbd
-from loguru import logger
-from langdetect import detect
-from enum import Enum
+from collections.abc import AsyncIterator
 from dataclasses import dataclass
+from enum import Enum
+from typing import Any
+
+import pysbd
+from langdetect import detect
+from loguru import logger
 
 # Constants for additional checks
 COMMAS = [
@@ -81,7 +83,7 @@ def detect_language(text: str) -> str:
     try:
         detected = detect(text)
         return detected if detected in SUPPORTED_LANGUAGES else None
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 (intentional broad catch in runtime)
         logger.debug(f"Language detection failed, language not supported by pysdb: {e}")
         return None
 
@@ -119,7 +121,7 @@ def contains_comma(text: str) -> bool:
     return any(comma in text for comma in COMMAS)
 
 
-def comma_splitter(text: str) -> Tuple[str, str]:
+def comma_splitter(text: str) -> tuple[str, str]:
     """
     Process text and split it at the first comma.
     Returns the split text (including the comma) and the remaining text.
@@ -170,7 +172,7 @@ def contains_end_punctuation(text: str) -> bool:
     return any(punct in text for punct in END_PUNCTUATIONS)
 
 
-def segment_text_by_regex(text: str) -> Tuple[List[str], str]:
+def segment_text_by_regex(text: str) -> tuple[list[str], str]:
     """
     Segment text into complete sentences using regex pattern matching.
     More efficient but less accurate than pysbd.
@@ -210,7 +212,7 @@ def segment_text_by_regex(text: str) -> Tuple[List[str], str]:
     return complete_sentences, remaining_text
 
 
-def segment_text_by_pysbd(text: str) -> Tuple[List[str], str]:
+def segment_text_by_pysbd(text: str) -> tuple[list[str], str]:
     """
     Segment text into complete sentences and remaining text.
     Uses pysbd for supported languages, falls back to regex for others.
@@ -260,7 +262,7 @@ def segment_text_by_pysbd(text: str) -> Tuple[List[str], str]:
         )
         return complete_sentences, remaining
 
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 (intentional broad catch in runtime)
         logger.error(f"Error in sentence segmentation: {e}")
         # Fallback to regex on any error
         return segment_text_by_regex(text)
@@ -295,7 +297,7 @@ class SentenceWithTags:
     """A sentence with its tag information, supporting nested tags"""
 
     text: str
-    tags: List[TagInfo]  # List of tags from outermost to innermost
+    tags: list[TagInfo]  # List of tags from outermost to innermost
 
 
 class SentenceDivider:
@@ -303,7 +305,7 @@ class SentenceDivider:
         self,
         faster_first_response: bool = True,
         segment_method: str = "pysbd",
-        valid_tags: List[str] = None,
+        valid_tags: list[str] | None = None,
     ):
         """
         Initialize the SentenceDivider.
@@ -321,7 +323,7 @@ class SentenceDivider:
         # Replace active_tags dict with a stack to handle nesting
         self._tag_stack = []
 
-    def _get_current_tags(self) -> List[TagInfo]:
+    def _get_current_tags(self) -> list[TagInfo]:
         """
         Get all current active tags from outermost to innermost.
 
@@ -330,7 +332,7 @@ class SentenceDivider:
         """
         return [TagInfo(tag.name, TagState.INSIDE) for tag in self._tag_stack]
 
-    def _get_current_tag(self) -> Optional[TagInfo]:
+    def _get_current_tag(self) -> TagInfo | None:
         """
         Get the current innermost active tag.
 
@@ -339,7 +341,7 @@ class SentenceDivider:
         """
         return self._tag_stack[-1] if self._tag_stack else None
 
-    def _extract_tag(self, text: str) -> Tuple[Optional[TagInfo], str]:
+    def _extract_tag(self, text: str) -> tuple[TagInfo | None, str]:
         """
         Extract the first tag from text if present.
         Handles nested tags by maintaining a tag stack.
@@ -448,7 +450,7 @@ class SentenceDivider:
 
                 # Process complete sentences in text before tag
                 if contains_end_punctuation(text_before_tag):
-                    sentences, remaining_before = self._segment_text(text_before_tag)
+                    sentences, _remaining_before = self._segment_text(text_before_tag)
                     for sentence in sentences:
                         if sentence.strip():
                             yield SentenceWithTags(
@@ -547,8 +549,8 @@ class SentenceDivider:
             self._buffer = ""  # Clear buffer after flushing
 
     async def process_stream(
-        self, segment_stream: AsyncIterator[Union[str, Dict[str, Any]]]
-    ) -> AsyncIterator[Union[SentenceWithTags, Dict[str, Any]]]:
+        self, segment_stream: AsyncIterator[str | dict[str, Any]]
+    ) -> AsyncIterator[SentenceWithTags | dict[str, Any]]:
         """
         Process a stream of tokens (strings) and dictionaries.
         Yields complete sentences with tags (SentenceWithTags) or dictionaries directly.
@@ -595,7 +597,7 @@ class SentenceDivider:
         """Get the complete response accumulated so far"""
         return "".join(self._full_response)
 
-    def _segment_text(self, text: str) -> Tuple[List[str], str]:
+    def _segment_text(self, text: str) -> tuple[list[str], str]:
         """Segment text using the configured method"""
         if self.segment_method == "regex":
             return segment_text_by_regex(text)

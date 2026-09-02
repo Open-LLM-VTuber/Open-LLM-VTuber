@@ -1,4 +1,5 @@
 import os
+
 import chardet
 from loguru import logger
 
@@ -48,7 +49,7 @@ def _load_file_content(file_path: str) -> str:
                 return raw_data.decode(detected_encoding)
             except UnicodeDecodeError:
                 pass
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 (intentional broad catch in runtime)
         logger.error(f"Error detecting encoding for {file_path}: {e}")
 
     raise UnicodeError(f"Failed to decode {file_path} with any encoding")

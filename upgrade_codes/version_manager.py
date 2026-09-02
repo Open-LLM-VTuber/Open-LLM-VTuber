@@ -1,8 +1,10 @@
 import json
 from pathlib import Path
+
 from packaging.version import parse as parse_version
-from upgrade_codes.upgrade_core.constants import USER_CONF, UPGRADE_TEXTS
+
 from upgrade_codes.from_version.v_1_1_1 import to_v_1_2_1
+from upgrade_codes.upgrade_core.constants import UPGRADE_TEXTS, USER_CONF
 
 
 class VersionUpgradeManager:
@@ -62,7 +64,7 @@ class VersionUpgradeManager:
             )
             return current_version
 
-        from_version, to_version, module = task
+        _from_version, to_version, module = task
         self.logger.info(
             self.log_texts["upgrading_path"].format(
                 from_version=current_version, to_version=to_version
@@ -88,7 +90,7 @@ class VersionUpgradeManager:
                 )
             else:
                 self.logger.info(self.log_texts["already_latest"])
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 (intentional broad catch in runtime)
             self.logger.error(self.log_texts["upgrade_error"].format(error=e))
 
         return upgraded_version

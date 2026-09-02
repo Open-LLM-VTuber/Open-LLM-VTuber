@@ -1,33 +1,35 @@
-from typing import List, Dict, Callable, Optional, TypedDict, Awaitable, ClassVar
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
+from typing import ClassVar, Optional, TypedDict
+
 from pydantic import BaseModel
 
 from ..agent.output_types import Actions, DisplayText
 
 # Type definitions
 WebSocketSend = Callable[[str], Awaitable[None]]
-BroadcastFunc = Callable[[List[str], dict, Optional[str]], Awaitable[None]]
+BroadcastFunc = Callable[[list[str], dict, str | None], Awaitable[None]]
 
 
 class AudioPayload(TypedDict):
     """Type definition for audio payload"""
 
     type: str
-    audio: Optional[str]
-    volumes: Optional[List[float]]
-    slice_length: Optional[int]
-    display_text: Optional[DisplayText]
-    actions: Optional[Actions]
-    forwarded: Optional[bool]
+    audio: str | None
+    volumes: list[float] | None
+    slice_length: int | None
+    display_text: DisplayText | None
+    actions: Actions | None
+    forwarded: bool | None
 
 
 @dataclass
 class BroadcastContext:
     """Context for broadcasting messages in group chat"""
 
-    broadcast_func: Optional[BroadcastFunc] = None
-    group_members: Optional[List[str]] = None
-    current_client_uid: Optional[str] = None
+    broadcast_func: BroadcastFunc | None = None
+    group_members: list[str] | None = None
+    current_client_uid: str | None = None
 
 
 class ConversationConfig(BaseModel):
@@ -44,14 +46,14 @@ class GroupConversationState:
     """State for group conversation"""
 
     # Class variable to track current states
-    _states: ClassVar[Dict[str, "GroupConversationState"]] = {}
+    _states: ClassVar[dict[str, "GroupConversationState"]] = {}
 
     group_id: str
-    conversation_history: List[str] = field(default_factory=list)
-    memory_index: Dict[str, int] = field(default_factory=dict)
-    group_queue: List[str] = field(default_factory=list)
+    conversation_history: list[str] = field(default_factory=list)
+    memory_index: dict[str, int] = field(default_factory=dict)
+    group_queue: list[str] = field(default_factory=list)
     session_emoji: str = ""
-    current_speaker_uid: Optional[str] = None
+    current_speaker_uid: str | None = None
 
     def __post_init__(self):
         """Register state instance after initialization"""

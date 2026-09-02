@@ -14,9 +14,9 @@ from starlette.middleware.cors import CORSMiddleware
 from starlette.responses import Response
 from starlette.staticfiles import StaticFiles as StarletteStaticFiles
 
-from .routes import init_client_ws_route, init_webtool_routes, init_proxy_route
-from .service_context import ServiceContext
 from .config_manager.utils import Config
+from .routes import init_client_ws_route, init_proxy_route, init_webtool_routes
+from .service_context import ServiceContext
 
 
 # Create a custom StaticFiles class that adds CORS headers
