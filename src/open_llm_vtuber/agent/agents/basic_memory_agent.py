@@ -465,20 +465,13 @@ class BasicMemoryAgent(AgentInterface):
                         isinstance(tc, ToolCallObject) for tc in event
                     ):
                         pending_tool_calls = event
+                        tool_calls_for_api = []
+                        for tc in pending_tool_calls:
+                            tool_calls_for_api.append(tc.to_dict())
                         assistant_message_for_api = {
                             "role": "assistant",
                             "content": current_turn_text if current_turn_text else None,
-                            "tool_calls": [
-                                {
-                                    "id": tc.id,
-                                    "type": tc.type,
-                                    "function": {
-                                        "name": tc.function.name,
-                                        "arguments": tc.function.arguments,
-                                    },
-                                }
-                                for tc in pending_tool_calls
-                            ],
+                            "tool_calls": tool_calls_for_api,
                         }
                         break
                     elif event == "__API_NOT_SUPPORT_TOOLS__":
