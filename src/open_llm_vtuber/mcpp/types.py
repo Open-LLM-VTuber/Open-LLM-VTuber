@@ -68,12 +68,15 @@ class ToolCallObject:
         type (str): Type of the tool call, typically "function".
         index (int): Index of the tool call in the sequence.
         function (ToolCallFunctionObject): Function information for the tool call.
+        extra_content (dict, optional): Provider-specific metadata that must be
+            returned with the tool call on subsequent requests.
     """
 
     id: Optional[str] = None
     type: str = "function"
     index: int = 0
     function: ToolCallFunctionObject = field(default_factory=ToolCallFunctionObject)
+    extra_content: Optional[dict[str, Any]] = None
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "ToolCallObject":
@@ -89,5 +92,23 @@ class ToolCallObject:
             name=data["function"]["name"], arguments=data["function"]["arguments"]
         )
         return cls(
-            id=data["id"], type=data["type"], index=data["index"], function=function
+            id=data["id"],
+            type=data["type"],
+            index=data["index"],
+            function=function,
+            extra_content=data.get("extra_content"),
         )
+
+    def to_dict(self) -> dict[str, Any]:
+        """Convert the tool call to an OpenAI-compatible message object."""
+        data = {
+            "id": self.id,
+            "type": self.type,
+            "function": {
+                "name": self.function.name,
+                "arguments": self.function.arguments,
+            },
+        }
+        if self.extra_content is not None:
+            data["extra_content"] = self.extra_content
+        return data

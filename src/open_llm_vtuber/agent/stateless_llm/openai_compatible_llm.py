@@ -141,6 +141,15 @@ class AsyncLLM(StatelessLLMInterface):
                                     "function": {"name": "", "arguments": ""},
                                 }
 
+                            # Preserve provider extensions (for example, Gemini
+                            # thought signatures) so they can be returned with
+                            # the assistant tool-call history on the next turn.
+                            extra_content = getattr(tool_call, "extra_content", None)
+                            if extra_content is not None:
+                                accumulated_tool_calls[index]["extra_content"] = (
+                                    extra_content
+                                )
+
                             # Update tool call information
                             if hasattr(tool_call, "id") and tool_call.id:
                                 accumulated_tool_calls[index]["id"] = tool_call.id
