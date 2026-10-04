@@ -186,6 +186,7 @@ def segment_text_by_regex(text: str) -> Tuple[List[str], str]:
 
     complete_sentences = []
     remaining_text = text.strip()
+    pending = ""  # text such as "Mr." that has to stay attached to the next sentence
 
     # Create pattern for matching sentences ending with any end punctuation
     escaped_punctuations = [re.escape(p) for p in END_PUNCTUATIONS]
@@ -199,13 +200,20 @@ def segment_text_by_regex(text: str) -> Tuple[List[str], str]:
         end_pos = match.end(1)
         potential_sentence = remaining_text[:end_pos].strip()
 
-        # Skip if sentence ends with abbreviation
+        # An abbreviation such as "Mr." does not end a sentence: hold the text back
+        # and attach it to the sentence that follows instead of dropping it.
         if any(potential_sentence.endswith(abbrev) for abbrev in ABBREVIATIONS):
+            pending = f"{pending} {potential_sentence}".strip()
             remaining_text = remaining_text[end_pos:].lstrip()
             continue
 
-        complete_sentences.append(potential_sentence)
+        complete_sentences.append(f"{pending} {potential_sentence}".strip())
+        pending = ""
         remaining_text = remaining_text[end_pos:].lstrip()
+
+    if pending:
+        # Keep the abbreviation in the buffer so a later chunk can complete it.
+        remaining_text = f"{pending} {remaining_text}".strip()
 
     return complete_sentences, remaining_text
 

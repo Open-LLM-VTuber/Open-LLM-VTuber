@@ -66,3 +66,7 @@ target-version = "py310"
 [tool.ruff.lint]
 # Ignore E402 (module level import not at top of file) for the run_bilibili_live.py script
 per-file-ignores = { "scripts/run_bilibili_live.py" = ["E402"] }
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
