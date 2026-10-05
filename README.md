@@ -101,6 +101,15 @@ The reason it's called `Open-LLM-Vtuber` instead of `Open-LLM-Companion` or `Ope
 
 Please refer to the [Quick Start](https://open-llm-vtuber.github.io/docs/quick-start) section in our documentation for installation.
 
+## ✨ Standalone Character Call
+
+The repository includes a separate text-first chat page for the original Aster Vale character. It uses the active Open-LLM-VTuber server configuration for language-model replies and generated voice playback.
+
+1. Start the server with a valid `conf.yaml` and configured LLM/TTS: `uv run run_server.py`.
+2. Open `http://localhost:12393/character-call`.
+
+The page connects to the existing `/client-ws` WebSocket and selects `characters/aster.yaml`; no separate frontend build or additional dependency is needed. Its SVG portrait is original static placeholder art, not an animated Live2D or VRM model.
+
 
 
 ## ☝ Update
@@ -151,7 +160,6 @@ Thanks our contributors and maintainers for making this project possible.
 ## Star History
 
 [![Star History Chart](https://api.star-history.com/svg?repos=Open-LLM-VTuber/open-llm-vtuber&type=Date)](https://star-history.com/#Open-LLM-VTuber/open-llm-vtuber&Date)
-
 
 
 

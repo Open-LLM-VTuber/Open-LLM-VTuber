@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 760" role="img" aria-labelledby="title description">
+  <title id="title">Aster Vale</title>
+  <desc id="description">An original illustrated stargazer surrounded by a quiet twilight sky.</desc>
+  <defs>
+    <linearGradient id="sky" x1="90" y1="45" x2="610" y2="746" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#273f51"/>
+      <stop offset=".48" stop-color="#375560"/>
+      <stop offset="1" stop-color="#c18c68"/>
+    </linearGradient>
+    <linearGradient id="cloak" x1="212" y1="434" x2="526" y2="738" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#637e78"/>
+      <stop offset="1" stop-color="#304d52"/>
+    </linearGradient>
+    <linearGradient id="hair" x1="254" y1="151" x2="494" y2="480" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#d3a16d"/>
+      <stop offset="1" stop-color="#795c53"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0" cy="0" r="1" gradientTransform="matrix(0 176 -176 0 515 196)" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#f1d797" stop-opacity=".95"/>
+      <stop offset="1" stop-color="#f1d797" stop-opacity="0"/>
+    </radialGradient>
+    <pattern id="grain" width="7" height="7" patternUnits="userSpaceOnUse">
+      <circle cx="1" cy="1" r=".65" fill="#f2e8cf" fill-opacity=".1"/>
+    </pattern>
+  </defs>
+  <path fill="url(#sky)" d="M0 0h720v760H0z"/>
+  <path fill="url(#glow)" d="M339 20h352v352H339z"/>
+  <circle cx="526" cy="205" r="57" fill="#f1d797" fill-opacity=".83"/>
+  <circle cx="548" cy="187" r="57" fill="#334d58"/>
+  <path d="m99 167 5 15 15 5-15 5-5 15-5-15-15-5 15-5 5-15Zm166-92 3 10 10 3-10 4-3 10-4-10-10-4 10-3 4-10Zm-52 213 3 9 10 4-10 3-3 10-4-10-10-3 10-4 4-9Zm397 58 4 10 10 3-10 4-4 10-3-10-10-4 10-3 3-10ZM436 93l2 7 7 2-7 3-2 7-3-7-7-3 7-2 3-7Z" fill="#f0dcab"/>
+  <path d="M121 371c61-40 118-61 177-61 43 0 71 16 94 31 40-44 87-69 138-75 33-3 65 4 97 19v475H82V433c11-27 24-47 39-62Z" fill="#314953" fill-opacity=".72"/>
+  <path d="M190 760c8-113 49-231 115-295 24-24 44-35 71-38 33-4 72 8 99 28 76 57 107 179 111 305H190Z" fill="url(#cloak)"/>
+  <path d="M285 458c16 43 45 68 83 68 39 0 67-25 83-69l7-32H278l7 33Z" fill="#e9c5a1"/>
+  <path d="M258 241c0-85 50-137 119-137 77 0 130 58 130 151v93c0 82-52 143-127 143-74 0-122-61-122-143v-107Z" fill="#e9c5a1"/>
+  <path d="M247 327c-18-92-7-156 42-201 25-24 58-37 99-37 51 0 89 21 114 60 25 39 32 95 22 167-17-8-32-19-45-35-21-25-33-59-40-101-28 49-92 83-190 101l-2 46Z" fill="url(#hair)"/>
+  <path d="M258 295c-28 24-39 63-29 107 8 34 23 51 44 55l-3-61 4-101-16 0Zm228-4c27 20 39 58 32 100-6 36-21 56-41 62l4-57-5-101 10-4Z" fill="#a27760"/>
+  <path d="M294 332c14-11 28-11 42-2m83 0c13-9 27-9 41 1" fill="none" stroke="#624f48" stroke-linecap="round" stroke-width="6"/>
+  <path d="M309 360c7 5 16 5 23 0m83 0c7 5 16 5 23 0" fill="none" stroke="#35474a" stroke-linecap="round" stroke-width="5"/>
+  <path d="M369 373c-3 14-5 23 2 27" fill="none" stroke="#bd8d74" stroke-linecap="round" stroke-width="4"/>
+  <path d="M351 418c17 11 35 11 52-1" fill="none" stroke="#a96e68" stroke-linecap="round" stroke-width="5"/>
+  <path d="M246 746c17-99 45-176 91-221 12 20 30 33 54 39 26-7 44-20 55-40 47 45 78 122 96 222H246Z" fill="url(#cloak)"/>
+  <path d="m391 560 17 37-17 107-17-107 17-37Z" fill="#e6bd75"/>
+  <path d="M344 532c13 20 28 31 47 33 19-2 34-13 47-33" fill="none" stroke="#d4ba83" stroke-width="4"/>
+  <path d="M188 574c-44 37-75 89-91 156h114l40-125-63-31Zm400 0c44 37 75 89 91 156H565l-40-125 63-31Z" fill="#243d47"/>
+  <path d="M134 112 143 118l-6 9-9-6 6-9Zm472 205 8 5-5 8-8-5 5-8ZM157 493l8 5-5 8-8-5 5-8Zm390-279 8 5-5 8-8-5 5-8Z" fill="#f0dcab" fill-opacity=".82"/>
+  <path fill="url(#grain)" d="M0 0h720v760H0z"/>
+</svg>

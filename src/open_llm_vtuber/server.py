@@ -141,6 +141,12 @@ class WebSocketServer:
             name="web_tool",
         )
 
+        self.app.mount(
+            "/character-call",
+            CORSStaticFiles(directory="character_call", html=True),
+            name="character_call",
+        )
+
         # Mount main frontend last (as catch-all)
         self.app.mount(
             "/",
