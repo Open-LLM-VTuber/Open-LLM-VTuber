@@ -113,6 +113,33 @@ class TTSTaskManager:
             except asyncio.CancelledError:
                 break
 
+    async def wait_until_sent(self) -> None:
+        """Wait until every queued TTS payload has been sent to the client."""
+        if not self._sender_task:
+            await self._payload_queue.join()
+            return
+
+        queue_join_task = asyncio.create_task(self._payload_queue.join())
+        try:
+            done, _ = await asyncio.wait(
+                (queue_join_task, self._sender_task),
+                return_when=asyncio.FIRST_COMPLETED,
+            )
+            if self._sender_task in done:
+                self._sender_task.result()
+                if not queue_join_task.done():
+                    raise RuntimeError(
+                        "TTS payload sender stopped before the queue drained"
+                    )
+
+            await queue_join_task
+            if self._sender_task.done():
+                self._sender_task.result()
+        finally:
+            if not queue_join_task.done():
+                queue_join_task.cancel()
+                await asyncio.gather(queue_join_task, return_exceptions=True)
+
     async def _send_silent_payload(
         self,
         display_text: DisplayText,

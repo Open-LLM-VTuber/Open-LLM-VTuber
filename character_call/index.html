@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="A quiet, voice-enabled chat with Aster Vale, an original AI character."
+    />
+    <meta name="theme-color" content="#101a25" />
+    <title>Aster Vale — a little room among the stars</title>
+    <link rel="icon" href="/character-call/assets/aster.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/character-call/styles.css" />
+    <script src="/character-call/app.js" defer></script>
+  </head>
+  <body>
+    <main class="app-shell">
+      <aside class="profile-panel" aria-label="Character profile">
+        <a class="wordmark" href="/character-call">
+          <span class="wordmark-mark" aria-hidden="true">✳</span>
+          <span>STILLROOM <span class="wordmark-divider">/</span> 01</span>
+        </a>
+
+        <div class="portrait-frame">
+          <img
+            class="portrait"
+            src="/character-call/assets/aster.svg"
+            alt="Original illustrated portrait of Aster Vale beneath a starry sky"
+          />
+          <span class="portrait-caption">A FRIENDLY VOICE, AFTER HOURS</span>
+        </div>
+
+        <div class="profile-copy">
+          <p class="eyebrow">YOUR EVENING COMPANION</p>
+          <h1>Aster <span>Vale</span></h1>
+          <p class="profile-description">
+            A gentle cartographer of small moments. Aster gathers stray thoughts
+            and turns them into constellations.
+          </p>
+        </div>
+
+        <div class="profile-details">
+          <div>
+            <span class="detail-label">CURRENTLY</span>
+            <span class="detail-value">Charting quiet skies</span>
+          </div>
+          <div>
+            <span class="detail-label">CONVERSATION</span>
+            <span class="detail-value">Text with spoken replies</span>
+          </div>
+        </div>
+
+        <p class="profile-note">
+          Aster is an original character. This portrait is a static illustration,
+          not an animated model.
+        </p>
+      </aside>
+
+      <section class="chat-panel" aria-label="Conversation with Aster">
+        <header class="chat-header">
+          <div class="connection-indicator">
+            <span class="status-dot" id="status-dot" aria-hidden="true"></span>
+            <span id="connection-status" role="status" aria-live="polite">
+              Connecting…
+            </span>
+          </div>
+          <button
+            class="voice-toggle"
+            id="voice-toggle"
+            type="button"
+            aria-pressed="true"
+            disabled
+          >
+            <span class="voice-icon" aria-hidden="true">♫</span>
+            <span id="voice-label">Voice on</span>
+          </button>
+        </header>
+
+        <div class="conversation-heading">
+          <p class="eyebrow">A SMALL PAUSE IN THE DAY</p>
+          <h2>Where shall we begin?</h2>
+          <p>Share a thought, ask a question, or just say hello.</p>
+        </div>
+
+        <div class="conversation-scroll">
+          <div
+            class="message-list"
+            id="message-list"
+            role="log"
+            aria-live="polite"
+            aria-relevant="additions text"
+            aria-label="Chat messages"
+          >
+            <article class="message assistant-message">
+              <div class="message-avatar" aria-hidden="true">
+                <img src="/character-call/assets/aster.svg" alt="" />
+              </div>
+              <div class="message-content">
+                <span class="message-author">Aster</span>
+                <p class="message-text">
+                  I'm glad you're here. What's on your mind tonight?
+                </p>
+              </div>
+            </article>
+          </div>
+        </div>
+
+        <div class="composer-area">
+          <p class="composer-hint" id="composer-hint">
+            Messages are sent to your configured Open-LLM-VTuber server.
+          </p>
+          <form class="composer" id="message-form">
+            <label class="visually-hidden" for="message-input">
+              Message Aster
+            </label>
+            <textarea
+              id="message-input"
+              name="message"
+              rows="1"
+              maxlength="4000"
+              placeholder="Write a message…"
+              autocomplete="off"
+              disabled
+              required
+            ></textarea>
+            <button class="send-button" id="send-button" type="submit" disabled>
+              <span>Send</span>
+              <span aria-hidden="true">↗</span>
+            </button>
+          </form>
+          <p class="composer-footnote">
+            Powered by the language model and voice configured on your server.
+          </p>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>
