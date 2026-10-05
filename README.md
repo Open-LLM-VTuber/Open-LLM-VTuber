@@ -107,7 +107,7 @@ The repository includes a separate text-first chat page for the original Aster V
 
 On Windows, double-click `launch_character_call.bat`. It starts the server in a separate console if the character page is not already available, waits for it to load, and opens it in an Edge app window (or your default browser if Edge is not installed). This is a browser app window, not a separate Electron binary. Install `uv` and configure `conf.yaml` first; the launcher reads `system_config.port` from that file (the default is `12393`).
 
-On any platform, start the server with a valid `conf.yaml` and configured LLM/TTS using `uv run run_server.py`, then open `http://localhost:12393/character-call`.
+On any platform, start the server with a valid `conf.yaml` and configured LLM/TTS using `uv run run_server.py`, then open `http://localhost:<system_config.port>/character-call` (for example, `http://localhost:12393/character-call` with the default configuration).
 
 The page connects to the existing `/client-ws` WebSocket and selects `characters/aster.yaml`; no separate frontend build or packaging dependency is needed. Its SVG portrait is original static placeholder art, not an animated Live2D or VRM model.
 
@@ -161,6 +161,5 @@ Thanks our contributors and maintainers for making this project possible.
 ## Star History
 
 [![Star History Chart](https://api.star-history.com/svg?repos=Open-LLM-VTuber/open-llm-vtuber&type=Date)](https://star-history.com/#Open-LLM-VTuber/open-llm-vtuber&Date)
-
 
 

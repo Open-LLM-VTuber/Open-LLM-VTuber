@@ -269,6 +269,7 @@ async def handle_group_member_turn(
 
     if tts_manager.task_list:
         await asyncio.gather(*tts_manager.task_list)
+        await tts_manager.wait_until_sent()
         await current_ws_send(json.dumps({"type": "backend-synth-complete"}))
 
         broadcast_ctx = BroadcastContext(

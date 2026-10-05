@@ -6,16 +6,34 @@ if (-not (Test-Path -LiteralPath $configPath)) {
 }
 
 $inSystemConfig = $false
+$systemConfigIndent = $null
 $serverPort = $null
 foreach ($line in Get-Content -LiteralPath $configPath) {
     if ($line -match '^system_config:\s*(?:#.*)?$') {
         $inSystemConfig = $true
         continue
     }
-    if ($inSystemConfig -and $line -match '^\S') {
+    if (-not $inSystemConfig) {
+        continue
+    }
+    if ($line -match '^\s*(?:#|$)') {
+        continue
+    }
+    if ($line -match '^(\s+)\S') {
+        $indent = $Matches[1].Length
+    } else {
         break
     }
-    if ($inSystemConfig -and $line -match '^\s+port:\s*["'']?(\d+)["'']?\s*(?:#.*)?$') {
+    if ($null -eq $systemConfigIndent) {
+        $systemConfigIndent = $indent
+    }
+    if ($indent -lt $systemConfigIndent) {
+        break
+    }
+    if (
+        $indent -eq $systemConfigIndent -and
+        $line -match '^\s+port:\s*["'']?(\d+)["'']?\s*(?:#.*)?$'
+    ) {
         $serverPort = [int]$Matches[1]
         break
     }
@@ -78,11 +96,11 @@ $edgeCommand = Get-Command msedge.exe -ErrorAction SilentlyContinue
 if ($edgeCommand) {
     $edgeCandidates += $edgeCommand.Source
 }
-$edgeCandidates += @(
-    (Join-Path $env:ProgramFiles "Microsoft\Edge\Application\msedge.exe"),
-    (Join-Path ${env:ProgramFiles(x86)} "Microsoft\Edge\Application\msedge.exe"),
-    (Join-Path $env:LOCALAPPDATA "Microsoft\Edge\Application\msedge.exe")
-)
+foreach ($basePath in @($env:ProgramFiles, ${env:ProgramFiles(x86)}, $env:LOCALAPPDATA)) {
+    if ($basePath) {
+        $edgeCandidates += Join-Path $basePath "Microsoft\Edge\Application\msedge.exe"
+    }
+}
 
 $edgePath = $edgeCandidates |
     Where-Object { $_ -and (Test-Path -LiteralPath $_) } |
