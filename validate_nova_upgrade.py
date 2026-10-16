@@ -178,10 +178,11 @@ section("7. Prompt Content Check")
 
 def test_proactive_prompt():
     with open("prompts/utils/proactive_speak_prompt.txt", encoding="utf-8") as f:
-        content = f.read()
-    assert len(content) > 100, "Proactive prompt is too short"
-    assert "hot take" in content.lower() or "streaming" in content.lower()
-    return f"Length: {len(content)} chars | Has influencer content: True"
+        content = f.read().strip()
+    from src.open_llm_vtuber.conversations.conversation_handler import _PROACTIVE_TRIGGERS
+    assert len(content) > 20, "Proactive prompt is empty"
+    assert len(_PROACTIVE_TRIGGERS) >= 10, "Not enough randomized proactive triggers"
+    return f"Base prompt: {len(content)} chars | Randomized triggers: {len(_PROACTIVE_TRIGGERS)}"
 
 def test_expression_prompt():
     with open("prompts/utils/live2d_expression_prompt.txt", encoding="utf-8") as f:
@@ -190,7 +191,7 @@ def test_expression_prompt():
     assert "stream" in content.lower()
     return f"Length: {len(content)} chars | Has stream context: True"
 
-test("Proactive speak prompt has rich influencer content", test_proactive_prompt)
+test("Proactive speak triggers & prompt verified", test_proactive_prompt)
 test("Live2D expression prompt has influencer style", test_expression_prompt)
 
 

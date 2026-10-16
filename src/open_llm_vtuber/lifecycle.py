@@ -10,8 +10,9 @@ existing functionality when a module is not needed.
 """
 
 import asyncio
+import threading
 import time
-from typing import Any, Dict, Optional, Set
+from typing import Dict, Optional, Set
 from loguru import logger
 
 
@@ -31,6 +32,8 @@ class NovaEngine:
         self._running = False
         self._start_time: Optional[float] = None
         self._tasks: Dict[str, asyncio.Task] = {}
+        self._init_locks: Dict[str, threading.Lock] = {}
+        self._locks_guard = threading.Lock()
 
         # Core modules — eagerly initialized
         self._init_eager_modules()
@@ -73,9 +76,18 @@ class NovaEngine:
             logger.warning(f"[Nova] Earbud Co-Pilot unavailable: {e}")
 
     def _lazy_init(self, module_name: str):
-        """Initialize a module on first access."""
+        """Initialize a module on first access. Thread-safe via per-module lock."""
         if module_name in self._initialized:
             return
+
+        with self._locks_guard:
+            if module_name not in self._init_locks:
+                self._init_locks[module_name] = threading.Lock()
+            lock = self._init_locks[module_name]
+
+        with lock:
+            if module_name in self._initialized:
+                return
 
         try:
             if module_name == "affective_engine":

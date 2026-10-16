@@ -14,19 +14,29 @@ from .cache import get_cache, close_cache
 from .pwa import create_pwa_router
 
 
-def init_client_ws_route(default_context_cache: ServiceContext) -> APIRouter:
+def init_client_ws_route(
+    default_context_cache: ServiceContext,
+    max_connections: int = 64,
+    max_memory_mb: float = 2048.0,
+) -> APIRouter:
     """
     Create and return API routes for handling the `/client-ws` WebSocket connections.
 
     Args:
         default_context_cache: Default service context cache for new sessions.
+        max_connections: Maximum number of concurrent connections.
+        max_memory_mb: Maximum server memory threshold in MB.
 
     Returns:
         APIRouter: Configured router with WebSocket endpoint.
     """
 
     router = APIRouter()
-    ws_handler = WebSocketHandler(default_context_cache)
+    ws_handler = WebSocketHandler(
+        default_context_cache,
+        max_connections=max_connections,
+        max_memory_mb=max_memory_mb,
+    )
 
     @router.websocket("/client-ws")
     async def websocket_endpoint(websocket: WebSocket):

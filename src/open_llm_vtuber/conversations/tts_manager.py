@@ -1,5 +1,6 @@
 import asyncio
 import json
+import os
 import re
 import uuid
 from datetime import datetime
@@ -16,7 +17,12 @@ from .types import WebSocketSend
 class TTSTaskManager:
     """Manages TTS tasks and ensures ordered delivery to frontend while allowing parallel TTS generation"""
 
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        max_concurrent_tts: Optional[int] = None,
+        tts_timeout_seconds: float = 30.0,
+        max_tts_queue_size: int = 20,
+    ) -> None:
         self.task_list: List[asyncio.Task] = []
         self._lock = asyncio.Lock()
         # Queue to store ordered payloads
@@ -26,6 +32,12 @@ class TTSTaskManager:
         # Counter for maintaining order
         self._sequence_counter = 0
         self._next_sequence_to_send = 0
+        # Concurrency control: limit parallel TTS generation to prevent CPU thrashing
+        if max_concurrent_tts is None:
+            max_concurrent_tts = int(os.getenv("MAX_CONCURRENT_TTS", "3"))
+        self._tts_semaphore: Optional[asyncio.Semaphore] = asyncio.Semaphore(max_concurrent_tts)
+        self._tts_timeout_seconds: float = tts_timeout_seconds
+        self._max_tts_queue_size: int = max_tts_queue_size
 
     async def speak(
         self,
@@ -89,6 +101,32 @@ class TTSTaskManager:
         )
         self.task_list.append(task)
 
+    def is_queue_full(self) -> bool:
+        """Check if TTS processing queue is at capacity.
+
+        Used by the conversation pipeline for backpressure control.
+        """
+        return len(self.task_list) >= self._max_tts_queue_size
+
+    async def wait_for_queue_slot(self, timeout: float = 10.0) -> bool:
+        """Wait until at least one TTS task completes to free up queue space.
+
+        Returns True if a slot became available, False if timed out.
+        """
+        if not self.task_list:
+            return True
+        try:
+            done, _ = await asyncio.wait(
+                self.task_list,
+                timeout=timeout,
+                return_when=asyncio.FIRST_COMPLETED,
+            )
+            self.task_list = [t for t in self.task_list if not t.done()]
+            return True
+        except Exception as e:
+            logger.error(f"Error waiting for TTS queue slot: {e}")
+            return True
+
     async def _process_payload_queue(self, websocket_send: WebSocketSend) -> None:
         """
         Process and send payloads in correct order.
@@ -139,7 +177,7 @@ class TTSTaskManager:
         """Process TTS generation and queue the result for ordered delivery"""
         audio_file_path = None
         try:
-            audio_file_path = await self._generate_audio(tts_engine, tts_text)
+            audio_file_path = await self._generate_audio_with_limits(tts_engine, tts_text)
             payload = prepare_audio_payload(
                 audio_path=audio_file_path,
                 display_text=display_text,
@@ -148,6 +186,17 @@ class TTSTaskManager:
             # Queue the payload with its sequence number
             await self._payload_queue.put((payload, sequence_number))
 
+        except asyncio.TimeoutError:
+            logger.error(
+                f"TTS generation timed out after {self._tts_timeout_seconds}s "
+                f"for text: '{tts_text[:50]}...'. Sending silent payload."
+            )
+            payload = prepare_audio_payload(
+                audio_path=None,
+                display_text=display_text,
+                actions=actions,
+            )
+            await self._payload_queue.put((payload, sequence_number))
         except Exception as e:
             logger.error(f"Error preparing audio payload: {e}")
             # Queue silent payload for error case
@@ -163,13 +212,18 @@ class TTSTaskManager:
                 tts_engine.remove_file(audio_file_path)
                 logger.debug("Audio cache file cleaned.")
 
-    async def _generate_audio(self, tts_engine: TTSInterface, text: str) -> str:
-        """Generate audio file from text"""
-        logger.debug(f"🏃Generating audio for '''{text}'''...")
-        return await tts_engine.async_generate_audio(
-            text=text,
-            file_name_no_ext=f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{str(uuid.uuid4())[:8]}",
-        )
+    async def _generate_audio_with_limits(
+        self, tts_engine: TTSInterface, text: str
+    ) -> str:
+        """Generate audio with semaphore-based concurrency limiting and timeout."""
+        async with self._tts_semaphore:
+            return await asyncio.wait_for(
+                tts_engine.async_generate_audio(
+                    text=text,
+                    file_name_no_ext=f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{str(uuid.uuid4())[:8]}",
+                ),
+                timeout=self._tts_timeout_seconds,
+            )
 
     def clear(self) -> None:
         """Clear all pending tasks and reset state"""

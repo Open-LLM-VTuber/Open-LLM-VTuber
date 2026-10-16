@@ -75,12 +75,12 @@ async def handle_conversation_trigger(
             logger.error(f"Error building proactive trigger: {e}")
             user_input = "Say something short and in-character right now."
 
-        # Proactive speech is stored in memory — Nova remembers what she said
-        # and won't immediately repeat herself on the next trigger.
+        # Proactive speech is stored in LLM memory (so Nova remembers what she said
+        # and alternates turns cleanly) but skipped in persistent human chat history.
         metadata = {
             "proactive_speak": True,
             "skip_memory": False,
-            "skip_history": False,
+            "skip_history": True,
         }
 
         await websocket.send_text(
