@@ -1,0 +1,84 @@
+version: "3.8"
+
+services:
+  vtuber:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: open-llm-vtuber
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/app/data
+      - ./cache:/app/cache
+      - ./live2d-models:/app/live2d-models
+      - ./config:/app/config
+      - ./logs:/app/logs
+    environment:
+      - DATABASE_URL=sqlite+aiosqlite:///data/vtuber.db
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel:4317
+    depends_on:
+      redis:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      otel:
+        condition: service_healthy
+    restart: unless-stopped
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+  redis:
+    image: redis:7-alpine
+    container_name: vtuber-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  otel:
+    image: otel/opentelemetry-collector-contrib:latest
+    container_name: vtuber-otel
+    ports:
+      - "4317:4317"
+      - "4318:4318"
+      - "8888:8888"
+    volumes:
+      - ./otel-config.yaml:/otel-config.yaml
+    command: ["--config=/otel-config.yaml"]
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: vtuber-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=vtuber
+    volumes:
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - otel
+    restart: unless-stopped
+
+volumes:
+  redis_data:
+  grafana_data:
+
+networks:
+  default:
+    name: vtuber-network

@@ -3,7 +3,7 @@ Open-LLM-VTuber Server
 ========================
 This module contains the WebSocket server for Open-LLM-VTuber, which handles
 the WebSocket connections, serves static files, and manages the web tool.
-It uses FastAPI for the server and Starlette for static file serving.
+It uses FastAPI for the server and Starlette for the static file serving.
 """
 
 import os
@@ -17,34 +17,21 @@ from starlette.staticfiles import StaticFiles as StarletteStaticFiles
 from .routes import init_client_ws_route, init_webtool_routes, init_proxy_route
 from .service_context import ServiceContext
 from .config_manager.utils import Config
+from .lifecycle import get_nova
 
 
-# Create a custom StaticFiles class that adds CORS headers
 class CORSStaticFiles(StarletteStaticFiles):
-    """
-    Static files handler that adds CORS headers to all responses.
-    Needed because Starlette StaticFiles might bypass standard middleware.
-    """
-
     async def get_response(self, path: str, scope):
         response = await super().get_response(path, scope)
-
-        # Add CORS headers to all responses
         response.headers["Access-Control-Allow-Origin"] = "*"
         response.headers["Access-Control-Allow-Methods"] = "GET, OPTIONS"
         response.headers["Access-Control-Allow-Headers"] = "*"
-
         if path.endswith(".js"):
             response.headers["Content-Type"] = "application/javascript"
-
         return response
 
 
 class AvatarStaticFiles(CORSStaticFiles):
-    """
-    Avatar files handler with security restrictions and CORS headers
-    """
-
     async def get_response(self, path: str, scope):
         allowed_extensions = (".jpg", ".jpeg", ".png", ".gif", ".svg")
         if not any(path.lower().endswith(ext) for ext in allowed_extensions):
@@ -72,14 +59,11 @@ class WebSocketServer:
     """
 
     def __init__(self, config: Config, default_context_cache: ServiceContext = None):
-        self.app = FastAPI(title="Open-LLM-VTuber Server")  # Added title for clarity
         self.config = config
-        self.default_context_cache = (
-            default_context_cache or ServiceContext()
-        )  # Use provided context or initialize a new empty one waiting to be loaded
-        # It will be populated during the initialize method call
+        self.default_context_cache = default_context_cache or ServiceContext()
+        self.nova = get_nova()
+        self.app = FastAPI(title="Open-LLM-VTuber Server")
 
-        # Add global CORS middleware
         self.app.add_middleware(
             CORSMiddleware,
             allow_origins=["*"],
@@ -88,8 +72,6 @@ class WebSocketServer:
             allow_headers=["*"],
         )
 
-        # Include routes, passing the context instance
-        # The context will be populated during the initialize step
         self.app.include_router(
             init_client_ws_route(default_context_cache=self.default_context_cache),
         )
@@ -97,10 +79,8 @@ class WebSocketServer:
             init_webtool_routes(default_context_cache=self.default_context_cache),
         )
 
-        # Initialize and include proxy routes if proxy is enabled
         system_config = config.system_config
         if hasattr(system_config, "enable_proxy") and system_config.enable_proxy:
-            # Construct the server URL for the proxy
             host = system_config.host
             port = system_config.port
             server_url = f"ws://{host}:{port}/client-ws"
@@ -108,54 +88,29 @@ class WebSocketServer:
                 init_proxy_route(server_url=server_url),
             )
 
-        # Mount cache directory first (to ensure audio file access)
         if not os.path.exists("cache"):
             os.makedirs("cache")
+        self.app.mount("/cache", CORSStaticFiles(directory="cache"), name="cache")
         self.app.mount(
-            "/cache",
-            CORSStaticFiles(directory="cache"),
-            name="cache",
+            "/live2d-models", CORSStaticFiles(directory="live2d-models"), name="live2d-models"
         )
-
-        # Mount static files with CORS-enabled handlers
+        self.app.mount("/bg", CORSStaticFiles(directory="backgrounds"), name="backgrounds")
         self.app.mount(
-            "/live2d-models",
-            CORSStaticFiles(directory="live2d-models"),
-            name="live2d-models",
+            "/avatars", AvatarStaticFiles(directory="avatars"), name="avatars"
         )
         self.app.mount(
-            "/bg",
-            CORSStaticFiles(directory="backgrounds"),
-            name="backgrounds",
+            "/web-tool", CORSStaticFiles(directory="web_tool", html=True), name="web_tool"
         )
         self.app.mount(
-            "/avatars",
-            AvatarStaticFiles(directory="avatars"),
-            name="avatars",
-        )
-
-        # Mount web tool directory separately from frontend
-        self.app.mount(
-            "/web-tool",
-            CORSStaticFiles(directory="web_tool", html=True),
-            name="web_tool",
-        )
-
-        # Mount main frontend last (as catch-all)
-        self.app.mount(
-            "/",
-            CORSStaticFiles(directory="frontend", html=True),
-            name="frontend",
+            "/", CORSStaticFiles(directory="frontend", html=True), name="frontend"
         )
 
     async def initialize(self):
-        """Asynchronously load the service context from config.
-        Calling this function is needed if default_context_cache was not provided to the constructor."""
         await self.default_context_cache.load_from_config(self.config)
+        await self.nova.start()
 
     @staticmethod
     def clean_cache():
-        """Clean the cache directory by removing and recreating it."""
         cache_dir = "cache"
         if os.path.exists(cache_dir):
             shutil.rmtree(cache_dir)

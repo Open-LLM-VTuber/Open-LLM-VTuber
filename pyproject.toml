@@ -3,12 +3,12 @@ name = "open-llm-vtuber"
 version = "1.2.1"
 description = "Talk to any LLM with hands-free voice interaction, voice interruption, and Live2D taking face running locally across platforms"
 readme = "README.md"
-requires-python = ">=3.10,<3.13"
+requires-python = ">=3.10"
 dependencies = [
     "anthropic>=0.40.0",
     "azure-cognitiveservices-speech>=1.41.1",
     "chardet>=5.2.0",
-    "cartesia>=2.0.0", 
+    "cartesia>=2.0.0",
     "edge-tts>=7.0.0",
     "elevenlabs>=1.0.0",
     "fastapi[standard]>=0.115.8",
@@ -17,7 +17,7 @@ dependencies = [
     "langdetect>=1.0.9",
     "loguru>=0.7.2",
     "mcp[cli]>=1.6.0",
-    "numpy>=1.26.4,<2",
+    "numpy>=1.26.4",
     "onnxruntime>=1.20.1",
     "openai>=1.57.4",
     "pre-commit>=4.1.0",
@@ -26,6 +26,7 @@ dependencies = [
     "pyttsx3>=2.98",
     "pyyaml>=6.0.2",
     "requests>=2.32.3",
+    "redis>=5.0.0",
     "ruamel-yaml>=0.18.10",
     "ruff>=0.8.6",
     "scipy>=1.14.1",
@@ -40,6 +41,10 @@ dependencies = [
     "websocket-client>=1.8.0",
     "letta-client>=0.1.100",
     "duckduckgo-mcp-server>=0.1.1",
+    "silero-vad>=6.2.1",
+    "pywebview>=6.2.1",
+    "mss>=10.2.0",
+    "kokoro-onnx>=0.3.3",
 ]
 
 [project.optional-dependencies]
@@ -60,9 +65,14 @@ open-llm-vtuber = { path = ".", editable = true }
 cudnn = ">=8.0,<9"
 cudatoolkit = ">=11.0,<12"
 
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-v --tb=short"
+
 [tool.ruff]
-target-version = "py310"
+target-version = "py314"
 
 [tool.ruff.lint]
-# Ignore E402 (module level import not at top of file) for the run_bilibili_live.py script
 per-file-ignores = { "scripts/run_bilibili_live.py" = ["E402"] }

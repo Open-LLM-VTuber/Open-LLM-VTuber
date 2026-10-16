@@ -2,6 +2,8 @@ from typing import Dict, List, Optional, Callable, TypedDict
 from fastapi import WebSocket, WebSocketDisconnect
 import asyncio
 import json
+import os
+import psutil
 from enum import Enum
 import numpy as np
 from loguru import logger
@@ -27,6 +29,8 @@ from .conversations.conversation_handler import (
     handle_group_interrupt,
     handle_individual_interrupt,
 )
+from .lifecycle import get_nova
+from .security import get_rate_limiter, RateLimitConfig, InputValidator
 
 
 class MessageType(Enum):
@@ -61,7 +65,12 @@ class WSMessage(TypedDict, total=False):
 class WebSocketHandler:
     """Handles WebSocket connections and message routing"""
 
-    def __init__(self, default_context_cache: ServiceContext):
+    def __init__(
+        self,
+        default_context_cache: ServiceContext,
+        max_connections: int = 64,
+        max_memory_mb: float = 2048.0,
+    ):
         """Initialize the WebSocket handler with default context"""
         self.client_connections: Dict[str, WebSocket] = {}
         self.client_contexts: Dict[str, ServiceContext] = {}
@@ -69,9 +78,27 @@ class WebSocketHandler:
         self.current_conversation_tasks: Dict[str, Optional[asyncio.Task]] = {}
         self.default_context_cache = default_context_cache
         self.received_data_buffers: Dict[str, np.ndarray] = {}
+        self._max_connections: int = max_connections
+        self._max_memory_mb: float = max_memory_mb
+        self._connection_semaphore: asyncio.Semaphore = asyncio.Semaphore(max_connections)
+        self._semaphore_holders: set[str] = set()
+
+        # Rate limiter for connections
+        self.rate_limiter = get_rate_limiter(RateLimitConfig(
+            requests_per_window=50,
+            window_seconds=60,
+            burst_allowance=10,
+        ))
 
         # Message handlers mapping
         self._message_handlers = self._init_message_handlers()
+
+        # Message types that require text input validation
+        self._CONVERSATION_MESSAGE_TYPES = frozenset({
+            "text-input",
+            "ai-speak-signal",
+            "mic-audio-end",
+        })
 
     def _init_message_handlers(self) -> Dict[str, Callable]:
         """Initialize message type to handler mapping"""
@@ -110,6 +137,40 @@ class WebSocketHandler:
         Raises:
             Exception: If initialization fails
         """
+        # Rate limit check
+        allowed, info = self.rate_limiter.check_rate_limit(f"ws_connect:{client_uid}")
+        if not allowed:
+            logger.warning(f"Rate limit exceeded for client {client_uid}")
+            await websocket.close(code=4008, reason="Rate limit exceeded")
+            return
+
+        # Memory pressure check
+        try:
+            process = psutil.Process(os.getpid())
+            memory_mb = process.memory_info().rss / (1024 * 1024)
+            if memory_mb > self._max_memory_mb:
+                logger.error(
+                    f"Memory limit exceeded: {memory_mb:.1f}MB > {self._max_memory_mb}MB. "
+                    f"Rejecting connection for {client_uid}."
+                )
+                await websocket.close(code=4009, reason="Server memory limit exceeded")
+                return
+        except Exception as e:
+            logger.debug(f"Memory check skipped: {e}")
+
+        # Connection count check via semaphore (non-blocking)
+        if self._connection_semaphore.locked() and len(self.client_connections) >= self._max_connections:
+            logger.error(
+                f"Connection limit reached: {len(self.client_connections)}/{self._max_connections}. "
+                f"Rejecting connection for {client_uid}."
+            )
+            await websocket.close(code=4010, reason="Maximum connections reached")
+            return
+
+        # Acquire semaphore for this connection
+        await self._connection_semaphore.acquire()
+        self._semaphore_holders.add(client_uid)
+
         try:
             session_service_context = await self._init_service_context(
                 websocket.send_text, client_uid
@@ -122,6 +183,12 @@ class WebSocketHandler:
             await self._send_initial_messages(
                 websocket, client_uid, session_service_context
             )
+
+            nova = get_nova()
+            if nova._running:
+                await self._dispatch_lifecycle_event(
+                    "client_connect", client_uid=client_uid
+                )
 
             logger.info(f"Connection established for client {client_uid}")
 
@@ -252,6 +319,34 @@ class WebSocketHandler:
             logger.warning("Message received without type")
             return
 
+        # Input validation for conversation messages
+        if msg_type in self._CONVERSATION_MESSAGE_TYPES:
+            text = data.get("text", "")
+            if text:
+                try:
+                    validated_text = InputValidator.validate_text(text, max_length=5000)
+                    data["text"] = validated_text
+                except ValueError as e:
+                    logger.warning(f"Input validation failed for client {client_uid}: {e}")
+                    await websocket.send_text(
+                        json.dumps({"type": "error", "message": "Invalid input text"})
+                    )
+                    return
+
+        # Validate audio data
+        if msg_type in ("mic-audio-data", "raw-audio-data"):
+            audio_data = data.get("audio", [])
+            if audio_data:
+                try:
+                    audio_bytes = bytes(int(x * 32768) if isinstance(x, float) else int(x) for x in audio_data[:44100])
+                    InputValidator.validate_audio_data(audio_bytes)
+                except ValueError as e:
+                    logger.warning(f"Audio validation failed for client {client_uid}: {e}")
+                    await websocket.send_text(
+                        json.dumps({"type": "error", "message": "Invalid audio data"})
+                    )
+                    return
+
         handler = self._message_handlers.get(msg_type)
         if handler:
             await handler(websocket, client_uid, data)
@@ -279,6 +374,7 @@ class WebSocketHandler:
 
     async def handle_disconnect(self, client_uid: str) -> None:
         """Handle client disconnection"""
+        await self._dispatch_lifecycle_event("client_disconnect", client_uid=client_uid)
         group = self.chat_group_manager.get_client_group(client_uid)
         if group:
             await handle_group_interrupt(
@@ -307,6 +403,11 @@ class WebSocketHandler:
                 task.cancel()
             self.current_conversation_tasks.pop(client_uid, None)
 
+        # Release the connection semaphore
+        if client_uid in self._semaphore_holders:
+            self._semaphore_holders.discard(client_uid)
+            self._connection_semaphore.release()
+
         # Call context close to clean up resources (e.g., MCPClient)
         context = self.client_contexts.get(client_uid)
         if context:
@@ -314,6 +415,53 @@ class WebSocketHandler:
 
         logger.info(f"Client {client_uid} disconnected")
         message_handler.cleanup_client(client_uid)
+
+    async def _dispatch_lifecycle_event(self, event: str, **kwargs) -> None:
+        try:
+            nova = get_nova()
+            if not nova._running:
+                return
+            if event == "client_connect":
+                if hasattr(nova, "parasocial_crm"):
+                    try:
+                        nova.parasocial_crm.record_interaction(
+                            kwargs.get("client_uid", ""), "", ""
+                        )
+                    except Exception:
+                        pass
+            elif event == "chat_message":
+                username = kwargs.get("username", "")
+                message = kwargs.get("message", "")
+                if hasattr(nova, "counter_troll"):
+                    try:
+                        result = nova.counter_troll.evaluate_message_for_troll(
+                            username, message
+                        )
+                        if result:
+                            await self._handle_troll_trial(result)
+                    except Exception:
+                        pass
+        except Exception as e:
+            logger.debug(f"Lifecycle event dispatch error: {e}")
+
+    async def _handle_troll_trial(self, trial_event: dict) -> None:
+        try:
+            defendant = trial_event.get("defendant", "")
+            websocket = self.client_connections.get(defendant)
+            if websocket:
+                await websocket.send_text(
+                    json.dumps(
+                        {
+                            "type": "control",
+                            "text": "troll_trial",
+                            "trial_id": trial_event.get("trial_id"),
+                            "screen_overlay": trial_event.get("screen_overlay"),
+                            "speech_prompt": trial_event.get("speech_prompt"),
+                        }
+                    )
+                )
+        except Exception as e:
+            logger.warning(f"Failed to send troll trial event: {e}")
 
     async def _cleanup_failed_connection(self, client_uid: str) -> None:
         """Clean up failed connection data"""
@@ -329,6 +477,11 @@ class WebSocketHandler:
             self.current_conversation_tasks.pop(client_uid, None)
 
         message_handler.cleanup_client(client_uid)
+
+        # Release the connection semaphore for failed connections
+        if client_uid in self._semaphore_holders:
+            self._semaphore_holders.discard(client_uid)
+            self._connection_semaphore.release()
 
     async def broadcast_to_group(
         self, group_members: list[str], message: dict, exclude_uid: str = None

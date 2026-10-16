@@ -101,6 +101,13 @@ async def process_single_conversation(
                     await websocket_send(json.dumps(output_item))
 
                 elif isinstance(output_item, (SentenceOutput, AudioOutput)):
+                    if tts_manager.is_queue_full():
+                        logger.warning(
+                            f"TTS queue full ({len(tts_manager.task_list)} tasks), "
+                            f"applying backpressure..."
+                        )
+                        await tts_manager.wait_for_queue_slot(timeout=5.0)
+
                     # Handle SentenceOutput or AudioOutput
                     response_part = await process_agent_output(
                         output=output_item,

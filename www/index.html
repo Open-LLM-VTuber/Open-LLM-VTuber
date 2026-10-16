@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#1a1a2e">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Open-LLM-VTuber</title>
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #0f0f1a; color: #e0e0e0; height: 100vh;
+            display: flex; flex-direction: column; touch-action: none;
+        }
+        header {
+            background: #1a1a2e; padding: 12px 16px;
+            display: flex; align-items: center; justify-content: space-between;
+            border-bottom: 1px solid #2a2a4e;
+        }
+        header h1 { font-size: 16px; font-weight: 600; }
+        .status { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #ff4444; }
+        .status-dot.connected { background: #44ff44; }
+        main { flex: 1; display: flex; flex-direction: column; padding: 8px; gap: 8px; }
+        #avatar-container {
+            flex: 1; background: #0a0a15; border-radius: 12px;
+            display: flex; align-items: center; justify-content: center;
+            overflow: hidden; position: relative;
+        }
+        #avatar-placeholder {
+            font-size: 14px; color: #555; text-align: center; padding: 20px;
+        }
+        #chat-area {
+            flex: 0 0 200px; background: #1a1a2e; border-radius: 12px;
+            padding: 12px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px;
+        }
+        .chat-msg {
+            background: #2a2a4e; padding: 8px 12px; border-radius: 12px;
+            font-size: 14px; line-height: 1.4; max-width: 80%;
+        }
+        .chat-msg.ai { align-self: flex-start; }
+        .chat-msg.user { align-self: flex-end; background: #4a4a8e; }
+        .chat-msg.system { align-self: center; font-size: 11px; color: #888; background: #222; }
+        #input-area {
+            flex: 0 0 auto; display: flex; gap: 8px; padding: 8px 0;
+        }
+        #text-input {
+            flex: 1; background: #1a1a2e; border: 1px solid #2a2a4e;
+            border-radius: 24px; padding: 10px 16px; color: #e0e0e0;
+            font-size: 14px; outline: none;
+        }
+        #send-btn {
+            background: #4a4a8e; border: none; border-radius: 24px;
+            padding: 10px 20px; color: #fff; font-size: 14px; cursor: pointer;
+        }
+        #send-btn:active { background: #6a6aaa; }
+        .controls {
+            display: flex; gap: 8px; justify-content: center; padding: 4px;
+        }
+        .ctrl-btn {
+            background: #2a2a4e; border: none; border-radius: 8px;
+            padding: 8px 12px; color: #ccc; font-size: 12px; cursor: pointer;
+        }
+        .ctrl-btn:active { background: #4a4a8e; }
+        #connection-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.8); display: flex; flex-direction: column;
+            align-items: center; justify-content: center; z-index: 100;
+        }
+        #connection-overlay h2 { margin-bottom: 16px; }
+        #connection-overlay .spinner {
+            width: 40px; height: 40px; border: 3px solid #333;
+            border-top-color: #4a4a8e; border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>🎤 Open-LLM-VTuber</h1>
+        <div class="status">
+            <div class="status-dot" id="status-dot"></div>
+            <span id="status-text">Connecting...</span>
+        </div>
+    </header>
+    <main>
+        <div id="avatar-container">
+            <div id="avatar-placeholder">Avatar Display Area<br>Connect to see Live2D model</div>
+        </div>
+        <div class="controls">
+            <button class="ctrl-btn" onclick="sendCommand('interrupt')">⏹ Interrupt</button>
+            <button class="ctrl-btn" onclick="sendCommand('emotion')">😊 Mood</button>
+            <button class="ctrl-btn" onclick="sendCommand('volume_up')">🔊 Vol+</button>
+            <button class="ctrl-btn" onclick="sendCommand('volume_down')">🔉 Vol-</button>
+        </div>
+        <div id="chat-area"></div>
+        <div id="input-area">
+            <input type="text" id="text-input" placeholder="Type a message..." onkeydown="if(event.key==='Enter')sendText()">
+            <button id="send-btn" onclick="sendText()">Send</button>
+        </div>
+    </main>
+    <div id="connection-overlay">
+        <h2>Connecting to VTuber Server...</h2>
+        <div class="spinner"></div>
+    </div>
+
+    <script>
+        const WS_URL = 'wss://' + location.hostname + ':8000/ws';
+        let ws = null;
+        let reconnectTimer = null;
+
+        const statusDot = document.getElementById('status-dot');
+        const statusText = document.getElementById('status-text');
+        const overlay = document.getElementById('connection-overlay');
+        const chatArea = document.getElementById('chat-area');
+        const textInput = document.getElementById('text-input');
+
+        function connect() {
+            try {
+                ws = new WebSocket(WS_URL);
+                ws.onopen = () => {
+                    statusDot.classList.add('connected');
+                    statusText.textContent = 'Connected';
+                    overlay.style.display = 'none';
+                };
+                ws.onmessage = (event) => {
+                    const data = JSON.parse(event.data);
+                    handleMessage(data);
+                };
+                ws.onclose = () => {
+                    statusDot.classList.remove('connected');
+                    statusText.textContent = 'Disconnected';
+                    reconnectTimer = setTimeout(connect, 3000);
+                };
+                ws.onerror = () => ws.close();
+            } catch(e) {
+                reconnectTimer = setTimeout(connect, 3000);
+            }
+        }
+
+        function handleMessage(data) {
+            const type = data.type || 'unknown';
+            if (type === 'full-text' || type === 'ai-speak') {
+                addChatMessage(data.text || '...', 'ai');
+            } else if (type === 'control' && data.text === 'interrupt') {
+                addChatMessage('[Interrupted]', 'system');
+            } else if (type === 'heartbeat-ack') {
+                // keepalive
+            } else {
+                console.log('WS message:', data);
+            }
+        }
+
+        function addChatMessage(text, sender) {
+            const div = document.createElement('div');
+            div.className = 'chat-msg ' + sender;
+            div.textContent = text;
+            chatArea.appendChild(div);
+            chatArea.scrollTop = chatArea.scrollHeight;
+        }
+
+        function sendText() {
+            const text = textInput.value.trim();
+            if (!text || !ws || ws.readyState !== WebSocket.OPEN) return;
+            addChatMessage(text, 'user');
+            ws.send(JSON.stringify({ type: 'text-input', text }));
+            textInput.value = '';
+        }
+
+        function sendCommand(cmd) {
+            if (!ws || ws.readyState !== WebSocket.OPEN) return;
+            ws.send(JSON.stringify({ type: 'control', text: cmd }));
+        }
+
+        // Service Worker registration
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js').catch(() => {});
+        }
+
+        // Request notification permission
+        if ('Notification' in window && Notification.permission === 'default') {
+            Notification.requestPermission();
+        }
+
+        connect();
+    </script>
+</body>
+</html>

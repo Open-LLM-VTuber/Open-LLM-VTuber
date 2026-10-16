@@ -10,21 +10,33 @@ from loguru import logger
 from .service_context import ServiceContext
 from .websocket_handler import WebSocketHandler
 from .proxy_handler import ProxyHandler
+from .cache import get_cache, close_cache
+from .pwa import create_pwa_router
 
 
-def init_client_ws_route(default_context_cache: ServiceContext) -> APIRouter:
+def init_client_ws_route(
+    default_context_cache: ServiceContext,
+    max_connections: int = 64,
+    max_memory_mb: float = 2048.0,
+) -> APIRouter:
     """
     Create and return API routes for handling the `/client-ws` WebSocket connections.
 
     Args:
         default_context_cache: Default service context cache for new sessions.
+        max_connections: Maximum number of concurrent connections.
+        max_memory_mb: Maximum server memory threshold in MB.
 
     Returns:
         APIRouter: Configured router with WebSocket endpoint.
     """
 
     router = APIRouter()
-    ws_handler = WebSocketHandler(default_context_cache)
+    ws_handler = WebSocketHandler(
+        default_context_cache,
+        max_connections=max_connections,
+        max_memory_mb=max_memory_mb,
+    )
 
     @router.websocket("/client-ws")
     async def websocket_endpoint(websocket: WebSocket):
@@ -96,6 +108,12 @@ def init_webtool_routes(default_context_cache: ServiceContext) -> APIRouter:
     @router.get("/live2d-models/info")
     async def get_live2d_folder_info():
         """Get information about available Live2D models"""
+        # Try cache first
+        cache = await get_cache()
+        cached_models = await cache.get("live2d_models_info")
+        if cached_models is not None:
+            return JSONResponse(cached_models)
+
         live2d_dir = "live2d-models"
         if not os.path.exists(live2d_dir):
             return JSONResponse(
@@ -130,13 +148,16 @@ def init_webtool_routes(default_context_cache: ServiceContext) -> APIRouter:
                             "model_path": model3_file,
                         }
                     )
-        return JSONResponse(
-            {
-                "type": "live2d-models/info",
-                "count": len(valid_characters),
-                "characters": valid_characters,
-            }
-        )
+        
+        response = {
+            "type": "live2d-models/info",
+            "count": len(valid_characters),
+            "characters": valid_characters,
+        }
+        
+        # Cache for 5 minutes
+        await cache.set("live2d_models_info", response, ttl=300)
+        return JSONResponse(response)
 
     @router.post("/asr")
     async def transcribe_audio(file: UploadFile = File(...)):
@@ -198,6 +219,13 @@ def init_webtool_routes(default_context_cache: ServiceContext) -> APIRouter:
                 media_type="application/json",
             )
 
+    @router.post("/cache/invalidate")
+    async def invalidate_cache(pattern: str = "live2d_models_info"):
+        """Invalidate cache entries matching pattern"""
+        cache = await get_cache()
+        deleted = await cache.invalidate_pattern(pattern)
+        return {"deleted": deleted, "pattern": pattern}
+
     @router.websocket("/tts-ws")
     async def tts_endpoint(websocket: WebSocket):
         """WebSocket endpoint for TTS generation"""
@@ -251,4 +279,14 @@ def init_webtool_routes(default_context_cache: ServiceContext) -> APIRouter:
             logger.error(f"Error in TTS WebSocket connection: {e}")
             await websocket.close()
 
+    @router.on_event("shutdown")
+    async def shutdown_event():
+        """Cleanup on shutdown"""
+        await close_cache()
+
     return router
+
+
+def init_pwa_router(www_dir: str = "www") -> APIRouter:
+    """Create and return PWA router for mobile/web access."""
+    return create_pwa_router(www_dir=www_dir)

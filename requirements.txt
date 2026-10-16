@@ -247,7 +247,7 @@ nvidia-nvshmem-cu12==3.4.5 ; platform_machine == 'x86_64' and sys_platform == 'l
     # via torch
 nvidia-nvtx-cu12==12.8.90 ; platform_machine == 'x86_64' and sys_platform == 'linux'
     # via torch
-onnxruntime==1.23.2
+onnxruntime==1.29.0
     # via open-llm-vtuber
 openai==2.15.0
     # via open-llm-vtuber
@@ -1081,7 +1081,7 @@ setuptools==80.10.1 ; (python_full_version >= '3.12' and platform_machine == 'ar
     # via torch
 shellingham==1.5.4
     # via typer
-sherpa-onnx==1.10.46
+# sherpa-onnx==1.10.46  # requires cmake build, optional
     # via open-llm-vtuber
 six==1.17.0
     # via langdetect

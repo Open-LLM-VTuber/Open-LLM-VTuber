@@ -1,6 +1,6 @@
 import os
 import json
-from typing import Callable
+from typing import Any, Callable, Dict
 from loguru import logger
 from fastapi import WebSocket
 
@@ -71,6 +71,45 @@ class ServiceContext:
 
         self.send_text: Callable = None
         self.client_uid: str = None
+
+    def _backup_state(self) -> Dict[str, Any]:
+        """Save current engine and config state for potential rollback."""
+        return {
+            "config": self.config,
+            "system_config": self.system_config,
+            "character_config": self.character_config,
+            "live2d_model": self.live2d_model,
+            "asr_engine": self.asr_engine,
+            "tts_engine": self.tts_engine,
+            "agent_engine": self.agent_engine,
+            "vad_engine": self.vad_engine,
+            "translate_engine": self.translate_engine,
+            "mcp_server_registery": self.mcp_server_registery,
+            "tool_adapter": self.tool_adapter,
+            "tool_manager": self.tool_manager,
+            "mcp_client": self.mcp_client,
+            "tool_executor": self.tool_executor,
+            "system_prompt": self.system_prompt,
+            "mcp_prompt": self.mcp_prompt,
+        }
+
+    async def _rollback_state(self, backup: Dict[str, Any]) -> None:
+        """Restore engine and config state from a backup."""
+        # Close any new MCPClient that was created during the failed switch
+        if (
+            self.mcp_client is not None
+            and backup.get("mcp_client") is not self.mcp_client
+        ):
+            try:
+                await self.mcp_client.aclose()
+            except Exception as e:
+                logger.debug(f"Error closing MCPClient during rollback: {e}")
+
+        # Restore all backed-up fields
+        for key, value in backup.items():
+            setattr(self, key, value)
+
+        logger.info("Configuration switch rolled back to previous state.")
 
     def __str__(self):
         return (
@@ -477,11 +516,16 @@ class ServiceContext:
         """
         Handle the configuration switch request.
         Change the configuration to a new config and notify the client.
+        Uses atomic switching: if the new config fails to load, rolls back
+        to the previous state.
 
         Parameters:
         - websocket (WebSocket): The WebSocket connection.
         - config_file_name (str): The name of the configuration file.
         """
+        # Save current state for rollback
+        backup = self._backup_state()
+
         try:
             new_character_config_data = None
 
@@ -547,6 +591,8 @@ class ServiceContext:
 
         except Exception as e:
             logger.error(f"Error switching configuration: {e}")
+            # Roll back to previous state
+            await self._rollback_state(backup)
             logger.debug(self)
             await websocket.send_text(
                 json.dumps(

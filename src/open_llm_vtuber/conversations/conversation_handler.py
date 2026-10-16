@@ -1,5 +1,7 @@
 import asyncio
+import datetime
 import json
+import random
 from typing import Dict, Optional, Callable
 
 import numpy as np
@@ -14,6 +16,25 @@ from .single_conversation import process_single_conversation
 from .conversation_utils import EMOJI_LIST
 from .types import GroupConversationState
 from prompts import prompt_loader
+
+# Varied proactive triggers — rotated randomly so Nova never says the same thing twice
+_PROACTIVE_TRIGGERS = [
+    "Drop a spicy hot take about AI, gaming, or internet culture. Keep it punchy, 1-2 sentences.",
+    "Comment sarcastically on the fact that chat just went completely silent. Stay in character.",
+    "Share a weird fact about your existence as an AI avatar that humans would find bizarre.",
+    "Challenge chat: ask them something provocative and say you're watching for their reaction.",
+    "React to something you just noticed happening on the stream. Make it up but make it vivid.",
+    "Start your response with 'Unpopular opinion:' and end it with something chaotic and confident.",
+    "Tell chat about the last thing you were thinking about before they went quiet.",
+    "Hype yourself up about something you're supposedly great at. Be delightfully delusional about it.",
+    "Make a bold prediction about AI or gaming. Be dramatically overconfident.",
+    "React as if chat just posted something shocking in the chat. Invent what they said and respond.",
+    "Drop a one-liner observation about humans that only an AI would ever notice.",
+    "Announce a new 'life decision' about your streaming career. Be extra and theatrical about it.",
+    "Pretend you just caught someone in chat doing something suspicious. Call them out playfully.",
+    "Share a 'hot take' and then immediately defend it against imaginary pushback from chat.",
+    "Say something that sounds wise at first but turns out to be complete nonsense. Own it.",
+]
 
 
 async def handle_conversation_trigger(
@@ -34,31 +55,39 @@ async def handle_conversation_trigger(
 
     if msg_type == "ai-speak-signal":
         try:
-            # Get proactive speak prompt from config
-            prompt_name = "proactive_speak_prompt"
-            prompt_file = context.system_config.tool_prompts.get(prompt_name)
-            if prompt_file:
-                user_input = prompt_loader.load_util(prompt_file)
+            # Pick a random unique trigger — inject time context so even the
+            # same trigger produces different outputs at different hours.
+            hour = datetime.datetime.now().hour
+            if hour >= 22 or hour < 4:
+                time_hint = "It's late at night — the dedicated night owls are watching."
+            elif hour < 9:
+                time_hint = "It's early morning — the early-risers are here."
+            elif hour < 17:
+                time_hint = "It's daytime on stream."
             else:
-                logger.warning("Proactive speak prompt not configured, using default")
-                user_input = "Please say something."
-        except Exception as e:
-            logger.error(f"Error loading proactive speak prompt: {e}")
-            user_input = "Please say something."
+                time_hint = "It's peak streaming hours — chat should be active."
 
-        # Add metadata to indicate this is a proactive speak request
-        # that should be skipped in both memory and history
+            chosen = random.choice(_PROACTIVE_TRIGGERS)
+            user_input = f"[{time_hint}] {chosen}"
+            logger.info(f"Proactive trigger: {chosen[:70]}...")
+
+        except Exception as e:
+            logger.error(f"Error building proactive trigger: {e}")
+            user_input = "Say something short and in-character right now."
+
+        # Proactive speech is stored in LLM memory (so Nova remembers what she said
+        # and alternates turns cleanly) but skipped in persistent human chat history.
         metadata = {
             "proactive_speak": True,
-            "skip_memory": True,  # Skip storing in AI's internal memory
-            "skip_history": True,  # Skip storing in local conversation history
+            "skip_memory": False,
+            "skip_history": True,
         }
 
         await websocket.send_text(
             json.dumps(
                 {
                     "type": "full-text",
-                    "text": "AI wants to speak something...",
+                    "text": "💬 Nova is speaking...",
                 }
             )
         )
