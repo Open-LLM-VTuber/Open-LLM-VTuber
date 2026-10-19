@@ -13,6 +13,7 @@ from .security import enforce_ws_token, http_token_allowed
 from .service_context import ServiceContext
 from .websocket_handler import WebSocketHandler
 from .proxy_handler import ProxyHandler
+from .utils.stage import build_stage_payload
 
 
 def init_client_ws_route(
@@ -115,6 +116,68 @@ def init_metrics_route(token: Optional[str] = None) -> APIRouter:
         if not http_token_allowed(request, token):
             return JSONResponse({"error": "unauthorized"}, status_code=401)
         return JSONResponse(turn_metrics.snapshot())
+
+    return router
+
+
+def init_stage_route(
+    ws_handler: WebSocketHandler, token: Optional[str] = None
+) -> APIRouter:
+    """Create the ``/api/stage`` route (Ruta B, audit §2.4).
+
+    Lets the operator change the overlay scene without waiting for a scheduled
+    job, which is also the quickest way to test a custom overlay:
+
+        curl -X POST http://127.0.0.1:12393/api/stage \\
+             -H 'Content-Type: application/json' \\
+             -d '{"stage": "tarot_main", "background": "/bg/tarot_table.png"}'
+
+    Args:
+        ws_handler: Shared handler; it owns the ``current_stage`` cache and the
+            client sockets.
+        token: Shared token (audit A22). Same rules as ``/api/metrics``.
+
+    Returns:
+        APIRouter: ``GET`` returns the last payload, ``POST`` broadcasts a new
+        one and reports how many overlays received it.
+    """
+    router = APIRouter()
+
+    @router.get("/api/stage")
+    async def get_stage(request: Request):
+        if not http_token_allowed(request, token):
+            return JSONResponse({"error": "unauthorized"}, status_code=401)
+        return JSONResponse({"stage": ws_handler.current_stage})
+
+    @router.post("/api/stage")
+    async def set_stage(request: Request):
+        if not http_token_allowed(request, token):
+            return JSONResponse({"error": "unauthorized"}, status_code=401)
+
+        try:
+            body = await request.json()
+        except Exception:
+            return JSONResponse({"error": "invalid JSON body"}, status_code=400)
+        if not isinstance(body, dict):
+            return JSONResponse({"error": "expected a JSON object"}, status_code=400)
+
+        try:
+            payload = build_stage_payload(
+                stage=str(body.get("stage", "")),
+                background=str(body.get("background", "")),
+                props=body.get("props"),
+                transition=str(body.get("transition", "fade")),
+                duration_ms=body.get("duration_ms", 800),
+            )
+        except ValueError as e:
+            return JSONResponse({"error": str(e)}, status_code=400)
+
+        delivered = await ws_handler.broadcast_stage_update(
+            payload, str(body.get("target", "first"))
+        )
+        return JSONResponse(
+            {"status": "ok", "delivered": delivered, "payload": payload}
+        )
 
     return router
 

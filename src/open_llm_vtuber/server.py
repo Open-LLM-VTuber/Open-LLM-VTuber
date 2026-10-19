@@ -18,6 +18,7 @@ from starlette.staticfiles import StaticFiles as StarletteStaticFiles
 from .routes import (
     init_client_ws_route,
     init_metrics_route,
+    init_stage_route,
     init_webtool_routes,
     init_proxy_route,
 )
@@ -138,6 +139,9 @@ class WebSocketServer:
         )
         # Turn/queue metrics (audit §5.3). Read-only JSON, no heavy imports.
         self.app.include_router(init_metrics_route(token=self.ws_token))
+        # Stage control for the Ruta B overlay (audit §2.4). The handler caches
+        # the last payload so a reconnecting overlay restores its scene.
+        self.app.include_router(init_stage_route(self.ws_handler, token=self.ws_token))
 
         # Initialize and include proxy routes if proxy is enabled
         system_config = config.system_config

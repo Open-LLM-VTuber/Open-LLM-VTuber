@@ -15,6 +15,7 @@ from .chat_group import (
 )
 from .message_handler import message_handler
 from .utils.stream_audio import prepare_audio_payload
+from .utils.stage import select_stage_targets
 from .chat_history_manager import (
     create_new_history,
     get_history,
@@ -41,7 +42,7 @@ class MessageType(Enum):
     ]
     CONVERSATION = ["mic-audio-end", "text-input", "ai-speak-signal"]
     CONFIG = ["fetch-configs", "switch-config"]
-    CONTROL = ["interrupt-signal", "audio-play-start"]
+    CONTROL = ["interrupt-signal", "audio-play-start", "fetch-stage"]
     DATA = ["mic-audio-data"]
 
 
@@ -69,6 +70,9 @@ class WebSocketHandler:
         self.current_conversation_tasks: Dict[str, Optional[asyncio.Task]] = {}
         self.default_context_cache = default_context_cache
         self.received_data_buffers: Dict[str, np.ndarray] = {}
+        # Last stage-update sent to the overlay (A25): replayed on reconnect so
+        # OBS can restart the browser source without losing the scene.
+        self.current_stage: Optional[dict] = None
 
         # Message handlers mapping
         self._message_handlers = self._init_message_handlers()
@@ -94,6 +98,7 @@ class WebSocketHandler:
             "fetch-backgrounds": self._handle_fetch_backgrounds,
             "audio-play-start": self._handle_audio_play_start,
             "request-init-config": self._handle_init_config_request,
+            "fetch-stage": self._handle_fetch_stage,
             "heartbeat": self._handle_heartbeat,
         }
 
@@ -168,6 +173,10 @@ class WebSocketHandler:
                 }
             )
         )
+
+        # Restore the last stage (background/props) when the overlay reconnects.
+        if self.current_stage:
+            await websocket.send_text(json.dumps(self.current_stage))
 
         # Send initial group status
         await self.send_group_update(websocket, client_uid)
@@ -340,6 +349,37 @@ class WebSocketHandler:
             client_connections=self.client_connections,
             exclude_uid=exclude_uid,
         )
+
+    async def broadcast_stage_update(
+        self, payload: dict, target_client: str = "first"
+    ) -> int:
+        """Send a ``stage-update`` payload to the overlay (Ruta B, audit §2.4).
+
+        Args:
+            payload: Message built with
+                :func:`open_llm_vtuber.utils.stage.build_stage_payload`.
+            target_client: ``"first"`` (recommended: the OBS overlay is the
+                first socket), ``"all"`` or an explicit ``client_uid``.
+
+        Returns:
+            int: Number of sockets the message reached. Failures are logged
+            and never raised: a dead overlay must not break a scheduled turn.
+        """
+        # Remember it even when nobody is connected, so the payload is
+        # replayed as soon as the overlay reconnects.
+        self.current_stage = payload
+
+        delivered = 0
+        for uid in select_stage_targets(self.client_connections, target_client):
+            websocket = self.client_connections.get(uid)
+            if websocket is None:
+                continue
+            try:
+                await websocket.send_text(json.dumps(payload))
+                delivered += 1
+            except Exception as e:
+                logger.warning(f"stage-update: could not reach {uid}: {e}")
+        return delivered
 
     async def send_group_update(self, websocket: WebSocket, client_uid: str):
         """Sends group information to a client"""
@@ -590,6 +630,13 @@ class WebSocketHandler:
         await websocket.send_text(
             json.dumps({"type": "background-files", "files": bg_files})
         )
+
+    async def _handle_fetch_stage(
+        self, websocket: WebSocket, client_uid: str, data: WSMessage
+    ) -> None:
+        """Replay the last stage-update (overlay reload / late subscriber)."""
+        if self.current_stage:
+            await websocket.send_text(json.dumps(self.current_stage))
 
     async def _handle_audio_play_start(
         self, websocket: WebSocket, client_uid: str, data: WSMessage
