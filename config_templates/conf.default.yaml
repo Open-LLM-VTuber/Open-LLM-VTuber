@@ -25,6 +25,16 @@ system_config:
     # Additional guidance for LLM on how to use tools
     # tool_guidance_prompt: 'tool_guidance_prompt' 
 
+  # A23: container used for the TTS audio sent over the WebSocket.
+  # - 'wav' (default): lowest latency, ideal when the overlay/OBS runs on this machine.
+  # - 'mp3': ~10x less traffic; use it when the overlay runs on another machine or
+  #   through a tunnel. Requires ffmpeg with libmp3lame (the project already assumes ffmpeg).
+  # Clients receive the format in the payload ('audio_format'); WebAudio-based players
+  # (decodeAudioData) detect it on their own.
+  audio_export:
+    format: 'wav' # 'wav' or 'mp3'
+    bitrate: '64k' # only used when format is 'mp3'
+
 # configuration for the default character
 character_config:
   conf_name: 'mao_pro' # The name of character configuration file.
@@ -358,6 +368,12 @@ character_config:
       batch_size: '1'
       media_type: 'wav'
       streaming_mode: 'false'
+      # A24: resilience of the GPT-SoVITS HTTP API. One GPU cannot answer
+      # several sentences at once, so requests are capped and retried.
+      request_timeout: 20.0 # seconds per attempt
+      max_retries: 2 # retries after the first attempt (timeout/5xx/non-audio)
+      retry_backoff: 0.5 # seconds before the first retry; doubles each time
+      max_concurrency: 2 # simultaneous requests per engine instance
 
     fish_api_tts:
       # The API key for the Fish TTS API.

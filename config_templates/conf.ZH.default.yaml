@@ -27,6 +27,15 @@ system_config:
     # 额外指导 LLM 如何使用工具的提示词
     # tool_guidance_prompt: 'tool_guidance_prompt' 
 
+  # A23：通过 WebSocket 发送的 TTS 音频格式。
+  # - 'wav'（默认）：延迟最低，适合 overlay/OBS 与服务器在同一台机器上。
+  # - 'mp3'：流量约减少 10 倍；overlay 在另一台机器或通过隧道访问时使用。
+  #   需要带 libmp3lame 的 ffmpeg（本项目本就依赖 ffmpeg）。
+  # 客户端会收到 payload 中的 'audio_format'；基于 WebAudio（decodeAudioData）的播放器可自行识别。
+  audio_export:
+    format: 'wav' # 'wav' 或 'mp3'
+    bitrate: '64k' # 仅当 format 为 'mp3' 时生效
+
 # 默认角色的配置
 character_config:
   conf_name: 'mao_pro' # 角色配置文件的名称
@@ -366,6 +375,12 @@ character_config:
       batch_size: '1' # 批处理大小
       media_type: 'wav' # 媒体类型
       streaming_mode: 'false' # 流模式
+      # A24：GPT-SoVITS HTTP API 的容错设置。单张 GPU 无法同时处理多个句子，
+      # 因此限制并发并在失败时重试。
+      request_timeout: 20.0 # 每次请求的超时时间（秒）
+      max_retries: 2 # 首次失败后的重试次数（超时/5xx/非音频）
+      retry_backoff: 0.5 # 首次重试前的等待秒数，之后每次翻倍
+      max_concurrency: 2 # 每个引擎实例的最大并发请求数
 
     fish_api_tts:
       # Fish TTS API 的 API 密钥。
