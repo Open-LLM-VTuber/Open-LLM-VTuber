@@ -1,12 +1,15 @@
 import os
 import json
+from typing import Optional
 from uuid import uuid4
 import numpy as np
 from datetime import datetime
-from fastapi import APIRouter, WebSocket, UploadFile, File, Response
+from fastapi import APIRouter, Request, WebSocket, UploadFile, File, Response
 from starlette.responses import JSONResponse
 from starlette.websockets import WebSocketDisconnect
 from loguru import logger
+from .metrics import turn_metrics
+from .security import enforce_ws_token, http_token_allowed
 from .service_context import ServiceContext
 from .websocket_handler import WebSocketHandler
 from .proxy_handler import ProxyHandler
@@ -15,6 +18,7 @@ from .proxy_handler import ProxyHandler
 def init_client_ws_route(
     default_context_cache: ServiceContext,
     ws_handler: WebSocketHandler | None = None,
+    token: Optional[str] = None,
 ) -> APIRouter:
     """
     Create and return API routes for handling the `/client-ws` WebSocket connections.
@@ -23,6 +27,8 @@ def init_client_ws_route(
         default_context_cache: Default service context cache for new sessions.
         ws_handler: Optional handler shared with the rest of the application
             (the scheduler needs it to reach connected clients).
+        token: Shared handshake token (audit A22). ``None`` reads
+            ``VTUBER_WS_TOKEN`` from the environment; empty means no auth.
 
     Returns:
         APIRouter: Configured router with WebSocket endpoint.
@@ -34,6 +40,11 @@ def init_client_ws_route(
     @router.websocket("/client-ws")
     async def websocket_endpoint(websocket: WebSocket):
         """WebSocket endpoint for client connections"""
+        # A22: reject the handshake before accept() so an unauthenticated peer
+        # never reaches the service context.
+        if not await enforce_ws_token(websocket, token):
+            return
+
         await websocket.accept()
         client_uid = str(uuid4())
 
@@ -50,12 +61,13 @@ def init_client_ws_route(
     return router
 
 
-def init_proxy_route(server_url: str) -> APIRouter:
+def init_proxy_route(server_url: str, token: Optional[str] = None) -> APIRouter:
     """
     Create and return API routes for handling proxy connections.
 
     Args:
         server_url: The WebSocket URL of the actual server
+        token: Shared handshake token (audit A22); same rules as `/client-ws`.
 
     Returns:
         APIRouter: Configured router with proxy WebSocket endpoint
@@ -66,11 +78,43 @@ def init_proxy_route(server_url: str) -> APIRouter:
     @router.websocket("/proxy-ws")
     async def proxy_endpoint(websocket: WebSocket):
         """WebSocket endpoint for proxy connections"""
+        if not await enforce_ws_token(websocket, token):
+            return
+
         try:
             await proxy_handler.handle_client_connection(websocket)
         except Exception as e:
             logger.error(f"Error in proxy connection: {e}")
             raise
+
+    return router
+
+
+def init_metrics_route(token: Optional[str] = None) -> APIRouter:
+    """
+    Create and return the `/api/metrics` route (A22 / audit §5.3).
+
+    The payload is the in-memory window kept by ``metrics.turn_metrics``: turn
+    duration (p50/p95), time to first audio and proxy queue depth/wait. It is
+    read-only and never touches the conversation state, so it is safe to poll
+    during a show:
+
+        curl -s http://127.0.0.1:12393/api/metrics | jq .turn_seconds
+
+    Args:
+        token: Shared token (audit A22). Same rules as the WebSockets: when it
+            is set, the request needs ``?token=`` or a bearer header.
+
+    Returns:
+        APIRouter: Configured router with the metrics endpoint.
+    """
+    router = APIRouter()
+
+    @router.get("/api/metrics")
+    async def get_metrics(request: Request):
+        if not http_token_allowed(request, token):
+            return JSONResponse({"error": "unauthorized"}, status_code=401)
+        return JSONResponse(turn_metrics.snapshot())
 
     return router
 
