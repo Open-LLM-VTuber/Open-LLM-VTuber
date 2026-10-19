@@ -1,0 +1,42 @@
+services:
+  open-llm-vtuber:
+    build:
+      context: .
+      dockerfile: dockerfile
+    container_name: open-llm-vtuber
+    ports:
+      - "12393:12393"
+    volumes:
+       - ./conf:/app/conf
+       - ./models:/app/models
+    # ---------------------------------------------------------------------------
+    # WHY THIS COMMAND: run_server.py does `read_yaml("conf.yaml")`, i.e. it reads
+    # /app/conf.yaml (CWD-relative), NOT /app/conf/conf.yaml. The image does NOT
+    # ship a /app/conf.yaml because `/conf.yaml` is excluded in .dockerignore, and
+    # the dockerfile CMD (/usr/local/bin/start-app) is the piece that creates:
+    #   /app/conf.yaml -> /app/conf/conf.yaml   (symlink)
+    # If `command:` is overridden WITHOUT recreating that symlink, then
+    # upgrade_manager.sync_user_config() finds no conf.yaml and copies
+    # config_templates/conf.default.yaml (which contains `host: 'localhost'`)
+    # into /app/conf.yaml. Uvicorn then logs
+    #   "Uvicorn running on http://localhost:12393"
+    # and binds to 127.0.0.1 INSIDE the container, so the published port 12393 is
+    # never reachable from Windows -> ERR_EMPTY_RESPONSE.
+    #
+    # Fix: run the image entrypoint (it recreates the symlink AND links
+    # models/characters/avatars/backgrounds from /app/conf) instead of invoking
+    # run_server.py directly.
+    #
+    # SECOND FIX - edge-tts TTS returns no audio:
+    # uv.lock pins edge-tts==7.2.7, and `uv add edge-tts` does NOT upgrade a
+    # version that is already locked, so the container kept running 7.2.7.
+    # Microsoft moved the Edge read-aloud DRM to "Sec-MS-GEC v2"; edge-tts only
+    # learned to send it in 7.3.0 ("feat: add Sec-MS-GEC v2 token support",
+    # PR #492). With 7.2.7 every synthesis fails with
+    #   403, message='Invalid response status'
+    # which leaves 0-byte .mp3 files in /app/cache, so the backend sends a
+    # silent payload and you get text without audio.
+    # Pinning the requirement here forces uv to actually install >= 7.3.0.
+    command: >-
+      bash -c "uv add 'edge-tts>=7.3.0' && exec /usr/local/bin/start-app"
+    restart: unless-stopped
