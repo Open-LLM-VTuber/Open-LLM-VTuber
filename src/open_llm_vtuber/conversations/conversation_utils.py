@@ -159,35 +159,57 @@ async def process_user_input(
     return user_input
 
 
+# A18: a turn must always end, even if the overlay never confirms playback.
+# Without these timeouts a backgrounded OBS browser source leaves the turn
+# hanging forever and the TikTok connector never advances its queue.
+PLAYBACK_ACK_TIMEOUT = 180  # s; a long tarot reading fits comfortably
+SYNTH_TIMEOUT = 120  # s; if TTS stalls, don't block the turn end
+
+
 async def finalize_conversation_turn(
     tts_manager: TTSTaskManager,
     websocket_send: WebSocketSend,
     client_uid: str,
     broadcast_ctx: Optional[BroadcastContext] = None,
 ) -> None:
-    """Finalize a conversation turn"""
-    if tts_manager.task_list:
-        await asyncio.gather(*tts_manager.task_list)
-        await websocket_send(json.dumps({"type": "backend-synth-complete"}))
+    """Finalize a conversation turn, always signalling the turn end."""
+    try:
+        if tts_manager.task_list:
+            try:
+                # return_exceptions: one failed sentence must not kill the turn
+                await asyncio.wait_for(
+                    asyncio.gather(*tts_manager.task_list, return_exceptions=True),
+                    timeout=SYNTH_TIMEOUT,
+                )
+            except asyncio.TimeoutError:
+                logger.warning(
+                    f"TTS still running after {SYNTH_TIMEOUT}s; closing the turn anyway"
+                )
 
-        response = await message_handler.wait_for_response(
-            client_uid, "frontend-playback-complete"
-        )
+            await websocket_send(json.dumps({"type": "backend-synth-complete"}))
 
-        if not response:
-            logger.warning(f"No playback completion response from {client_uid}")
-            return
+            response = await message_handler.wait_for_response(
+                client_uid,
+                "frontend-playback-complete",
+                timeout=PLAYBACK_ACK_TIMEOUT,
+            )
+            if not response:
+                logger.warning(
+                    f"No playback completion from {client_uid}; closing the turn anyway"
+                )
+                # NOTE: no early return - the turn must be closed below.
 
-    await websocket_send(json.dumps({"type": "force-new-message"}))
+        await websocket_send(json.dumps({"type": "force-new-message"}))
 
-    if broadcast_ctx and broadcast_ctx.broadcast_func:
-        await broadcast_ctx.broadcast_func(
-            broadcast_ctx.group_members,
-            {"type": "force-new-message"},
-            broadcast_ctx.current_client_uid,
-        )
-
-    await send_conversation_end_signal(websocket_send, broadcast_ctx)
+        if broadcast_ctx and broadcast_ctx.broadcast_func:
+            await broadcast_ctx.broadcast_func(
+                broadcast_ctx.group_members,
+                {"type": "force-new-message"},
+                broadcast_ctx.current_client_uid,
+            )
+    finally:
+        # Last line of the turn: whatever happened, unblock proxy and connector.
+        await send_conversation_end_signal(websocket_send, broadcast_ctx)
 
 
 async def send_conversation_end_signal(

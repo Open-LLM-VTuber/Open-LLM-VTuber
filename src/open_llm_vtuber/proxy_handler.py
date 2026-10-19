@@ -26,6 +26,8 @@ class ProxyHandler:
         self.server_url = server_url
         self.server_ws: Optional[aiohttp.ClientWebSocketResponse] = None
         self.clients: Dict[str, WebSocket] = {}
+        # Clients that only need control messages (e.g. the TikTok connector).
+        self.silent_clients: set[str] = set()
         self.connected = False
         self.server_task: Optional[asyncio.Task] = None
         self.lock = asyncio.Lock()
@@ -125,6 +127,10 @@ class ProxyHandler:
                 if message.get("type") == "text-input":
                     # Queue the message with the sender's ID
                     self.message_queue.queue_message(message, client_id)
+                # Connector opt-in: no audio/volumes in its broadcast
+                elif message.get("type") == "connector-hello":
+                    self.silent_clients.add(client_id)
+                    logger.info(f"Client {client_id} marked as connector (no audio)")
                 # Handle interrupt signals
                 elif message.get("type") == "interrupt-signal":
                     logger.info(
@@ -152,6 +158,7 @@ class ProxyHandler:
             client_id: The ID of the disconnected client
         """
         self.clients.pop(client_id, None)
+        self.silent_clients.discard(client_id)
         logger.info(
             f"Client {client_id} removed. Remaining clients: {len(self.clients)}"
         )
@@ -281,6 +288,12 @@ class ProxyHandler:
         for client_id, websocket in self.clients.items():
             # Skip the excluded client
             if exclude_client and client_id == exclude_client:
+                continue
+
+            # Connectors do not need audio or volume data (~1 MB per turn)
+            if client_id in self.silent_clients and (
+                "audio" in message or "volumes" in message
+            ):
                 continue
 
             try:

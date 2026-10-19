@@ -1,5 +1,6 @@
 from typing import Union, List, Dict, Any, Optional
 import asyncio
+import contextlib
 import json
 from loguru import logger
 import numpy as np
@@ -10,6 +11,7 @@ from .conversation_utils import (
     send_conversation_start_signals,
     process_user_input,
     finalize_conversation_turn,
+    send_conversation_end_signal,
     cleanup_conversation,
     EMOJI_LIST,
 )
@@ -137,11 +139,8 @@ async def process_single_conversation(
             # full_response will contain partial response before error
         # --- End processing agent response ---
 
-        # Wait for any pending TTS tasks
-        if tts_manager.task_list:
-            await asyncio.gather(*tts_manager.task_list)
-            await websocket_send(json.dumps({"type": "backend-synth-complete"}))
-
+        # Wait for pending TTS tasks and close the turn (A18/A19: finalize
+        # emits backend-synth-complete once and always sends the end signal).
         await finalize_conversation_turn(
             tts_manager=tts_manager,
             websocket_send=websocket_send,
@@ -163,6 +162,9 @@ async def process_single_conversation(
 
     except asyncio.CancelledError:
         logger.info(f"🤡👍 Conversation {session_emoji} cancelled because interrupted.")
+        with contextlib.suppress(Exception):
+            # Unblock the proxy/connector: interrupts skip finalize_conversation_turn.
+            await send_conversation_end_signal(websocket_send, None)
         raise
     except Exception as e:
         logger.error(f"Error in conversation chain: {e}")

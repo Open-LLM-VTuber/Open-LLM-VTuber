@@ -172,9 +172,12 @@ class TTSTaskManager:
         )
 
     def clear(self) -> None:
-        """Clear all pending tasks and reset state"""
+        """Cancel pending TTS tasks, stop the sender and reset state."""
+        for task in self.task_list:
+            if not task.done():
+                task.cancel()
         self.task_list.clear()
-        if self._sender_task:
+        if self._sender_task and not self._sender_task.done():
             self._sender_task.cancel()
         self._sequence_counter = 0
         self._next_sequence_to_send = 0
