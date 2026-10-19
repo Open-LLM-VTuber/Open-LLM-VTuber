@@ -521,3 +521,28 @@ live_config:
     # Thank viewers for gifts / greet new followers
     reply_to_gifts: true
     reply_to_follows: true
+
+# Scripted broadcast (opening, breaks, closing). Runs inside the server: each
+# job sends a proactive turn to the first connected client (the OBS overlay).
+scheduler_config:
+  enabled: false
+  # IANA timezone used by the cron expressions
+  timezone: 'Europe/Madrid'
+  # 'first' = first connected client (OBS overlay); or an explicit client_uid
+  target_client: 'first'
+  jobs:
+    - name: 'pre_show'
+      cron: '50 19 * * *'          # every day at 19:50
+      text: 'Quedan diez minutos para empezar. Saluda a quien ya esté en el chat y pide que se queden.'
+      scene: 'starting_soon'       # reserved for the OBS integration
+    - name: 'card_of_the_day'
+      cron: '0 20 * * *'
+      text: 'Abre el directo, presenta la carta del día y pide preguntas.'
+      scene: 'tarot_main'
+    - name: 'break'
+      interval_minutes: 45
+      text: 'Haz una pausa breve, recuerda que sigues leyendo el tarot y pide que compartan el directo.'
+    - name: 'closing'
+      cron: '0 23 * * *'
+      text: 'Despídete, agradece a quienes han participado y anuncia cuándo será la próxima lectura.'
+      scene: 'ending'

@@ -528,6 +528,41 @@ class WebSocketHandler:
             broadcast_to_group=self.broadcast_to_group,
         )
 
+    async def trigger_proactive_speak(self, client_uid: str, text: str = "") -> bool:
+        """Start a proactive turn on an already connected client.
+
+        Used by the scheduler. Returns False when the client is gone or busy;
+        the caller decides whether to retry. Checking the running task is
+        mandatory: the scheduler writes straight into the client socket, so it
+        bypasses the serialization of the live connector.
+        """
+        websocket = self.client_connections.get(client_uid)
+        if not websocket:
+            return False
+
+        current = self.current_conversation_tasks.get(client_uid)
+        if current and not current.done():
+            logger.info("Turn in progress; scheduled segment postponed")
+            return False
+
+        group = self.chat_group_manager.get_client_group(client_uid)
+        if group and len(group.members) > 1:
+            group_task = self.current_conversation_tasks.get(group.group_id)
+            if group_task and not group_task.done():
+                logger.info("Group turn in progress; scheduled segment postponed")
+                return False
+
+        try:
+            await self._route_message(
+                websocket,
+                client_uid,
+                {"type": "ai-speak-signal", "text": text},
+            )
+        except Exception as e:
+            logger.error(f"Failed to trigger proactive speak for {client_uid}: {e}")
+            return False
+        return True
+
     async def _handle_fetch_configs(
         self, websocket: WebSocket, client_uid: str, data: WSMessage
     ) -> None:

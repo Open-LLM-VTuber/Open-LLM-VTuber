@@ -15,7 +15,10 @@ from starlette.responses import Response
 from starlette.staticfiles import StaticFiles as StarletteStaticFiles
 
 from .routes import init_client_ws_route, init_webtool_routes, init_proxy_route
+from .scheduler.service import SchedulerService
 from .service_context import ServiceContext
+from .websocket_handler import WebSocketHandler
+from .config_manager.scheduler import SchedulerConfig
 from .config_manager.utils import Config
 
 
@@ -89,9 +92,14 @@ class WebSocketServer:
         )
 
         # Include routes, passing the context instance
-        # The context will be populated during the initialize step
+        # The context will be populated during the initialize step.
+        # The handler is created here so the scheduler can reuse it.
+        self.ws_handler = WebSocketHandler(self.default_context_cache)
         self.app.include_router(
-            init_client_ws_route(default_context_cache=self.default_context_cache),
+            init_client_ws_route(
+                default_context_cache=self.default_context_cache,
+                ws_handler=self.ws_handler,
+            ),
         )
         self.app.include_router(
             init_webtool_routes(default_context_cache=self.default_context_cache),
@@ -107,6 +115,14 @@ class WebSocketServer:
             self.app.include_router(
                 init_proxy_route(server_url=server_url),
             )
+
+        # Scripted segments (start, breaks, closing). Disabled by default.
+        scheduler_config = (
+            getattr(config, "scheduler_config", None) or SchedulerConfig()
+        )
+        self.scheduler = SchedulerService(self.ws_handler, scheduler_config)
+        self.app.add_event_handler("startup", self.scheduler.start)
+        self.app.add_event_handler("shutdown", self.scheduler.shutdown)
 
         # Mount cache directory first (to ensure audio file access)
         if not os.path.exists("cache"):

@@ -517,3 +517,28 @@ live_config:
     # 感谢礼物 / 向新关注者打招呼
     reply_to_gifts: true
     reply_to_follows: true
+
+# 定时播出（开场、休息、收尾）。在服务端运行：每个任务向第一个已连接的客户端
+#（OBS 的 overlay）发送一次主动发言。
+scheduler_config:
+  enabled: false
+  # cron 表达式使用的 IANA 时区
+  timezone: 'Europe/Madrid'
+  # 'first' = 第一个已连接的客户端（OBS overlay）；也可以填具体的 client_uid
+  target_client: 'first'
+  jobs:
+    - name: 'pre_show'
+      cron: '50 19 * * *'          # 每天 19:50
+      text: 'Quedan diez minutos para empezar. Saluda a quien ya esté en el chat y pide que se queden.'
+      scene: 'starting_soon'       # 为 OBS 集成预留
+    - name: 'card_of_the_day'
+      cron: '0 20 * * *'
+      text: 'Abre el directo, presenta la carta del día y pide preguntas.'
+      scene: 'tarot_main'
+    - name: 'break'
+      interval_minutes: 45
+      text: 'Haz una pausa breve, recuerda que sigues leyendo el tarot y pide que compartan el directo.'
+    - name: 'closing'
+      cron: '0 23 * * *'
+      text: 'Despídete, agradece a quienes han participado y anuncia cuándo será la próxima lectura.'
+      scene: 'ending'

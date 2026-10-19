@@ -5,6 +5,7 @@ from typing import Dict, ClassVar
 from .system import SystemConfig
 from .character import CharacterConfig
 from .live import LiveConfig
+from .scheduler import SchedulerConfig
 from .i18n import I18nMixin, Description
 
 
@@ -16,6 +17,9 @@ class Config(I18nMixin, BaseModel):
     system_config: SystemConfig = Field(default=None, alias="system_config")
     character_config: CharacterConfig = Field(..., alias="character_config")
     live_config: LiveConfig = Field(default=LiveConfig(), alias="live_config")
+    scheduler_config: SchedulerConfig = Field(
+        default_factory=SchedulerConfig, alias="scheduler_config"
+    )
 
     DESCRIPTIONS: ClassVar[Dict[str, Description]] = {
         "system_config": Description(
@@ -26,5 +30,8 @@ class Config(I18nMixin, BaseModel):
         ),
         "live_config": Description(
             en="Live streaming platform integration settings", zh="直播平台集成设置"
+        ),
+        "scheduler_config": Description(
+            en="Scripted live broadcast scheduler settings", zh="定时播出调度器设置"
         ),
     }
