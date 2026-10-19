@@ -283,3 +283,88 @@ docker compose exec -T open-llm-vtuber ls -la /app/cache                # los .m
 - No se debe usar `network_mode: host` (en Docker Desktop para Windows no expone el localhost de Windows).
 
 
+
+## 9. Seguridad y observabilidad (auditoría A22 y §5.3) — guía de uso
+
+Implementado en `src/open_llm_vtuber/security.py`, `metrics.py` y `routes.py`, cableado en `server.py`.
+**Todo es opt-in:** sin variables de entorno el comportamiento es el de antes (show local sin auth), así que
+no puede romper una instalación existente.
+
+### 9.1 Variables de entorno
+
+| Variable | Para qué sirve | Sin definir |
+|---|---|---|
+| `VTUBER_WS_TOKEN` | Si **no** está vacía, todo handshake de `/client-ws` y `/proxy-ws` debe presentarla (`?token=...` o `Authorization: Bearer ...`); si falta o no coincide, el servidor cierra con código **1008** (el cliente ve un 403 en el handshake). `GET /api/metrics` responde **401** `{"error":"unauthorized"}`. La comparación es en tiempo constante (`hmac.compare_digest`). | sin auth (como antes) |
+| `VTUBER_CORS_ORIGINS` | Orígenes extra **separados por comas** que pueden leer respuestas cross-origin (p. ej. un overlay en otro dominio). Se normalizan (se descarta el `/` final). `*` reactiva el comodín antiguo, pero ahora con `allow_credentials=False` (el comodín con credenciales es lo que los navegadores rechazan y lo que A22 quería quitar). | sólo loopback (`localhost`, `127.x`, `[::1]`) + el `host` de `conf.yaml` (http/https, con puerto) + regex para los rangos RFC 1918 en cualquier puerto |
+| `VTUBER_METRICS_WINDOW` | Cuántos turnos y muestras de cola se guardan en memoria (ventana del p95). | `200` |
+
+> ⚠️ **La UI del navegador NO añade el token.** No hay ninguna referencia a `client-ws` ni a `token` en
+> `frontend/`: si defines `VTUBER_WS_TOKEN`, `http://localhost:12393` seguirá abriendo pero el WebSocket
+> será rechazado (sin voz ni animación). Los clientes que **sí** lo soportan son
+> `scripts/smoke_test.py --token ...` y `scripts/run_tiktok_live.py` (lee la variable del entorno).
+> Para el show local en Docker: **déjala sin definir**; úsala cuando el puerto salga de tu máquina
+> (LAN, túnel, Cloudflare) o cuando el overlay sea un cliente propio.
+
+Cómo pasarlas al contenedor (el `docker-compose.yml` actual **no** las pasa, son opt-in):
+
+```powershell
+# opción rápida: variable en la sesión + recrear
+$env:VTUBER_WS_TOKEN = 'un-secreto-largo-y-aleatorio'
+docker compose up -d --force-recreate
+docker compose exec -T open-llm-vtuber sh -c 'echo $VTUBER_WS_TOKEN'   # comprobar que llegó
+```
+
+```yaml
+# opción permanente: añadir al servicio open-llm-vtuber de docker-compose.yml
+    environment:
+      VTUBER_WS_TOKEN: "${VTUBER_WS_TOKEN}"
+      VTUBER_CORS_ORIGINS: "https://overlay.example,https://otro.example"
+```
+
+### 9.2 `GET /api/metrics` (criterio de aceptación: p95 del turno < 8 s)
+
+Read-only, no toca el estado de la conversación, se puede consultar en mitad de un directo.
+Forma del JSON (`metrics.turn_metrics.snapshot()`):
+
+| Campo | Contenido |
+|---|---|
+| `turns` | `started`, `completed`, `interrupted`, `failed`, `active`, `overlaps` (segundo trigger con el turno anterior aún abierto) y `without_audio` (turnos completados sin audio) |
+| `turn_seconds`, `first_audio_seconds`, `queue.wait_seconds` | `count`, `avg`, `p50`, `p95`, `max` de la ventana |
+| `queue` | `depth` (última muestra) y `max_depth` del proxy |
+| `active_turns` | `key`, `kind` y `elapsed_s` de los turnos en curso |
+| `last_turn` | último turno cerrado (`outcome`, `duration_s`, `first_audio_s`) |
+| `targets` | `p95_turn_seconds: 8.0` y `p95_ok` (`null` mientras no haya turnos) |
+
+```powershell
+# sin token definido
+curl.exe -s http://localhost:12393/api/metrics
+
+# con token definido: 401 sin credencial, 200 con ella
+curl.exe -s -o NUL -w "%{http_code}`n" http://localhost:12393/api/metrics
+curl.exe -s -H "Authorization: Bearer $env:VTUBER_WS_TOKEN" http://localhost:12393/api/metrics
+curl.exe -s "http://localhost:12393/api/metrics?token=$env:VTUBER_WS_TOKEN"
+```
+
+### 9.3 Comprobaciones de esta capa (lo que era "pendiente" en §6)
+
+```powershell
+# 1) lint + formato: lo mismo que ejecuta .pre-commit-config.yaml.
+#    El CI (.github/workflows/ruff.yml) sólo ejecuta el check, no el formateo.
+uv run pre-commit run --all-files
+
+# alternativa sin uv, con el ruff standalone (v0.9.6, la misma que fija el pre-commit):
+#   ruff check .          -> "All checks passed!"
+#   ruff format --check . -> sólo config_manager/asr.py queda fuera, y ya venía así de upstream
+
+# 2) tests de seguridad + métricas (stdlib puro: 34 pasan, 5 se saltan sin numpy/torch)
+uv run python scripts/test_security_metrics.py
+
+# 3) smoke end-to-end (necesita servidor + LLM + TTS reales)
+uv run python scripts/smoke_test.py --url http://127.0.0.1:12393
+uv run python scripts/smoke_test.py --url http://127.0.0.1:12393 --token $env:VTUBER_WS_TOKEN
+```
+
+**Estado en esta máquina (Windows, sin `uv`):** el paso 2 se ejecuta con el Python del sistema
+(`python scripts/test_security_metrics.py` -> `Ran 39 tests ... OK (skipped=5)`), los pasos 1 y 3
+requieren `uv sync` (el `pyproject.toml` exige `>=3.10,<3.13` y aquí hay Python 3.14).
+
