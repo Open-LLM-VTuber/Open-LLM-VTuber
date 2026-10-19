@@ -228,6 +228,24 @@ Dos avisos sacados de esa ejecución:
    "Start Docker Desktop when you sign in".
 7. **[Limpieza]** Dentro del contenedor quedan restos de pruebas **efímeros**: `/tmp/test_tts.py`, `/tmp/t.mp3`.
    El script de prueba en Windows está en `%TEMP%\test_tts.py`.
+8. **[Contenedor vs. imagen]** El scheduler y `scripts/smoke_test.py` ya están **commiteados**
+   (`2da6d3d`, `ea648d5`, `881a899` en la rama `feat/mvp-tarot-hardening`), pero la imagen que usa el
+   contenedor actual se construyó **antes**: dentro del contenedor funcionan solo porque se copiaron
+   a mano con `docker cp`. `docker compose restart` (o `stop` + `start`) los conserva, pero
+   **`docker compose up -d` sin `--build` recrea el contenedor desde la imagen vieja y los pierde**.
+   Mientras el build no sea reproducible (`#17 exporting layers` se queda colgado), la alternativa es
+   volver a copiarlos y reiniciar:
+   ```powershell
+   docker cp src\open_llm_vtuber\scheduler open-llm-vtuber:/app/src/open_llm_vtuber/scheduler
+   docker cp src\open_llm_vtuber\config_manager\scheduler.py open-llm-vtuber:/app/src/open_llm_vtuber/config_manager/scheduler.py
+   docker cp src\open_llm_vtuber\config_manager\main.py open-llm-vtuber:/app/src/open_llm_vtuber/config_manager/main.py
+   docker cp src\open_llm_vtuber\server.py open-llm-vtuber:/app/src/open_llm_vtuber/server.py
+   docker cp src\open_llm_vtuber\routes.py open-llm-vtuber:/app/src/open_llm_vtuber/routes.py
+   docker cp src\open_llm_vtuber\websocket_handler.py open-llm-vtuber:/app/src/open_llm_vtuber/websocket_handler.py
+   docker cp src\open_llm_vtuber\conversations\conversation_handler.py open-llm-vtuber:/app/src/open_llm_vtuber/conversations/conversation_handler.py
+   docker cp scripts\smoke_test.py open-llm-vtuber:/app/scripts/smoke_test.py
+   docker compose restart
+   ```
 
 ## 7. Chuleta de comandos
 
