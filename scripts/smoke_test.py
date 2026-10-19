@@ -24,11 +24,28 @@ import argparse
 import asyncio
 import base64
 import json
+import os
 import sys
 from typing import Optional
+from urllib.parse import quote
 
 import httpx
 import websockets
+
+#: Shared handshake token (audit A22); unset means the local show has no auth.
+TOKEN_ENV = "VTUBER_WS_TOKEN"
+
+
+def _with_token(url: str, token: Optional[str]) -> str:
+    """Append ``?token=`` to a WebSocket/HTTP URL (no-op without a token).
+
+    Mirrors ``security.with_token``; kept local so the smoke test stays a
+    standalone script that runs without the service package importable.
+    """
+    if not token:
+        return url
+    separator = "&" if "?" in url else "?"
+    return f"{url}{separator}token={quote(token, safe='')}"
 
 
 class Result:
@@ -108,9 +125,12 @@ async def _sender(ws_url: str, text: str, result: Result) -> None:
             await asyncio.sleep(0.2)
 
 
-async def run(url: str, text: str, timeout: float) -> Result:
+async def run(
+    url: str, text: str, timeout: float, token: Optional[str] = None
+) -> Result:
     base = url.rstrip("/")
     ws_url = base.replace("http://", "ws://").replace("https://", "wss://")
+    proxy_url = _with_token(f"{ws_url}/proxy-ws", token)
     result = Result()
 
     try:
@@ -126,8 +146,8 @@ async def run(url: str, text: str, timeout: float) -> Result:
 
     ready = asyncio.Event()
     tasks = [
-        asyncio.create_task(_overlay(f"{ws_url}/proxy-ws", result, ready)),
-        asyncio.create_task(_sender(f"{ws_url}/proxy-ws", text, result)),
+        asyncio.create_task(_overlay(proxy_url, result, ready)),
+        asyncio.create_task(_sender(proxy_url, text, result)),
     ]
     try:
         await asyncio.wait_for(ready.wait(), timeout=10)
@@ -143,6 +163,33 @@ async def run(url: str, text: str, timeout: float) -> Result:
         await asyncio.gather(*tasks, return_exceptions=True)
 
     return result
+
+
+def _print_metrics(url: str, token: Optional[str]) -> None:
+    """Best-effort dump of ``GET /api/metrics`` (audit §5.3 acceptance p95)."""
+    metrics_url = _with_token(f"{url.rstrip('/')}/api/metrics", token)
+    try:
+        response = httpx.get(metrics_url, timeout=5.0)
+        response.raise_for_status()
+        data = response.json()
+    except Exception as e:
+        print(f"metrics      : unavailable ({type(e).__name__})")
+        return
+
+    turns = data.get("turn_seconds") or {}
+    first_audio = data.get("first_audio_seconds") or {}
+    queue = (data.get("queue") or {}).get("wait_seconds") or {}
+    targets = data.get("targets") or {}
+    print(
+        "turn p95     : "
+        f"{turns.get('p95')} s (n={turns.get('count')}, "
+        f"first audio p95={first_audio.get('p95')} s, "
+        f"queue wait p95={queue.get('p95')} s)"
+    )
+    print(
+        f"p95 target   : <{targets.get('p95_turn_seconds')} s -> "
+        f"{targets.get('p95_ok')}"
+    )
 
 
 def main() -> int:
@@ -161,10 +208,15 @@ def main() -> int:
         default=120.0,
         help="seconds to wait for conversation-chain-end (default: 120)",
     )
+    parser.add_argument(
+        "--token",
+        default=os.environ.get(TOKEN_ENV, ""),
+        help="shared WS token (default: $VTUBER_WS_TOKEN)",
+    )
     args = parser.parse_args()
 
     try:
-        result = asyncio.run(run(args.url, args.text, args.timeout))
+        result = asyncio.run(run(args.url, args.text, args.timeout, args.token))
     except KeyboardInterrupt:
         return 130
 
@@ -177,6 +229,7 @@ def main() -> int:
     if result.texts:
         preview = " ".join(result.texts)[:200]
         print(f"said         : {preview}")
+    _print_metrics(args.url, args.token)
 
     if result.ok:
         print("\nSMOKE TEST PASSED")

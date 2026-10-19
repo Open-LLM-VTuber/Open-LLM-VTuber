@@ -10,6 +10,7 @@ sys.path.insert(0, project_root)
 
 from src.open_llm_vtuber.live.tiktok_live import TikTokLivePlatform
 from src.open_llm_vtuber.config_manager.utils import read_yaml, validate_config
+from src.open_llm_vtuber.security import with_token
 
 
 def build_platform(config):
@@ -26,6 +27,10 @@ def build_platform(config):
     proxy_url = (tiktok_config.proxy_url or "").strip()
     if not proxy_url:
         proxy_url = f"ws://127.0.0.1:{config.system_config.port}/proxy-ws"
+
+    # A22: when VTUBER_WS_TOKEN is set the server rejects token-less
+    # handshakes, so the connector has to carry it like any other client.
+    proxy_url = with_token(proxy_url)
 
     return TikTokLivePlatform(
         unique_id=unique_id,
