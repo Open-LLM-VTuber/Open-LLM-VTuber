@@ -48,6 +48,10 @@ bilibili = [
     "Brotli~=1.1.0",
     "yarl>=1.12.0,<2.0"
 ]
+tiktok = [
+    "TikTokLive>=7,<8",
+    "websockets>=12.0"
+]
 
 [tool.pixi.project]
 channels = ["conda-forge"]
@@ -65,4 +69,4 @@ target-version = "py310"
 
 [tool.ruff.lint]
 # Ignore E402 (module level import not at top of file) for the run_bilibili_live.py script
-per-file-ignores = { "scripts/run_bilibili_live.py" = ["E402"] }
+per-file-ignores = { "scripts/run_bilibili_live.py" = ["E402"], "scripts/run_tiktok_live.py" = ["E402"] }

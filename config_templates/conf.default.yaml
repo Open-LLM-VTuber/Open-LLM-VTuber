@@ -64,6 +64,10 @@ character_config:
         faster_first_response: True
         # Method for segmenting sentences: 'regex' or 'pysbd'
         segment_method: 'pysbd'
+        # Turns of history sent to the LLM (0 = unlimited). The full history
+        # is still kept for the UI and the chat history files.
+        max_history_turns: 12
+
         # Use MCP (Model Context Protocol) Plus to let the LLM have the ability to use tools
         # 'Plus' means that it has the ability to call tools by using OpenAI API.
         use_mcpp: True
@@ -501,3 +505,19 @@ live_config:
     room_ids: [1991478060]
     # SESSDATA cookie value (optional, for authenticated requests)
     sessdata: ""
+  tiktok_live:
+    # Enable the TikTok Live connector (run scripts/run_tiktok_live.py)
+    enabled: false
+    # TikTok username of the account that is live (without @)
+    unique_id: ""
+    # Leave empty to use ws://127.0.0.1:{system_config.port}/proxy-ws
+    proxy_url: ""
+    # Maximum number of pending events (gifts are dropped last)
+    max_queue: 5
+    # Minimum seconds between two replies
+    cooldown_seconds: 6
+    # Ignore gifts cheaper than this many coins
+    min_gift_coins: 1
+    # Thank viewers for gifts / greet new followers
+    reply_to_gifts: true
+    reply_to_follows: true

@@ -31,6 +31,7 @@ class BasicMemoryAgentConfig(I18nMixin, BaseModel):
 
     faster_first_response: Optional[bool] = Field(True, alias="faster_first_response")
     segment_method: Literal["regex", "pysbd"] = Field("pysbd", alias="segment_method")
+    max_history_turns: int = Field(12, alias="max_history_turns")
     use_mcpp: Optional[bool] = Field(False, alias="use_mcpp")
     mcp_enabled_servers: Optional[List[str]] = Field([], alias="mcp_enabled_servers")
 
@@ -46,6 +47,10 @@ class BasicMemoryAgentConfig(I18nMixin, BaseModel):
         "segment_method": Description(
             en="Method for segmenting sentences: 'regex' or 'pysbd' (default: 'pysbd')",
             zh="分割句子的方法：'regex' 或 'pysbd'（默认：'pysbd'）",
+        ),
+        "max_history_turns": Description(
+            en="Number of past turns sent to the LLM in the prompt; 0 = unlimited (default: 12)",
+            zh="发送给大语言模型的提示词中包含的历史轮数；0 表示不限制（默认：12）",
         ),
         "use_mcpp": Description(
             en="Whether to use MCP (Model Context Protocol) for the agent (default: True)",

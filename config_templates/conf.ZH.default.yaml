@@ -64,6 +64,10 @@ character_config:
         faster_first_response: True
         # 句子分割方法：'regex' 或 'pysbd'
         segment_method: 'pysbd'
+        # 发送给 LLM 的历史轮数（0 表示不限制）。完整历史仍会保留，
+        # 用于界面显示和聊天记录文件。
+        max_history_turns: 12
+
         # 是否使用 MCP（Model Context Protocol） Plus 以使 LLM 获得使用工具的能力（默认：False）
         # 'Plus' 意味着它包含了通过 OpenAI API 调用工具的能力。
         use_mcpp: False
@@ -497,3 +501,19 @@ live_config:
     room_ids: [1991478060]
     # SESSDATA cookie值（可选，用于认证请求，可以查看发送弹幕用户名）
     sessdata: ""
+  tiktok_live:
+    # 启用TikTok直播连接器（运行 scripts/run_tiktok_live.py）
+    enabled: false
+    # 正在直播的TikTok账号用户名（不含@）
+    unique_id: ""
+    # 留空则使用 ws://127.0.0.1:{system_config.port}/proxy-ws
+    proxy_url: ""
+    # 待处理事件的最大数量（礼物最后才丢弃）
+    max_queue: 5
+    # 两次回复之间的最短秒数
+    cooldown_seconds: 6
+    # 忽略低于该币值的礼物
+    min_gift_coins: 1
+    # 感谢礼物 / 向新关注者打招呼
+    reply_to_gifts: true
+    reply_to_follows: true

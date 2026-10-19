@@ -77,6 +77,7 @@ class AgentFactory:
                     "faster_first_response", True
                 ),
                 segment_method=basic_memory_settings.get("segment_method", "pysbd"),
+                max_history_turns=basic_memory_settings.get("max_history_turns", 12),
                 use_mcpp=basic_memory_settings.get("use_mcpp", False),
                 interrupt_method=interrupt_method,
                 tool_prompts=tool_prompts,

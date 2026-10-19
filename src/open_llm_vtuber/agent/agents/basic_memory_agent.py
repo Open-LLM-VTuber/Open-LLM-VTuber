@@ -43,6 +43,7 @@ class BasicMemoryAgent(AgentInterface):
         tts_preprocessor_config: TTSPreprocessorConfig = None,
         faster_first_response: bool = True,
         segment_method: str = "pysbd",
+        max_history_turns: int = 12,
         use_mcpp: bool = False,
         interrupt_method: Literal["system", "user"] = "user",
         tool_prompts: Dict[str, str] = None,
@@ -57,6 +58,7 @@ class BasicMemoryAgent(AgentInterface):
         self._tts_preprocessor_config = tts_preprocessor_config
         self._faster_first_response = faster_first_response
         self._segment_method = segment_method
+        self._max_history_turns = max(0, max_history_turns)
         self._use_mcpp = use_mcpp
         self.interrupt_method = interrupt_method
         self._tool_prompts = tool_prompts or {}
@@ -240,8 +242,16 @@ class BasicMemoryAgent(AgentInterface):
         return "\n".join(message_parts).strip()
 
     def _to_messages(self, input_data: BatchInput) -> List[Dict[str, Any]]:
-        """Prepare messages for LLM API call."""
-        messages = self._memory.copy()
+        """Prepare messages for LLM API call.
+
+        Only the last ``max_history_turns`` turns are sent to the LLM; the full
+        history stays in ``self._memory`` for the UI and chat history.
+        """
+        messages = (
+            self._memory[-2 * self._max_history_turns :]
+            if self._max_history_turns
+            else self._memory.copy()
+        )
         user_content = []
         text_prompt = self._to_text_prompt(input_data)
         if text_prompt:
