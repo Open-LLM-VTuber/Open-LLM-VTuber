@@ -29,6 +29,7 @@ from .security import (
     with_token,
 )
 from .service_context import ServiceContext
+from .utils.stream_audio import configure_audio_export
 from .websocket_handler import WebSocketHandler
 from .config_manager.scheduler import SchedulerConfig
 from .config_manager.utils import Config
@@ -140,6 +141,24 @@ class WebSocketServer:
 
         # Initialize and include proxy routes if proxy is enabled
         system_config = config.system_config
+
+        # A23: container used for every TTS payload. WAV by default (LAN); switch
+        # to MP3 when the overlay runs on another machine or through a tunnel.
+        audio_export = getattr(system_config, "audio_export", None)
+        try:
+            audio_format = configure_audio_export(
+                getattr(audio_export, "audio_format", "wav"),
+                getattr(audio_export, "bitrate", "64k"),
+            )
+        except ValueError as e:
+            logger.warning(f"Invalid system_config.audio_export ({e}); using wav")
+            audio_format = configure_audio_export("wav")
+        if audio_format != "wav":
+            logger.info(
+                f"Audio export format: {audio_format} "
+                f"({getattr(audio_export, 'bitrate', '64k')})"
+            )
+
         if hasattr(system_config, "enable_proxy") and system_config.enable_proxy:
             # Construct the server URL for the proxy. The proxy connects to its
             # own /client-ws, so it has to carry the token when auth is on.
