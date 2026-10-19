@@ -94,6 +94,89 @@ Los **dos cambios clave** son:
 `conf.yaml` (raíz, gitignored) es la config antigua nativa, **no se usa** en Docker.
 **No se tocó** `pyproject.toml` ni `uv.lock` (ver pendiente 3).
 
+### 4.1 Emisión programada (auditoría §4.3) — implementada
+
+- `src/open_llm_vtuber/scheduler/service.py`: planificador **sin dependencias nuevas**
+  (cron de 5 campos + `interval_minutes` en stdlib). Se descartó APScheduler para no
+  regenerar `uv.lock`, que rompería el `uv sync --frozen` del build.
+- `src/open_llm_vtuber/config_manager/scheduler.py` + sección `scheduler_config` en
+  `conf/conf.yaml`, `conf.yaml` y las dos plantillas. **`enabled: false` por defecto**.
+- `WebSocketHandler.trigger_proactive_speak()`: dispara `ai-speak-signal` solo si el
+  cliente no tiene un turno en curso (guarda de A14); el scheduler reintenta 3 veces/10 s.
+- `conversation_handler.py`: `ai-speak-signal` usa `data["text"]` si viene; si no, carga
+  `proactive_speak_prompt` como antes.
+- `server.py` crea el handler una vez y lo comparte con las rutas y el scheduler
+  (`startup`/`shutdown`).
+
+Para probarlo: poner `scheduler_config.enabled: true` en `conf/conf.yaml`, añadir un job
+`interval_minutes: 1` (más simple que un cron a 2 minutos vista) y reiniciar
+(`docker compose restart`, la config se lee al arrancar). **Hace falta un cliente conectado**
+a `/proxy-ws` en el momento del disparo: el scheduler escribe sobre el overlay, así que sin
+cliente el log dice `job '...' skipped, no overlay connected`; con el overlay abierto (o con
+un script que se conecte a `/proxy-ws` y responda `frontend-playback-complete`) sale
+`Scheduler: job '...' armed for ...` → `fired on <uid>` y el turno se oye.
+
+Verificado el 19/10/2026 con `interval_minutes: 1`:
+
+```text
+Scheduler: job 'preflight_test' armed for 2026-10-19 22:46
+Scheduler started with 5 job(s) (timezone: Europe/Madrid)
+Scheduler: job 'preflight_test' fired on d15fc559-... (attempt 1/3)
+User input: Saluda brevemente: esta es la prueba de preflight del scheduler.
+```
+
+El cliente recibió `conversation-chain-start`, 5 chunks de `audio`, envió sus acks y recibió
+`conversation-chain-end`. Ojo: la hora del `armed for` está en la zona configurada
+(`Europe/Madrid`), mientras que las marcas de tiempo de loguru van en UTC; con el contenedor
+en UTC se ven con 2 h de diferencia y es correcto. `scene` se acepta pero solo se registra:
+el cambio de escena OBS es fase 3.
+
+### 4.2. Smoke test del pipeline (`scripts/smoke_test.py`)
+
+Prueba el circuito completo **sin navegador**: `text-input` → LLM → TTS → `audio` →
+`frontend-playback-complete` → `conversation-chain-end`. Abre dos conexiones a `/proxy-ws`:
+una hace de overlay (cuenta el audio base64 y responde el ack que el backend espera) y otra
+inyecta el texto como el conector de TikTok.
+
+```powershell
+cd d:\Open-LLM-VTuber
+docker compose build                                        # el script es nuevo: la imagen hace COPY . /app
+docker compose up -d
+docker compose exec -T open-llm-vtuber uv run python scripts/smoke_test.py
+# alternativa desde Windows (venv con httpx + websockets):
+python scripts/smoke_test.py --url http://127.0.0.1:12393
+```
+
+Salida esperada: `ok web ... -> 200`, `ok overlay connected to /proxy-ws`, recuento de
+`audio chunks/bytes` y `SMOKE TEST PASSED` (exit 0). Si falla, el mensaje distingue
+servidor caído (`server unreachable`), turno sin cerrar (`no turn end within Ns`, sospechar
+LLM/TTS o un turno ya en curso) y `error` del propio backend.
+
+**Ejecutado contra el contenedor real el 19/10/2026** (pipeline completo: OpenRouter +
+edge-tts + proxy):
+
+```text
+ok  web http://127.0.0.1:12393/ -> 200
+ok  overlay connected to /proxy-ws
+
+audio chunks : 2
+audio bytes  : 290392
+playback ack : 2
+chain start  : True
+chain end    : True
+said         : [smirk] Hola, alma inquieta... los astros te trajeron hasta aquí por una razón.
+
+SMOKE TEST PASSED
+```
+
+Dos avisos sacados de esa ejecución:
+
+- **No lances el test mientras corre un `docker compose build`**: el build satura CPU/disco
+  y el WebSocket cae con `ConnectionClosedError: sent 1011 (internal error) keepalive ping
+  timeout`, que parece un fallo del backend y no lo es. Espera a que el build acabe.
+- Si los acentos salen como `aqu├¡` es la consola de PowerShell, no el servidor: ejecuta
+  antes `[Console]::OutputEncoding = [Text.Encoding]::UTF8` (o `chcp 65001`).
+
 ## 5. Estado verificado (¡importante!)
 
 | Comprobación | Resultado |
@@ -106,6 +189,8 @@ Los **dos cambios clave** son:
 | edge-tts | actualizado en runtime **7.2.7 → 7.3.1** ✅ |
 | DRM | `SEC_MS_GEC_VERSION: 2-143.0.3650.75` (v2) ✅ |
 | **TTS real** | `TTS OK size = 11232 bytes` (antes 0 bytes + 403) ✅ |
+| **Smoke test** | `audio chunks 2 / 290392 bytes / playback ack 2 / chain end True` → `SMOKE TEST PASSED`, exit 0 ✅ |
+| **Scheduler** | `Scheduler started with 5 job(s)` → `job 'preflight_test' fired on <uid>`; el cliente recibe audio, ack y `conversation-chain-end` ✅ |
 
 ## 6. Pendientes / siguientes pasos
 
@@ -152,6 +237,7 @@ cd d:\Open-LLM-VTuber
 docker compose up -d                  # crear/arrancar
 docker compose ps                     # estado + puertos
 docker compose logs -f                # seguir logs (espera "Uvicorn running on http://0.0.0.0:12393")
+docker compose stop                   # PARAR sin eliminar el contenedor (up -d lo reanuda)
 docker compose down                   # parar y eliminar (habrá que volver a up -d)
 docker compose up -d --force-recreate # recrear (tras cambiar el compose)
 docker compose restart                # reiniciar manteniendo el contenedor

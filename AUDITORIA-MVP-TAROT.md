@@ -156,7 +156,7 @@ UI/Proxy --text-input--> WebSocketHandler._handle_conversation_trigger
 | A8 | `run_bilibili_live.py` es un **proceso aparte** del servidor | `scripts/run_bilibili_live.py` | Buen patrón para TikTok: proceso independiente supervisable |
 | A9 | Sin **autenticación** en `/client-ws` ni `/proxy-ws`; CORS `*` | `routes.py`, `server.py` | Si se expone para OBS remoto, túnel + auth (Cloudflare Access / nginx basic auth) |
 | A10 | El audio viaja como **WAV base64** dentro de JSON | `conversations/tts_manager.py`, `utils/stream_audio.py` | ~64 KB/s (0,3–1,5 MB por frase de 5–20 s); aceptable en local, caro en cloud |
-| A11 | **No hay scheduler** ni tareas programadas | `pyproject.toml` (sin APScheduler), `server.py` | Módulo nuevo (§4.3) |
+| A11 | ~~**No hay scheduler** ni tareas programadas~~ → **RESUELTO** sin APScheduler (cron en stdlib) | `pyproject.toml` (sin APScheduler), `server.py` | Módulo nuevo (§4.3) |
 | A12 | El frontend **ignora `volumes`** para lip-sync y usa el `WavFileHandler` de Cubism sobre el WAV | `use-audio-task.ts` (`model._wavFileHandler.start(audioDataUrl)`) | Un overlay propio puede usar `volumes` (RMS cada 20 ms) sin decodificar audio |
 
 ---
@@ -757,6 +757,17 @@ class SchedulerConfig(I18nMixin):
 
 Añadir `scheduler_config: SchedulerConfig = Field(SchedulerConfig(), alias="scheduler_config")` a `Config` y **`apscheduler>=3.10,<4`** a `pyproject.toml` (la API 4.x es incompatible).
 
+> **Estado (implementado 2026-10-19): ✅** `src/open_llm_vtuber/scheduler/service.py` con
+> `SchedulerConfig`/`ScheduledJob` en `config_manager/scheduler.py`, `trigger_proactive_speak()`
+> en `WebSocketHandler` y `text` opcional en `ai-speak-signal`.
+> **Desviación consciente:** **no se añadió APScheduler.** El `dockerfile` usa
+> `uv sync --frozen`, así que cualquier dependencia nueva en `pyproject.toml` exige regenerar
+> `uv.lock` (y el build falla si no coincide). El planificador se resolvió con la stdlib:
+> parser de crontab de 5 campos (`*`, `n`, `a-b`, `*/n`, `a/n`, listas), `interval_minutes`
+> y un único `asyncio.Task` con `stop` Event. Misma funcionalidad para el MVP; si más adelante
+> hace falta escalado/`misfire_grace_time`, se cambia a APScheduler regenerando el lock.
+> `scene`/`obs` se aceptan pero solo se registran en el log (fase 3).
+
 #### 4.3.3 Implementación (`scheduler/service.py`, nuevo)
 
 El planificador necesita acceso al `WebSocketHandler`, que hoy se crea **dentro** de `init_client_ws_route` (`routes.py:27`) y no se expone. Cambio mínimo:
@@ -1192,31 +1203,24 @@ if self._queued >= self._max_queue:
 | 5 | Servidor | `uv run run_server.py --verbose` → log `Starting server on 127.0.0.1:12393` |
 | 6 | Overlay en OBS | Browser Source → `http://127.0.0.1:12393/`; en **Settings → General → WebSocket URL** (etiqueta literal del campo `settings.general.wsUrl`; el frontend solo trae locales `en`/`zh`) poner `ws://127.0.0.1:12393/proxy-ws` (el frontend guarda el valor en `localStorage['wsUrl']` y por defecto usa `ws://127.0.0.1:12393/client-ws`). **Sin este cambio el overlay no recibe audio**, porque el turno lo inicia la conexión del proxy (A1). Si la versión del frontend no mostrara el campo, ejecutar en la consola del Browser Source `localStorage.setItem('wsUrl','ws://127.0.0.1:12393/proxy-ws')` y recargar. Verificar con el botón de test y con un `text-input` del conector |
 | 7 | Conector TikTok | `uv run python scripts/run_tiktok_live.py` → log `TikTok connector conectado al proxy` + comentario de prueba en el chat |
-| 8 | Scheduler | log `Job programado: pre_show`; probar con un cron a 2 minutos vista |
+| 8 | Scheduler | `scheduler_config.enabled: true` en `conf/conf.yaml` + `docker compose restart`; log `Scheduler: job 'pre_show' armed for ...` y luego `Scheduler: job 'pre_show' fired on <uid>`. Para probar en 1 minuto: job con `interval_minutes: 1` y **un cliente conectado a `/proxy-ws`** (sin cliente sale `skipped, no overlay connected`) |
 | 9 | Interrupción | Decir “para” en la UI: el audio calla, GPT-SoVITS deja de sintetizar (parche 5.2.3) |
 | 10 | Apagado | Cerrar OBS/UI no debe dejar tareas colgadas; `Ctrl+C` limpia `cache/` (`WebSocketServer.clean_cache`) |
+| 11 | Smoke test | `uv run python scripts/smoke_test.py` → `SMOKE TEST PASSED` (exit 0) antes de abrir el directo |
 
 **Smoke test automatizable** (sin navegador) para validar el pipeline completo de texto→audio:
 
-```python
-import asyncio, json, websockets
-
-async def smoke():
-    async with websockets.connect("ws://127.0.0.1:12393/proxy-ws") as ws:
-        await ws.send(json.dumps({"type": "text-input", "text": "Di hola en una frase."}))
-        audio_bytes = 0
-        while True:
-            msg = json.loads(await asyncio.wait_for(ws.recv(), timeout=60))
-            if "audio" in msg:
-                audio_bytes += len(msg["audio"])
-            if msg.get("type") == "control" and msg.get("text") == "conversation-chain-end":
-                break
-        print(f"OK: {audio_bytes} bytes de audio base64")
-
-asyncio.run(smoke())
+```bash
+uv run python scripts/smoke_test.py                                  # 1 turno de prueba (~10-20 s)
+uv run python scripts/smoke_test.py --text "Di hola en una frase." --timeout 90
+uv run python scripts/smoke_test.py --url http://192.168.1.50:12393  # servidor en otra máquina
 ```
 
-> Requiere que el proxy esté escuchando y que **haya un cliente que responda `frontend-playback-complete`**; si se lanza contra `/proxy-ws` sin UI, el smoke test se queda esperando (A18). Es, de hecho, la mejor forma de reproducir el bug.
+`scripts/smoke_test.py` abre **dos** conexiones a `/proxy-ws`: una hace de overlay (suma los bytes de audio base64, guarda el `display_text` y responde `frontend-playback-complete` en cada `backend-synth-complete`, igual que `use-audio-task.ts`) y otra inyecta el `text-input` como el conector. Termina al recibir `conversation-chain-end` e imprime `audio chunks / audio bytes / playback ack / chain end` y el texto dicho. Devuelve **0** si hubo audio y el turno cerró, **1** en cualquier otro caso (timeout, servidor caído, `error` del backend), así que sirve tal cual en un `.bat` de pre-flight o en CI.
+
+> Sin el ack `frontend-playback-complete` el backend espera `PLAYBACK_ACK_TIMEOUT` (180 s) antes de cerrar el turno (A18). El script lo envía siempre, de modo que un fallo del test señala al LLM/TTS/proxy, no al ack. Para **reproducir** el bug a propósito, comentar la línea del `send(...)` en `_overlay()` y lanzarlo con `--timeout 20`: debe fallar con `no turn end within 20s`.
+
+**Validado contra el contenedor Docker real** (2026-10-19, OpenRouter + edge-tts + `/proxy-ws`): `audio chunks 2`, `290392` bytes, `playback ack 2`, `chain start/end True` → `SMOKE TEST PASSED` (exit 0). Dos trampas vistas en esa ejecución: (1) lanzar el test mientras hay un `docker compose build` en marcha provoca `ConnectionClosedError: ... keepalive ping timeout`, que parece un fallo del backend y no lo es; (2) en PowerShell los acentos salen como `aqu├¡` salvo que se ponga antes `[Console]::OutputEncoding = [Text.Encoding]::UTF8`.
 
 ### 5.5 Operación del directo
 
