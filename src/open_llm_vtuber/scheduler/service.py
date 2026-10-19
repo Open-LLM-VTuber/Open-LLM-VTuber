@@ -20,6 +20,9 @@ from typing import List, Optional, Set
 
 from loguru import logger
 
+from ..utils.stage import build_stage_payload
+from .obs import OBSController
+
 
 _FIELD_RANGES = ((0, 59), (0, 23), (1, 31), (1, 12), (0, 7))
 
@@ -180,6 +183,16 @@ class SchedulerService:
         self._jobs: List[_PlannedJob] = []
         self._task: Optional[asyncio.Task] = None
         self._stop = asyncio.Event()
+        # OBS is optional: without it the show runs with manual scene changes.
+        self._obs: Optional[OBSController] = None
+        obs_config = getattr(config, "obs", None)
+        if obs_config is not None and getattr(obs_config, "enabled", False):
+            self._obs = OBSController(
+                host=getattr(obs_config, "host", "127.0.0.1"),
+                port=getattr(obs_config, "port", 4455),
+                password=getattr(obs_config, "password", ""),
+                timeout=getattr(obs_config, "timeout", 3.0),
+            )
 
     # ------------------------------------------------------------------ setup
     async def start(self) -> None:
@@ -222,6 +235,9 @@ class SchedulerService:
             logger.info("Scheduler: no active jobs")
             return
 
+        if self._obs is not None:
+            await self._connect_obs()
+
         self._stop.clear()
         self._task = asyncio.create_task(self._run(), name="scheduler")
         logger.info(
@@ -241,6 +257,11 @@ class SchedulerService:
         if self._jobs:
             logger.info("Scheduler stopped")
         self._jobs.clear()
+
+        if self._obs is not None:
+            if getattr(self._config.obs, "stop_stream_on_shutdown", False):
+                await self._obs.stop_stream()
+            await self._obs.close()
 
     # ------------------------------------------------------------------- loop
     def _now(self) -> datetime:
@@ -283,17 +304,63 @@ class SchedulerService:
             return target if target in self._ws.client_connections else None
         return next(iter(self._ws.client_connections), None)
 
+    async def _connect_obs(self) -> None:
+        """Connect to OBS once at startup and log the available scenes."""
+        obs_config = self._config.obs
+        if not await self._obs.connect():
+            logger.warning(
+                f"Scheduler: OBS unreachable at {obs_config.host}:{obs_config.port}; "
+                "scene changes will retry on demand"
+            )
+            return
+
+        scenes = await self._obs.list_scenes()
+        if scenes:
+            logger.info(f"Scheduler: OBS scenes available: {', '.join(scenes)}")
+
+        if getattr(obs_config, "start_stream", False):
+            await self._obs.start_stream()
+
+    async def _prepare_stage(self, job) -> None:
+        """Switch the OBS scene and broadcast the overlay stage for ``job``.
+
+        Both steps are best-effort: a closed OBS or an absent overlay must not
+        cancel the spoken segment.
+        """
+        if job.scene:
+            if self._obs is None:
+                logger.debug(
+                    f"Scheduler: job '{job.name}' scene '{job.scene}' ignored "
+                    "(scheduler_config.obs.enabled is false)"
+                )
+            elif getattr(self._config.obs, "switch_scenes", True):
+                await self._obs.set_scene(job.scene)
+
+        if not job.background:
+            return
+
+        payload = build_stage_payload(
+            stage=job.name,
+            background=job.background,
+            transition=job.transition,
+            duration_ms=job.duration_ms,
+        )
+        delivered = await self._ws.broadcast_stage_update(
+            payload, self._config.target_client
+        )
+        logger.info(
+            f"Scheduler: stage '{job.name}' -> {job.background} ({delivered} client(s))"
+        )
+
     async def _fire(self, job) -> None:
         """Send one segment, retrying while the overlay is busy."""
+        # The scene change is useful even without an overlay: OBS keeps showing
+        # the right camera/board while the chat is answered by the connector.
+        await self._prepare_stage(job)
+
         if not self._pick_client():
             logger.warning(f"Scheduler: job '{job.name}' skipped, no overlay connected")
             return
-
-        if job.scene:
-            logger.info(
-                f"Scheduler: job '{job.name}' requests scene '{job.scene}' "
-                "(OBS integration not enabled in this phase)"
-            )
 
         for attempt in range(1, self.MAX_ATTEMPTS + 1):
             client_uid = self._pick_client()
