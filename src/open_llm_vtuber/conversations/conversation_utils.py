@@ -6,6 +6,7 @@ import json
 from loguru import logger
 
 from ..message_handler import message_handler
+from ..metrics import OUTCOME_COMPLETED, turn_metrics
 from .types import WebSocketSend, BroadcastContext
 from .tts_manager import TTSTaskManager
 from ..agent.output_types import SentenceOutput, AudioOutput
@@ -14,6 +15,52 @@ from ..asr.asr_interface import ASRInterface
 from ..live2d_model import Live2dModel
 from ..tts.tts_interface import TTSInterface
 from ..utils.stream_audio import prepare_audio_payload
+
+
+# --------------------------------------------------------------------------- #
+# A22 / §5.3: turn metrics
+# --------------------------------------------------------------------------- #
+#: Payload types that carry synthesised audio ("time to first audio").
+_AUDIO_MESSAGE_TYPES = frozenset({"audio"})
+
+
+def _decode_message(payload: str) -> Dict[str, Any]:
+    """Best-effort decode of an outgoing payload (never raises)."""
+    try:
+        message = json.loads(payload)
+    except (TypeError, ValueError):
+        return {}
+    return message if isinstance(message, dict) else {}
+
+
+def instrument_websocket_send(
+    websocket_send: WebSocketSend, client_uid: str
+) -> WebSocketSend:
+    """Wrap ``websocket_send`` so the turn metrics see audio and the turn end.
+
+    Every payload of an individual turn goes through the wrapped sender, which
+    is the cheapest place to timestamp "first audio" and "chain end" without
+    touching the agent, TTS or proxy code (audit §5.3). Decoding failures are
+    swallowed on purpose: telemetry must never be able to abort a turn.
+    """
+
+    async def send(payload: str) -> None:
+        await websocket_send(payload)
+
+        if not isinstance(payload, str) or '"type"' not in payload:
+            return
+
+        message = _decode_message(payload)
+        message_type = message.get("type")
+        if message_type in _AUDIO_MESSAGE_TYPES:
+            turn_metrics.first_audio(client_uid)
+        elif (
+            message_type == "control"
+            and message.get("text") == "conversation-chain-end"
+        ):
+            turn_metrics.end_turn(client_uid, OUTCOME_COMPLETED)
+
+    return send
 
 
 # Convert class methods to standalone functions

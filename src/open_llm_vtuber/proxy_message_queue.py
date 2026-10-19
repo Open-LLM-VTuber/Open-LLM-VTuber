@@ -1,7 +1,10 @@
 import asyncio
+import time
 from typing import Dict, Optional, Deque, Any, Callable
 from collections import deque
 from loguru import logger
+
+from .metrics import turn_metrics
 
 
 class ProxyMessageQueue:
@@ -37,12 +40,19 @@ class ProxyMessageQueue:
             message: The message to queue
             sender_id: Optional ID of the client that sent the message
         """
-        # Store the message along with its sender ID
-        queue_item = {"message": message, "sender_id": sender_id}
+        # Store the message along with its sender ID. ``enqueued_at`` lets the
+        # consumer report how long the message waited (audit §5.3: queue wait
+        # is part of the perceived turn latency).
+        queue_item = {
+            "message": message,
+            "sender_id": sender_id,
+            "enqueued_at": time.monotonic(),
+        }
         logger.info(
             f"Queuing message: {message.get('text', '')} (active conversation: {self._conversation_active})"
         )
         self.message_queue.append(queue_item)
+        turn_metrics.note_queue_depth(len(self.message_queue))
 
         # Start consumer if needed
         self._ensure_consumer_running()
@@ -106,6 +116,11 @@ class ProxyMessageQueue:
                         logger.info(
                             f"Consumer processing message: {message.get('text', '')}"
                         )
+
+                        # A22/§5.3: how long this message waited in the queue.
+                        enqueued_at = queue_item.get("enqueued_at")
+                        if enqueued_at is not None:
+                            turn_metrics.note_queue_wait(time.monotonic() - enqueued_at)
 
                         # Set active before forwarding to prevent race conditions
                         self._conversation_active = True
