@@ -177,6 +177,37 @@ Dos avisos sacados de esa ejecución:
 - Si los acentos salen como `aqu├¡` es la consola de PowerShell, no el servidor: ejecuta
   antes `[Console]::OutputEncoding = [Text.Encoding]::UTF8` (o `chcp 65001`).
 
+### 4.3 Fase 2 — A23 (formato de audio configurable) y A24 (resiliencia GPT-SoVITS)
+
+Ficheros tocados:
+
+| Fichero | Cambio |
+|---|---|
+| `config_manager/system.py` | nuevo `AudioExportConfig` (`system_config.audio_export`, default `wav`/`64k`) |
+| `config_manager/tts.py` | `GPTSoVITSConfig`: `request_timeout`, `max_retries`, `retry_backoff`, `max_concurrency` (todos con default) |
+| `utils/stream_audio.py` | `configure_audio_export()`, `get_audio_export_format()`, `audio_format` en el payload |
+| `tts/gpt_sovits_tts.py` | timeout acotado, reintentos con backoff, `BoundedSemaphore`, validación de que el cuerpo es audio, `streaming_mode` default `false` |
+| `tts/tts_factory.py` | pasa las 4 claves nuevas al engine |
+| `server.py` | aplica `system_config.audio_export` al arrancar (fallback a `wav` si es inválido) |
+| `conf/conf.yaml`, `conf.yaml`, `config_templates/*.yaml` | documentan las claves nuevas |
+| `scripts/test_audio_hardening.py` | 12 tests nuevos (stdlib puro) |
+
+Para llevarlo al contenedor ya construido (el build sigue sin ser reproducible, ver §6.8):
+
+```powershell
+docker cp src\open_llm_vtuber\config_manager\system.py        open-llm-vtuber:/app/src/open_llm_vtuber/config_manager/system.py
+docker cp src\open_llm_vtuber\config_manager\tts.py           open-llm-vtuber:/app/src/open_llm_vtuber/config_manager/tts.py
+docker cp src\open_llm_vtuber\utils\stream_audio.py           open-llm-vtuber:/app/src/open_llm_vtuber/utils/stream_audio.py
+docker cp src\open_llm_vtuber\tts\gpt_sovits_tts.py           open-llm-vtuber:/app/src/open_llm_vtuber/tts/gpt_sovits_tts.py
+docker cp src\open_llm_vtuber\tts\tts_factory.py              open-llm-vtuber:/app/src/open_llm_vtuber/tts/tts_factory.py
+docker cp src\open_llm_vtuber\server.py                       open-llm-vtuber:/app/src/open_llm_vtuber/server.py
+docker cp scripts\test_audio_hardening.py                     open-llm-vtuber:/app/scripts/test_audio_hardening.py
+docker compose restart
+```
+
+> `conf/conf.yaml` se lee al arrancar: tras cambiar `audio_export.format` hay que reiniciar
+> (no basta con recargar la página). El formato activo se registra en el log sólo si **no** es `wav`.
+
 ## 5. Estado verificado (¡importante!)
 
 | Comprobación | Resultado |
@@ -246,6 +277,11 @@ Dos avisos sacados de esa ejecución:
    docker cp scripts\smoke_test.py open-llm-vtuber:/app/scripts/smoke_test.py
    docker compose restart
    ```
+9. **[Cerrar la Fase 2 con datos]** A23 y A24 ya están implementados (ver §4.3 y §9.4); lo que falta
+   es el criterio empírico de la fase. Durante el próximo directo de 30–60 min, consultar
+   `GET /api/metrics` cada pocos minutos y comprobar `turn_seconds.p95 < 8`, `first_audio_seconds.p95`
+   estable, `queue.max_depth` acotado y `without_audio` a 0. Si el ancho de banda es el problema,
+   cambiar `system_config.audio_export.format` a `'mp3'` y repetir: el tráfico debe caer ~10×.
 
 ## 7. Chuleta de comandos
 
@@ -356,17 +392,76 @@ uv run pre-commit run --all-files
 #   ruff check .          -> "All checks passed!"
 #   ruff format --check . -> sólo config_manager/asr.py queda fuera, y ya venía así de upstream
 
-# 2) tests de seguridad + métricas (stdlib puro: 34 pasan, 5 se saltan sin numpy/torch)
+# 2) tests de seguridad + métricas (stdlib puro: 39 pasan, 5 se saltan sin numpy/torch)
 uv run python scripts/test_security_metrics.py
 
 # 3) smoke end-to-end (necesita servidor + LLM + TTS reales)
 uv run python scripts/smoke_test.py --url http://127.0.0.1:12393
 uv run python scripts/smoke_test.py --url http://127.0.0.1:12393 --token $env:VTUBER_WS_TOKEN
+
+# 4) tests de A23/A24 (formato de audio + resiliencia de GPT-SoVITS)
+uv run python scripts/test_audio_hardening.py
 ```
 
 **Estado en esta máquina (Windows, sin `uv`):** el paso 2 se ejecuta con el Python del sistema
-(`python scripts/test_security_metrics.py` -> `Ran 39 tests ... OK (skipped=5)`), los pasos 1 y 3
+(`python scripts/test_security_metrics.py` -> `Ran 39 tests ... OK (skipped=5)`) y el paso 4 también
+(`python scripts/test_audio_hardening.py` -> `Ran 12 tests ... OK`), los pasos 1 y 3
 requieren `uv sync` (el `pyproject.toml` exige `>=3.10,<3.13` y aquí hay Python 3.14).
+
+### 9.4 Fase 2 — audio configurable (A23) y resiliencia de GPT-SoVITS (A24)
+
+Ambos son **retrocompatibles**: si no se toca el `conf.yaml`, el comportamiento es el de antes
+(salvo que ahora un fallo de GPT-SoVITS se reintenta y se registra en vez de perderse en silencio).
+
+**A23 — formato del audio que viaja por el WebSocket**
+
+```yaml
+system_config:
+  audio_export:
+    format: 'wav'   # 'wav' (LAN: menos latencia, sin transcodificar) | 'mp3'
+    bitrate: '64k'  # sólo se usa con mp3
+```
+
+| | WAV (default) | MP3 64k |
+|---|---|---|
+| Tráfico (24 kHz mono, base64) | ~64 KB/s | ~8 KB/s (~10× menos) |
+| Latencia extra por frase | ~0 | transcodificación con ffmpeg |
+| Requisito | ninguno | `ffmpeg` con `libmp3lame` (ya está en la imagen) |
+| Cuándo usarlo | OBS/overlay en la misma máquina | overlay en otra máquina o por túnel |
+
+El payload de audio incluye `"audio_format": "wav"|"mp3"` (también en los payloads silenciosos),
+para que un overlay propio elija el MIME del `data:` URL; los reproductores con WebAudio
+(`decodeAudioData`) lo detectan solos. El esquema sólo acepta `wav` o `mp3`: un typo impide arrancar
+con un error de validación claro (la clave entera es opcional y por defecto vale `wav`).
+
+**A24 — reintentos, timeout y semáforo en `tts/gpt_sovits_tts.py`**
+
+```yaml
+tts_config:
+  tts_model: 'gpt_sovits_tts'
+  gpt_sovits_tts:
+    api_url: 'http://127.0.0.1:9880/tts'
+    media_type: 'wav'
+    streaming_mode: 'false'
+    request_timeout: 20.0   # segundos por intento
+    max_retries: 2          # reintentos tras timeout / 5xx / cuerpo no-audio
+    retry_backoff: 0.5      # espera del 1.er reintento; se duplica
+    max_concurrency: 2      # peticiones simultáneas contra GPT-SoVITS
+```
+
+- Un **`4xx` no se reintenta** (URL o `ref_audio_path` mal): falla rápido y queda en el log.
+- Un `200` que **no es audio** (GPT-SoVITS con el modelo sin cargar devuelve HTML) se detecta por
+  la firma del cuerpo y se reintenta, en vez de guardar un `.wav` corrupto.
+- Agotados los reintentos **se lanza la excepción**: `TTSTaskManager` ya la convierte en payload
+  silencioso, así que el turno sigue y las frases mantienen el orden (antes se devolvía `None` y
+  la frase desaparecía sin más).
+- `max_concurrency` bajo = GPU/CPU sin saturar; súbelo sólo si tu GPT-SoVITS soporta batching real.
+- `streaming_mode` sigue en `'false'`: el pipeline espera el WAV completo por frase.
+
+**Comprobación rápida (sin servidor real):** `python scripts/test_audio_hardening.py` cubre el
+cambio de formato/bitrate, el payload silencioso, la validación de la config, el timeout acotado,
+el reintento de errores de transporte, el agotamiento de `5xx`, el `4xx` sin reintento, el `200`
+no-audio, `max_retries: 0` y el tope de concurrencia con 6 hilos en paralelo.
 
 
 ## 10. CI (GitHub Actions) en el fork

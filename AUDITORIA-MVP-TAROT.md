@@ -39,8 +39,10 @@ La hoja de ruta está ordenada por **dependencias reales**, no por pilares: prim
 | Fase | Objetivo | Trabajo incluido | Criterio de salida |
 |---|---|---|---|
 | **Fase MVP** (semana 1) | Directo de 30 min desatendido, con voz clonada y comentarios del chat | **P0:** A18 (5.2.1), A19 (5.2.2), A20 (5.2.3) y A21 (5.2.4). **Conector:** `live/tiktok_live.py` + `scripts/run_tiktok_live.py` + config (4.2.3, 4.2.4) con `cooldown_seconds: 6`, `max_queue: 5` y prioridad regalos > preguntas > comentarios. **Scheduler:** `scheduler/service.py` + `scheduler_config` + `ai-speak-signal` con texto (4.3.1–4.3.3). **Escenario:** OBS con la UI en `/proxy-ws` (Ruta A) | 30 min sin intervención; 1 turno cada ≥6 s; `interrupt` corta el audio; el directo sobrevive a una reconexión de TikTok; el guion programado se emite |
-| **Fase 2** (semana 2) | Calidad, coste y robustez bajo carga | A15 ventana de memoria (5.2.6); A23 MP3 (5.2.7); A24 reintentos + semáforo (5.2.7); A22 token y CORS (5.2.5); métricas de latencia/cola y ajuste de `cooldown_seconds` (5.3) | p95 de turno < 8 s; RAM estable en 3 h; audio < 16 KB/s por cliente; cero turnos huérfanos en el log |
+| **Fase 2** (semana 2) | Calidad, coste y robustez bajo carga | A15 ventana de memoria (5.2.6); **A23 MP3 — ✅ implementado** (5.2.7); **A24 reintentos + semáforo — ✅ implementado** (5.2.7); A22 token y CORS (5.2.5); métricas de latencia/cola y ajuste de `cooldown_seconds` (5.3) | p95 de turno < 8 s; RAM estable en 3 h; audio < 16 KB/s por cliente; cero turnos huérfanos en el log |
 | **Fase 3** (mes 1–2) | Escenario rico y autonomía de show | OBS `start_stream` y cambio de escena por guion (`scheduler/obs.py`); Ruta B: overlay propio con `stage-update` (2.4); resumen de memoria al cerrar bloque; prioridad por regalos y “gracias” automático | Cambio de escena automático en intro/lectura/cierre; continuidad temática entre bloques; regalos atendidos en < 15 s |
+
+**Estado de la Fase 2 (19/10/2026):** el **código** de las cuatro piezas está terminado — A15 ventana de memoria (`max_history_turns` en config, factory y `_to_messages`), A22 token/CORS/métricas (`security.py`, `routes.py`), A23 formato de audio (`system_config.audio_export`) y A24 resiliencia GPT-SoVITS (timeout + reintentos + semáforo). Lo único que falta para dar la fase por cerrada es el **criterio empírico**: medir `GET /api/metrics` durante un directo de 30–60 min y comprobar `p95_turn_seconds < 8`, `queue.max_depth` acotado y RSS estable (no hay forma de verificar eso sin ejecutar el show real).
 
 **Regla de secuenciación:** los parches de §5.2 son **prerrequisito** del conector y del scheduler, no “deuda técnica”. A18 y A14 se amplifican mutuamente: sin timeout y sin cola acotada, una ráfaga de TikTok deja el stream mudo y la memoria del proceso creciendo. El orden correcto es **5.2.1 → 5.2.2 → 5.2.3 → 5.2.4 → conector → scheduler**.
 
@@ -245,7 +247,7 @@ TTSTaskManager._process_payload_queue()
 ```
 
 - **Paralelismo**: la síntesis es concurrente; **el envío es estrictamente secuencial** (`_next_sequence_to_send`). Latencia baja sin desordenar el habla.
-- **Formato**: el TTS puede devolver `wav`/`mp3`, pero `stream_audio.prepare_audio_payload` **siempre re-exporta a WAV** (`AudioSegment.export(format="wav")`, línea 64) y lo embebe en base64. No hay streaming real: se espera a la frase completa.
+- **Formato**: el TTS puede devolver `wav`/`mp3`; `stream_audio.prepare_audio_payload` **re-exporta** al contenedor configurado en `system_config.audio_export.format` (**WAV por defecto**, MP3 opcional — A23, §5.2.7) y lo embebe en base64. El payload lo declara en `audio_format`. No hay streaming real: se espera a la frase completa.
 - **Lip-sync**: `volumes` = RMS normalizado por trozos de 20 ms (`slice_length: 20`). El frontend oficial **no lo usa** (usa `_wavFileHandler` del Cubism SDK); un overlay propio sí puede usarlo.
 - **Texto hablado**: `gpt_sovits_tts.generate_audio` limpia etiquetas `[...]` antes de sintetizar (línea 36), de modo que las acciones/expresiones entre corchetes **no se vocalizan**.
 
@@ -262,8 +264,12 @@ TTSTaskManager._process_payload_queue()
 | `prompt_text` | `""` | **Transcripción exacta** del clip |
 | `text_split_method` | `cut5` | Corte por puntuación |
 | `batch_size` | `1` | Subir a 2–4 si hay VRAM |
-| `media_type` | `wav` | Se re-exporta igualmente |
-| `streaming_mode` | `"ture"` en código / `'false'` en `conf.yaml` | Typo en el default del dataclass; el `conf.yaml` ya envía `'false'`. No dejar `'true'` con GPT-SoVITS: rompe el cliente (espera WAV completo) |
+| `media_type` | `wav` | La salida se re-exporta al formato de A23 |
+| `streaming_mode` | `'false'` (default corregido) | No dejar `'true'` con GPT-SoVITS: rompe el cliente (espera WAV completo) |
+| `request_timeout` | `20.0` | Segundos por intento (A24) |
+| `max_retries` | `2` | Reintentos con backoff ante timeout/5xx/no-audio (A24) |
+| `retry_backoff` | `0.5` | Espera inicial; se duplica en cada reintento (A24) |
+| `max_concurrency` | `2` | Peticiones simultáneas por instancia (`BoundedSemaphore`, A24) |
 
 Procedimiento de clonación:
 
@@ -951,8 +957,8 @@ Durante el resto del tiempo responde a TikTok (4.2) y, si no hay comentarios, el
 | **A20** | `TTSTaskManager.clear()` **no cancela las tareas TTS**, solo el emisor, y **reinicia los contadores de secuencia** | `tts_manager.py:174-182` | Tras un `interrupt`: GPT-SoVITS sigue sintetizando (GPU tirada), los payloads huérfanos van a la cola nueva sin consumidor y sus `sequence_number` chocan con los del turno siguiente |
 | **A21** | Broadcast **sin filtro** a todos los clientes del proxy | `proxy_handler.py:206-294` | Si hay dos UIs abiertas, **las dos reproducen el mismo audio** (eco). El conector recibe todo el WAV base64 que luego descarta |
 | **A22** | `CORS` con `allow_origins=["*"]` + `allow_credentials=True` (combinación inválida según la spec) y **cero auth** en los WS | `server.py` (`add_middleware`), `routes.py` | Aceptable en LAN; **peligroso** si se expone por túnel para controlar OBS en remoto |
-| **A23** | Audio **WAV PCM 16-bit** re-codificado en cada frase y enviado en base64 | `utils/stream_audio.py:64` (`audio.export(format="wav")`) | ~**64 KB/s** de tráfico WS (24 kHz mono: 48 KB/s × 1,33). En LAN sobra; con OBS en otra máquina o túnel conviene MP3/Opus |
-| **A24** | El `gpt_sovits_tts` hace **GET con la URL montada a mano**, sin reintentos ni límite de concurrencia | `tts/gpt_sovits_tts.py` | Una frase fallida se pierde (silencio) y 3 frases en paralelo saturan un GPT-SoVITS en CPU |
+| **A23** | Audio **WAV PCM 16-bit** re-codificado en cada frase y enviado en base64 — **✅ corregido: `system_config.audio_export` (wav/mp3)** | `utils/stream_audio.py:64` (`audio.export(format="wav")`) | ~**64 KB/s** de tráfico WS (24 kHz mono: 48 KB/s × 1,33). En LAN sobra; con OBS en otra máquina o túnel conviene MP3 (64 kbps ≈ 8 KB/s) |
+| **A24** | El `gpt_sovits_tts` hace **GET con la URL montada a mano**, sin reintentos ni límite de concurrencia — **✅ corregido: timeout/retries/backoff/semáforo** | `tts/gpt_sovits_tts.py` | Una frase fallida se pierde (silencio) y 3 frases en paralelo saturan un GPT-SoVITS en CPU |
 
 > A18 es el más grave para un directo desatendido: convierte un fallo del cliente en un **directo mudo**. Debe arreglarse antes de la primera emisión real.
 
@@ -1159,11 +1165,30 @@ messages = (
 
 Complemento recomendado (fase 2): un **resumen rodante** — cada N turnos, pedir al LLM “resume en 5 líneas lo esencial” y guardar ese resumen como primer mensaje `system`. Mantiene continuidad (“la señora del gato”) sin arrastrar todo el transcript.
 
-#### 5.2.7 Formato de audio y resiliencia de GPT-SoVITS (A23, A24)
+#### 5.2.7 Formato de audio y resiliencia de GPT-SoVITS (A23, A24) — **IMPLEMENTADO**
 
-- **Formato:** mantener WAV en LAN (menos latencia, sin decodificar). Si el overlay corre en otra máquina o por túnel, cambiar `audio.export(format="wav")` por `format="mp3", bitrate="64k"` (pydub ya está en uso; requiere ffmpeg, que el proyecto asume). Reduce ~10× el tráfico.
-- **Reintentos y semáforo** en `tts/gpt_sovits_tts.py`: `aiohttp.ClientSession` con `timeout=ClientTimeout(total=20)`, 2 reintentos con backoff y `asyncio.Semaphore(2)` por instancia. Si falla tras reintentos, devolver una ruta válida de silencio es peor que lanzar: el `TTSTaskManager` ya convierte la excepción en payload silencioso (mantiene el orden y no rompe el turno).
-- **`streaming_mode`:** el default del dataclass es `"ture"` (typo); fijar `"false"` en `conf.yaml` y corregir el default a `"false"`.
+- **Formato (A23):** `utils/stream_audio.py` ya no fija `format="wav"`. `configure_audio_export()` guarda el contenedor y el bitrate del proceso; `prepare_audio_payload()` los aplica y añade `audio_format` al payload (también en el payload silencioso). `server.py` lo configura al arrancar desde `system_config.audio_export`:
+  ```yaml
+  system_config:
+    audio_export:
+      format: 'wav'   # 'wav' (LAN, menos latencia) | 'mp3' (~10× menos tráfico)
+      bitrate: '64k'  # sólo para mp3
+  ```
+  La clave es **opcional** (default `wav`), así que no rompe configs antiguas. El esquema tipa `format` como `Literal["wav","mp3"]`: un typo detiene el arranque con un error de validación claro (mejor que arrancar en silencio con otro formato). El `try/except ValueError` de `server.py` es defensivo para llamadas programáticas, no la vía normal. MP3 exige `ffmpeg` con `libmp3lame` (el proyecto ya asume `ffmpeg`). Los reproductores basados en WebAudio (`decodeAudioData`) detectan el contenedor solos; los que construyan un `data:` URL deben usar `audio_format` para el MIME.
+- **Reintentos y semáforo (A24)** en `tts/gpt_sovits_tts.py`, configurables desde `tts_config.gpt_sovits_tts`:
+
+  | Clave | Default | Efecto |
+  |---|---|---|
+  | `request_timeout` | `20.0` | segundos por intento (antes: `120` fijos en un `requests.get` bloqueante) |
+  | `max_retries` | `2` | reintentos tras timeout / error de transporte / `5xx` / cuerpo no-audio |
+  | `retry_backoff` | `0.5` | espera del primer reintento; se duplica en cada uno |
+  | `max_concurrency` | `2` | `threading.BoundedSemaphore` por instancia (no `asyncio.Semaphore`: `generate_audio` corre en el `to_thread` de `TTSInterface.async_generate_audio`) |
+
+  Un `4xx` **no** se reintenta (`PermanentGPTSoVITSError`): la URL o el `ref_audio_path` están mal y repetir sólo añade latencia. Tras agotar los reintentos se **lanza** (`RetryableGPTSoVITSError`); es lo correcto porque `TTSTaskManager` ya convierte la excepción en payload silencioso, mantiene el orden de las frases y no rompe el turno. Antes el motor devolvía `None` y la frase se perdía sin señal en el log.
+- **Validación del cuerpo:** un `200` con HTML/JSON (modelo GPT-SoVITS no cargado) ya no se escribe como `.wav` para fallar después dentro de pydub; `_looks_like_audio()` comprueba la firma (`RIFF`, `ID3`, `OggS`, `fLaC`, sync MPEG) y lo trata como error reintentable con un mensaje explícito.
+- **`streaming_mode`:** el default del engine pasa de `"ture"` (typo) a `"false"`; sigue siendo configurable y `conf.yaml`/plantillas lo fijan a `'false'`.
+
+**Verificación:** `python scripts/test_audio_hardening.py` (12 tests, stdlib puro + mocks: formato/bitrate, payload silencioso, validación de config, timeout acotado, reintento de error de transporte, `5xx` agotado, `4xx` sin reintento, `200` no-audio, `max_retries: 0` y tope de concurrencia con 6 hilos).
 
 ### 5.3 Presupuesto de rendimiento y capacidad
 
