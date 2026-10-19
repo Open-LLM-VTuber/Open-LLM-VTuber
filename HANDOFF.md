@@ -368,3 +368,53 @@ uv run python scripts/smoke_test.py --url http://127.0.0.1:12393 --token $env:VT
 (`python scripts/test_security_metrics.py` -> `Ran 39 tests ... OK (skipped=5)`), los pasos 1 y 3
 requieren `uv sync` (el `pyproject.toml` exige `>=3.10,<3.13` y aquí hay Python 3.14).
 
+
+## 10. CI (GitHub Actions) en el fork
+
+En un fork los workflows no se ejecutan hasta habilitarlos una sola vez:
+`https://github.com/<usuario>/Open-LLM-VTuber/actions` →
+*"I understand my workflows, go ahead and enable them"*. La API no sirve para
+eso: hasta que no se aprueban, `GET /actions/workflows` devuelve
+`total_count: 0` y `PUT /actions/workflows/{id}/enable` responde 404 porque el
+workflow aún no tiene `id`.
+
+### 10.1 Por qué el check Ruff estaba en rojo
+
+`astral-sh/ruff-action@v3` resuelve la versión desde `pyproject.toml`
+(`ruff>=0.8.6` → la última, 0.17.1), no desde `.pre-commit-config.yaml`.
+Con esa versión el árbol no pasa:
+
+| árbol | violaciones con ruff 0.17.1 |
+| --- | --- |
+| `origin/main` (`992309c`) | 927 |
+| esta rama | 1038 (las 927 + 111 de los módulos nuevos) |
+
+O sea: el check ya fallaba en `main`, así que no podía bloquear ninguna PR.
+El workflow fija ahora `version: "0.9.6"` (la misma que el pre-commit); con
+ella `ruff check .` no reporta nada.
+
+### 10.2 Validación hecha
+
+- Run `Ruff` sobre `94f764e` → `success`; el log del job muestra
+  `Successfully installed ruff version 0.9.6` y `ruff check` sin salida.
+- Reproducido en local con el `ruff.exe` 0.17.1 de la release: HEAD 1039 líneas
+  de salida vs. 927 en un worktree limpio de `origin/main` (cuadra con el CI).
+- El workflow sólo ejecuta `ruff check`; el formato se comprueba con
+  `ruff format --check .` en local (ver §9.3).
+
+### 10.3 Consultar los runs sin `gh`
+
+```powershell
+# token de Git Credential Manager, sin imprimirlo
+$cred = ("protocol=https`nhost=github.com`n`n" | git credential fill)
+$tok = ($cred | Where-Object { $_ -like 'password=*' }) -replace '^password=',''
+$h = @{ Authorization = "Bearer $tok"; Accept = 'application/vnd.github+json' }
+Invoke-RestMethod -Uri 'https://api.github.com/repos/guarodriguezpa/Open-LLM-VTuber/actions/runs?per_page=5' -Headers $h |
+    Select-Object -ExpandProperty workflow_runs |
+    Select-Object name, head_branch, status, conclusion, html_url
+```
+
+Nota: al abrir una PR contra el upstream, los workflows corren en el repo base;
+si el autor es un colaborador nuevo quedan en `action_required` hasta que un
+mantenedor los apruebe, así que verás los checks "Waiting approval".
+
