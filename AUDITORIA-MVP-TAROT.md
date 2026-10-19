@@ -12,7 +12,7 @@
 | Capacidad pedida | Estado real en el código | Punto de extensión | Trabajo para el MVP | Riesgo |
 |---|---|---|---|---|
 | **Voz clonada** | ✅ **Nativo** | `tts/gpt_sovits_tts.py`, `tts/tts_factory.py`, `config_manager/tts.py` (`ref_audio_path` + `prompt_text`) | Config + servidor GPT-SoVITS. **0 líneas** de código — §3.2 | Medio: la calidad en español depende del checkpoint (v2Pro/v4) y del ref-audio |
-| **Escenario personalizable** | ⚠️ **Parcial**: fondo + Live2D, cambio manual desde la UI | `model_dict.json`, `backgrounds/`, `set-model-and-conf`; el resto es OBS — §2.3 | **Ruta A (OBS): 0 código backend.** Ruta B (overlay propio): 1 HTML + `stage-update` — §2.4 | Medio: el overlay **debe** apuntar su WS a `/proxy-ws` o se queda sin audio (A1) |
+| **Escenario personalizable** | ⚠️ **Parcial**: OBS por scheduler (escena + *StartStream*/*StopStream*) y contrato `stage-update`, sin overlay de producción | `model_dict.json`, `backgrounds/`, `set-model-and-conf`, `scheduler/obs.py`, `utils/stage.py` — §2.3, §2.4 | **Ruta A: hecha** (sin código de frontend). **Ruta B: contrato + overlay de prueba** (`web_tool/stage-test.html`); falta el arte y el lip-sync | Medio: el overlay **debe** apuntar su WS a `/proxy-ws` o se queda sin audio (A1) |
 | **Chat en directo (TikTok)** | ❌ **Solo Bilibili** (`blivedm`); ignora regalos, entradas y username | `live/live_interface.py` (ABC), `live/bilibili_live.py` (referencia) | `live/tiktok_live.py` (~200 líneas) + `scripts/run_tiktok_live.py` (~60) — §4.2.4 | Alto: API no oficial (`TikTokLive`), cambios de protocolo y ToS |
 | **Emisión programada** | ❌ **No existe** (sin cron ni APScheduler) | `ai-speak-signal` ya existe, pero **ignora `data["text"]`** — §4.3.1 | `scheduler/` (~150) + config (~70) + inyección en `routes.py`/`server.py` (~20) — §4.3.3 | Medio: depende de A18; un turno colgado bloquea el siguiente guion |
 | **Emisión desatendida (robustez)** | ❌ **No**: 7 defectos bloqueantes (A18–A24) | `conversation_utils.py`, `tts_manager.py`, `proxy_handler.py`, `gpt_sovits_tts.py` — §5.1 | Parches 5.2.1–5.2.7 (~80 líneas netas) | **Alto si no se aplican**: A18 ⇒ directo mudo; A20/A24 ⇒ GPU saturada |
@@ -224,6 +224,30 @@ model_dict.json  --> Live2dModel (backend) --> model_info --set-model-and-conf--
 ```
 
 En el frontend actual bastaría con escuchar `stage-update` en `websocket-handler.tsx` y llamar a `setBgUrl(message.background)`; los `props` exigen overlay propio (Ruta A/B).
+
+> **Estado (implementado 2026-10-19): ✅** — `utils/stage.py::build_stage_payload`
+> valida el mensaje antes de emitirlo: `stage` (máx. 64 caracteres) y `background`
+> recortados; sin `stage`, `background` ni ningún prop con `src` lanza `ValueError`;
+> se miran como máximo 32 `props`, con `x`/`y` acotados
+> a 0..1, `rot`/`scale`/`opacity` saneados y descartando los que no traen `src`,
+> `transition` ∈ {`fade`, `none`} y `duration_ms` acotado a 0..10000 (800 por defecto).
+> `select_stage_targets` resuelve `first`/`all`/`client_uid`.
+>
+> Transporte (`WebSocketHandler`): el último payload queda cacheado y se reenvía al
+> conectar (un overlay que recarga no pierde la escena), al recibir
+> `{"type": "fetch-stage"}` y al ejecutar `POST /api/stage` (token A22 igual que
+> `/client-ws`; responde `{"status": "ok", "delivered": N, "payload": {...}}`).
+> `GET /api/stage` devuelve `{"stage": <último payload o null>}`. El scheduler emite `stage-update` con
+> `background:` antes de cada segmento y cambia `scene:` por OBS WebSocket v5; ambos
+> pasos son *best-effort*: OBS caído u overlay ausente **no** cancelan el turno hablado.
+>
+> Semántica para el overlay: cuando `props` viene en el mensaje **reemplaza** la lista;
+> cuando falta, se **conserva** la anterior (un job que solo cambia el fondo no borra
+> las cartas). Los campos desconocidos se ignoran.
+>
+> Herramienta de verificación manual (no es el overlay final): `web_tool/stage-test.html`,
+> servido en `http://localhost:12393/web-tool/stage-test.html`. Acepta `?token=` (A22)
+> y `?ws=` para apuntar a otro socket; tecla `h` oculta el HUD.
 
 ---
 
@@ -724,15 +748,28 @@ scheduler_config:
   enabled: true
   timezone: 'Europe/Madrid'
   target_client: 'first'        # 'first' = primer cliente conectado (OBS)
+  obs:                          # opcional: OBS 28+ con WebSocket server activo
+    enabled: true
+    host: '127.0.0.1'
+    port: 4455
+    password: ''
+    timeout: 3.0
+    start_stream: false         # StartStream al arrancar el scheduler
+    stop_stream_on_shutdown: false
+    switch_scenes: true         # permite a los jobs cambiar la escena
   jobs:
     - name: 'pre_show'
       cron: '50 19 * * *'       # 19:50 todos los días
       text: 'Quedan diez minutos para empezar. Saluda a quien ya esté en el chat y pide que se queden.'
       scene: 'starting_soon'    # opcional (OBS)
+      background: '/bg/tarot_intro.png'   # opcional (stage-update al overlay)
     - name: 'card_of_the_day'
       cron: '0 20 * * *'
       text: 'Abre el directo, presenta la carta del día y pide preguntas.'
       scene: 'tarot_main'
+      background: '/bg/tarot_table.png'
+      transition: 'fade'
+      duration_ms: 800
     - name: 'break'
       interval_minutes: 45
       text: 'Haz una pausa breve, recuerda que sigues leyendo el tarot y pide que compartan el directo.'
@@ -740,6 +777,8 @@ scheduler_config:
       cron: '0 23 * * *'
       text: 'Despídete, agradece a quienes han participado y anuncia cuándo será la próxima lectura.'
       scene: 'ending'
+      background: '/bg/tarot_ending.png'
+      transition: 'none'
 ```
 
 Modelo (`config_manager/scheduler.py`, nuevo):
@@ -751,14 +790,27 @@ class ScheduledJob(I18nMixin):
     interval_minutes: int = Field(0, alias="interval_minutes")
     text: str = Field("", alias="text")                       # si vacío -> proactive_speak_prompt
     scene: str = Field("", alias="scene")                     # opcional OBS
+    background: str = Field("", alias="background")           # opcional stage-update
+    transition: str = Field("fade", alias="transition")        # 'fade' | 'none'
+    duration_ms: int = Field(800, alias="duration_ms")
     enabled: bool = Field(True, alias="enabled")
+
+class OBSConfig(I18nMixin):
+    enabled: bool = Field(False, alias="enabled")
+    host: str = Field("127.0.0.1", alias="host")
+    port: int = Field(4455, alias="port", ge=1, le=65535)
+    password: str = Field("", alias="password")
+    timeout: float = Field(3.0, alias="timeout", ge=0.5, le=30.0)
+    start_stream: bool = Field(False, alias="start_stream")
+    stop_stream_on_shutdown: bool = Field(False, alias="stop_stream_on_shutdown")
+    switch_scenes: bool = Field(True, alias="switch_scenes")
 
 class SchedulerConfig(I18nMixin):
     enabled: bool = Field(False, alias="enabled")
     timezone: str = Field("Europe/Madrid", alias="timezone")
     target_client: str = Field("first", alias="target_client")
+    obs: OBSConfig = Field(default_factory=OBSConfig, alias="obs")
     jobs: List[ScheduledJob] = Field(default_factory=list, alias="jobs")
-    obs: Optional[OBSConfig] = Field(None, alias="obs")
 ```
 
 Añadir `scheduler_config: SchedulerConfig = Field(SchedulerConfig(), alias="scheduler_config")` a `Config` y **`apscheduler>=3.10,<4`** a `pyproject.toml` (la API 4.x es incompatible).
@@ -772,7 +824,13 @@ Añadir `scheduler_config: SchedulerConfig = Field(SchedulerConfig(), alias="sch
 > parser de crontab de 5 campos (`*`, `n`, `a-b`, `*/n`, `a/n`, listas), `interval_minutes`
 > y un único `asyncio.Task` con `stop` Event. Misma funcionalidad para el MVP; si más adelante
 > hace falta escalado/`misfire_grace_time`, se cambia a APScheduler regenerando el lock.
-> `scene`/`obs` se aceptan pero solo se registran en el log (fase 3).
+> **Fase 3 (obs, implementada 2026-10-19):** `obs:` ya no se ignora — `scheduler/obs.py`
+> habla OBS WebSocket v5 con la librería `websockets` que ya estaba en `pyproject.toml`
+> (0 dependencias nuevas, sin tocar `uv.lock`). Al arrancar: conecta, lista escenas en el
+> log y, si `start_stream: true`, llama a `StartStream`. Cada job: cambia `scene:` (si
+> `switch_scenes`) y emite `stage-update` con `background:` (§2.4). Al apagar, con
+> `stop_stream_on_shutdown: true`, `StopStream`. Todo es *best-effort*: si OBS no está,
+> se registra un warning y el directo sigue (escena manual).
 
 #### 4.3.3 Implementación (`scheduler/service.py`, nuevo)
 
@@ -896,18 +954,43 @@ self.app.add_event_handler("shutdown", self.scheduler.shutdown)
 
 > `add_event_handler` está deprecado en FastAPI moderna; si se migra, usar `lifespan`. Funciona igual en la versión actual del repo.
 
-**OBS (opcional, fase 3).** `scheduler/obs.py` con `obsws-python` (añadir dependencia):
+**OBS (opcional, fase 3 — implementado 2026-10-19).** `scheduler/obs.py` habla
+**OBS WebSocket v5** directamente sobre `websockets` (ya en `pyproject.toml`), en vez de
+añadir `obsws-python`: una dependencia nueva obligaría a regenerar `uv.lock` y el
+`dockerfile` usa `uv sync --frozen`.
 
 ```python
-import obsws_python as obs
-
-def switch_scene(cfg, scene_name: str) -> None:
-    client = obs.ReqClient(host=cfg.host, port=cfg.port,
-                           password=cfg.password, timeout=3)
-    client.set_current_program_scene(scene_name)
+# scheduler/obs.py — resumen de la API
+class OBSController:
+    def __init__(self, host="127.0.0.1", port=4455, password="", timeout=3.0): ...
+    async def connect(self) -> bool          # Hello -> Identify (si hay password)
+    async def set_scene(self, name) -> bool  # SetCurrentProgramScene
+    async def start_stream(self) -> bool     # StartStream
+    async def stop_stream(self) -> bool      # StopStream
+    async def list_scenes(self) -> list[str] # GetSceneList (log de arranque)
+    async def close(self) -> None
 ```
 
-`OBSConfig`: `host: '127.0.0.1'`, `port: 4455`, `password: ''` (hay que activar *WebSocket server* en OBS → Herramientas). Con el mismo cliente se puede lanzar `client.start_stream()` para **arrancar el directo solo**, pero eso ya es fase 3: el MVP puede empezar con OBS en modo manual.
+Detalles que importan en producción:
+
+- **Autenticación** (`build_auth_string`): `base64(sha256(base64(sha256(password + salt)) + challenge))`,
+  exactamente como documenta OBS. Sin `password` configurada y con OBS pidiéndola, se
+  lanza `OBSAuthError` y se registra el motivo (no reintenta en bucle).
+- **Reconexión**: `_request` reconecta **una vez** si el socket murió (`ConnectionClosed`,
+  `OSError`, timeout) y, si vuelve a fallar, devuelve `False`/lista vacía. Nunca propaga
+  la excepción al scheduler, así que un OBS cerrado no tumba el directo.
+- **Sin eventos**: `eventSubscriptions: 0`; el cliente solo usa pares
+  `Request`/`RequestResponse` y descarta mensajes ajenos por `requestId`.
+- **Identificadores**: `requestId = uuid4()`; se ignoran los eventos que lleguen entre
+  la petición y su respuesta.
+- **Ciclo de vida** (`scheduler/service.py`): conexión al arrancar (con `list_scenes()` en
+  el log y `start_stream()` si `obs.start_stream`); `close()` al apagar, tras
+  `stop_stream()` si `obs.stop_stream_on_shutdown`.
+
+`OBSConfig`: `enabled: false`, `host: '127.0.0.1'`, `port: 4455`, `password: ''`,
+`timeout: 3.0`, `start_stream: false`, `stop_stream_on_shutdown: false`,
+`switch_scenes: true`. Hay que activar *WebSocket server* en OBS → Herramientas →
+*WebSocket Server Settings* (OBS 28+ lo trae de serie).
 
 #### 4.3.4 Guion de emisión recomendado (MVP)
 
@@ -936,15 +1019,25 @@ Durante el resto del tiempo responde a TikTok (4.2) y, si no hay comentarios, el
 | `config_manager/main.py` | añadir `scheduler_config` | +3 |
 | `live/tiktok_live.py` | **nuevo** conector (4.2.4) | ~200 |
 | `scripts/run_tiktok_live.py` | **nuevo** lanzador (calco del de BiliBili) | ~60 |
-| `scheduler/__init__.py`, `service.py`, `obs.py` | **nuevos** | ~150 |
-| `routes.py` | aceptar `ws_handler` inyectado | ±3 |
+| `scheduler/__init__.py`, `service.py` | **nuevos**: crontab stdlib, `interval_minutes`, `stage-update` por job | ~390 |
+| `scheduler/obs.py` | **nuevo**: cliente OBS WebSocket v5 (escena, StartStream/StopStream, GetSceneList) | ~260 |
+| `utils/stage.py` | **nuevo**: `build_stage_payload` + `select_stage_targets` (§2.4) | ~125 |
+| `web_tool/stage-test.html` | **nuevo**: overlay de prueba del contrato (no es el overlay final) | ~270 |
+| `routes.py` | aceptar `ws_handler` inyectado + `GET/POST /api/stage` | +70 |
 | `websocket_handler.py` | `trigger_proactive_speak()` con guarda de `current_conversation_tasks` (A14) | +14 |
 | `conversations/conversation_handler.py` | `data.get("text") or ...` en `ai-speak-signal` | ±1 |
 | `server.py` | instanciar handler + scheduler + startup/shutdown | +15 |
-| `pyproject.toml` | `apscheduler>=3.10,<4`, `TikTokLive>=7,<8`, `obsws-python` (opcional) | +3 |
-| `conf.yaml` | `enable_proxy: true`, `live_config.tiktok_live`, `scheduler_config` | +40 |
+| `pyproject.toml` | `TikTokLive>=7,<8` (fase 2). **Fase 3: 0 dependencias nuevas** — OBS usa `websockets` (`uv.lock` intacto) | +1 |
+| `conf.yaml` | `enable_proxy: true`, `live_config.tiktok_live`, `scheduler_config` + `obs` | +55 |
 
-**Riesgo residual:** ni `TikTokLive` ni el cambio de escena OBS son críticos para arrancar: se pueden desarrollar en paralelo y el directo funciona con OBS manual + operador escribiendo en el chat de la UI.
+**Verificado sin red (2026-10-19):** `python scripts/test_stage_obs.py` → `Ran 27 tests ... OK`
+(payload y targeting, cliente v5 con `FakeOBSSocket`, integración con el planificador);
+`ruff 0.9.6` → `All checks passed!` / `8 files already formatted`; las dos plantillas y
+`conf/conf.yaml` se cargan con `SchedulerConfig` (pydantic) → `obs.enabled=False`, `port=4455`,
+4 jobs. **Sin verificar todavía:** OBS real y OBS+overlay juntos, porque en esta máquina OBS no
+convive con Docker; el protocolo de prueba manual está en `HANDOFF.md` §4.4.
+
+**Riesgo residual:** ni `TikTokLive` ni el cambio de escena OBS son críticos para arrancar: se pueden desarrollar en paralelo y el directo funciona con OBS manual + operador escribiendo en el chat de la UI. Con la fase 3, si OBS no responde el scheduler emite el segmento igualmente (solo se pierde el cambio de escena y el `stage-update` queda cacheado para el próximo overlay que conecte).
 
 ## 5. Pilar 5 — Optimización, robustez y hardening
 

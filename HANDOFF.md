@@ -128,8 +128,8 @@ User input: Saluda brevemente: esta es la prueba de preflight del scheduler.
 El cliente recibió `conversation-chain-start`, 5 chunks de `audio`, envió sus acks y recibió
 `conversation-chain-end`. Ojo: la hora del `armed for` está en la zona configurada
 (`Europe/Madrid`), mientras que las marcas de tiempo de loguru van en UTC; con el contenedor
-en UTC se ven con 2 h de diferencia y es correcto. `scene` se acepta pero solo se registra:
-el cambio de escena OBS es fase 3.
+en UTC se ven con 2 h de diferencia y es correcto. `scene` ya se aplica de verdad desde la
+fase 3 (OBS WebSocket, ver §4.4).
 
 ### 4.2. Smoke test del pipeline (`scripts/smoke_test.py`)
 
@@ -208,6 +208,80 @@ docker compose restart
 > `conf/conf.yaml` se lee al arrancar: tras cambiar `audio_export.format` hay que reiniciar
 > (no basta con recargar la página). El formato activo se registra en el log sólo si **no** es `wav`.
 
+### 4.4 Fase 3 — OBS WebSocket v5 y contrato `stage-update` (auditoría §2.4)
+
+Ficheros nuevos:
+
+| Fichero | Qué hace |
+|---|---|
+| `src/open_llm_vtuber/scheduler/obs.py` | cliente **OBS WebSocket v5** sobre `websockets` (ya era dependencia): handshake + auth SHA256/base64, `connect`, `set_scene`, `start_stream`, `stop_stream`, `list_scenes`, `close`; reintenta la conexión una vez por llamada y **nunca lanza** (devuelve `bool`) |
+| `src/open_llm_vtuber/utils/stage.py` | contrato del overlay: `build_stage_payload()` (sanea `props`, acota `duration_ms`, exige algo que cambiar) y `select_stage_targets()` (`first`/`all`/`client_uid`) |
+| `web_tool/stage-test.html` | overlay de prueba: dos capas con crossfade, `props` posicionados en % y HUD con `h`. Acepta `?token=` y `?ws=` |
+| `scripts/test_stage_obs.py` | **27 tests** sin red ni OBS real (`FakeOBSSocket`): payload, targeting, cliente v5 y scheduler |
+
+Modificados: `config_manager/scheduler.py` (`OBSConfig` + `background`/`transition`/`duration_ms` en cada job), `websocket_handler.py` (`current_stage`, `broadcast_stage_update`, `fetch-stage`), `routes.py` (`GET`/`POST /api/stage`), `scheduler/service.py` (`_prepare_stage`, StartStream/StopStream, cierre limpio), `server.py`, las dos plantillas YAML y `conf/conf.yaml` (*este último está gitignored*: el cambio es solo para la copia local).
+
+```yaml
+scheduler_config:
+  obs:                       # todo desactivado por defecto
+    enabled: false           # true = conectar al arrancar y cambiar escenas
+    host: '127.0.0.1'
+    port: 4455
+    password: ''
+    timeout: 3.0
+    start_stream: false            # StartStream cuando arranca el scheduler
+    stop_stream_on_shutdown: false # StopStream al apagar el servidor
+    switch_scenes: true            # los jobs pueden cambiar la escena
+  jobs:
+    - name: 'card_of_the_day'
+      cron: '0 20 * * *'
+      scene: 'tarot_main'                # SetCurrentProgramScene
+      background: '/bg/tarot_table.png'  # stage-update al overlay
+      transition: 'fade'                 # 'fade' | 'none'
+      duration_ms: 800
+```
+
+Comportamiento (todo **best-effort**):
+
+- **OBS apagado o mal configurado** ⇒ un `warning` y el segmento se emite igual: solo se pierde el cambio de escena.
+- **`stage-update` se cachea** en el handler: el overlay que conecta tarde (o recarga el Browser Source) lo recibe al conectar o al mandar `fetch-stage`.
+- **`props` ausente conserva** los props anteriores (un job solo-fondo no borra las cartas); `props: []` sí los limpia.
+- **`POST /api/stage`** permite al operador cambiar el overlay sin esperar a un job; el token es el mismo de A22 (`VTUBER_WS_TOKEN`, cabecera `Authorization: Bearer …` o `?token=`).
+
+```powershell
+# ver el último stage (401 si hay token y no se envía)
+curl.exe http://127.0.0.1:12393/api/stage
+# cambiarlo a mano; delivered = nº de overlays que lo recibieron
+curl.exe -X POST http://127.0.0.1:12393/api/stage -H 'Content-Type: application/json' `
+  -d '{"stage":"tarot_main","background":"/bg/tarot_table.png","props":[{"id":"card_1","src":"/bg/cards/death.png","x":0.7,"y":0.5}],"duration_ms":600}'
+```
+
+Prueba manual (**obligatoria**, aquí no se puede ejecutar OBS junto con Docker):
+
+1. Sin OBS: `python scripts/test_stage_obs.py` y abrir
+   `http://localhost:12393/web-tool/stage-test.html` (con `?token=…` si A22 está activo). El `POST`
+   de arriba debe devolver `delivered: 1` y verse el crossfade.
+2. Con OBS 28+: *Herramientas → Configuración del servidor WebSocket*, activarlo, poner
+   `scheduler_config.obs.enabled: true` y la contraseña, crear las escenas (`starting_soon`,
+   `tarot_main`, `ending`) y añadir el overlay como **Browser Source**
+   (`http://127.0.0.1:12393/web-tool/stage-test.html`, 1920×1080). Tras reiniciar, el log debe mostrar
+   `Scheduler: OBS scenes available: …`; al disparar un job, `SetCurrentProgramScene` (y `StartStream`
+   si `start_stream: true`). El overlay de prueba **no** envía `frontend-playback-complete`: el turno se
+   cerrará por timeout (A18) — el overlay definitivo sí debe enviar el ack.
+
+Para llevarlo al contenedor ya construido (el build sigue sin ser reproducible, §6.8):
+
+```powershell
+docker cp src\open_llm_vtuber\utils\stage.py open-llm-vtuber:/app/src/open_llm_vtuber/utils/stage.py
+docker cp src\open_llm_vtuber\scheduler open-llm-vtuber:/app/src/open_llm_vtuber/scheduler
+docker cp src\open_llm_vtuber\config_manager\scheduler.py open-llm-vtuber:/app/src/open_llm_vtuber/config_manager/scheduler.py
+docker cp src\open_llm_vtuber\routes.py open-llm-vtuber:/app/src/open_llm_vtuber/routes.py
+docker cp src\open_llm_vtuber\server.py open-llm-vtuber:/app/src/open_llm_vtuber/server.py
+docker cp src\open_llm_vtuber\websocket_handler.py open-llm-vtuber:/app/src/open_llm_vtuber/websocket_handler.py
+docker cp web_tool\stage-test.html open-llm-vtuber:/app/web_tool/stage-test.html
+docker compose restart
+```
+
 ## 5. Estado verificado (¡importante!)
 
 | Comprobación | Resultado |
@@ -222,6 +296,7 @@ docker compose restart
 | **TTS real** | `TTS OK size = 11232 bytes` (antes 0 bytes + 403) ✅ |
 | **Smoke test** | `audio chunks 2 / 290392 bytes / playback ack 2 / chain end True` → `SMOKE TEST PASSED`, exit 0 ✅ |
 | **Scheduler** | `Scheduler started with 5 job(s)` → `job 'preflight_test' fired on <uid>`; el cliente recibe audio, ack y `conversation-chain-end` ✅ |
+| **Stage/OBS** | ⏳ contrato, cliente v5 y wiring cubiertos por `python scripts/test_stage_obs.py` (`Ran 27 tests ... OK`); la prueba con OBS real es manual (§6.10) |
 
 ## 6. Pendientes / siguientes pasos
 
@@ -282,6 +357,17 @@ docker compose restart
    `GET /api/metrics` cada pocos minutos y comprobar `turn_seconds.p95 < 8`, `first_audio_seconds.p95`
    estable, `queue.max_depth` acotado y `without_audio` a 0. Si el ancho de banda es el problema,
    cambiar `system_config.audio_export.format` a `'mp3'` y repetir: el tráfico debe caer ~10×.
+10. **[Fase 3 · prueba manual obligatoria]** El contrato `stage-update` y el cliente OBS están
+    probados sin red (27 tests), pero **aquí no se puede ejecutar OBS junto con Docker**. Protocolo
+    completo en §4.4: (a) sin OBS, abrir `/web-tool/stage-test.html` y comprobar que
+    `POST /api/stage` devuelve `delivered: 1` y cambia el fondo; (b) con OBS 28+ y
+    `obs.enabled: true`, ver `Scheduler: OBS scenes available: …` en el log y el cambio de escena al
+    disparar un job. Ojo: el overlay de prueba no manda `frontend-playback-complete`, así que el
+    turno acaba por timeout (A18); el overlay definitivo debe enviar el ack.
+11. **[Audio de la Fase 3]** El overlay de prueba todavía **no reproduce el audio** de los jobs: el
+    contrato `stage-update` solo cubre escena/fondo/props. Para oír al vtuber dentro de OBS hay que
+    añadir la reproducción de los mensajes `audio` en el overlay real (o usar `web_tool/index.html`
+    como Browser Source) y mandar `frontend-playback-complete`.
 
 ## 7. Chuleta de comandos
 
@@ -401,12 +487,20 @@ uv run python scripts/smoke_test.py --url http://127.0.0.1:12393 --token $env:VT
 
 # 4) tests de A23/A24 (formato de audio + resiliencia de GPT-SoVITS)
 uv run python scripts/test_audio_hardening.py
+
+# 5) tests de la fase 3 (contrato stage-update + cliente OBS v5, sin red ni OBS)
+uv run python scripts/test_stage_obs.py
 ```
 
-**Estado en esta máquina (Windows, sin `uv`):** el paso 2 se ejecuta con el Python del sistema
-(`python scripts/test_security_metrics.py` -> `Ran 39 tests ... OK (skipped=5)`) y el paso 4 también
-(`python scripts/test_audio_hardening.py` -> `Ran 12 tests ... OK`), los pasos 1 y 3
-requieren `uv sync` (el `pyproject.toml` exige `>=3.10,<3.13` y aquí hay Python 3.14).
+**Estado en esta máquina (Windows, sin `uv`):** los pasos 2, 4 y 5 se ejecutan con el Python del
+sistema (`python scripts/test_security_metrics.py` -> `Ran 39 tests ... OK (skipped=5)`,
+`python scripts/test_audio_hardening.py` -> `Ran 12 tests ... OK`,
+`python scripts/test_stage_obs.py` -> `Ran 27 tests ... OK`); los pasos 1 y 3 requieren `uv sync`
+(el `pyproject.toml` exige `>=3.10,<3.13` y aquí hay Python 3.14). El paso 1 se puede hacer con el
+ruff standalone **0.9.6** (la versión que fija el pre-commit): `ruff check` + `ruff format --check`
+sobre los ficheros tocados en la fase 3 -> `All checks passed!` / `8 files already formatted`.
+Los YAML se validaron cargándolos con `SchedulerConfig` (pydantic) en un venv temporal: las dos
+plantillas y `conf/conf.yaml` dan `obs.enabled=False`, `port=4455` y 4 jobs.
 
 ### 9.4 Fase 2 — audio configurable (A23) y resiliencia de GPT-SoVITS (A24)
 
