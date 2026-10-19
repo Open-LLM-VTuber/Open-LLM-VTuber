@@ -296,7 +296,11 @@ class TikTokLivePlatform(LivePlatformInterface):
         self._wakeup.set()
 
     def _next(self) -> Optional[str]:
-        for level in (self.PRIORITY_GIFT, self.PRIORITY_QUESTION, self.PRIORITY_COMMENT):
+        for level in (
+            self.PRIORITY_GIFT,
+            self.PRIORITY_QUESTION,
+            self.PRIORITY_COMMENT,
+        ):
             if self._queues[level]:
                 self._queued -= 1
                 return self._queues[level].popleft()
@@ -325,7 +329,9 @@ class TikTokLivePlatform(LivePlatformInterface):
                 logger.warning("Turn not delivered to the proxy; skipping its wait")
                 continue
             try:
-                await asyncio.wait_for(self._turn_done.wait(), timeout=self.TURN_TIMEOUT)
+                await asyncio.wait_for(
+                    self._turn_done.wait(), timeout=self.TURN_TIMEOUT
+                )
             except asyncio.TimeoutError:
                 logger.warning(
                     "Turn without 'conversation-chain-end'; continuing anyway"

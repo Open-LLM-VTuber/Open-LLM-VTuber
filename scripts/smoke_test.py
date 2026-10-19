@@ -95,9 +95,7 @@ async def _overlay(ws_url: str, result: Result, ready: asyncio.Event) -> None:
                     # ``display_text`` is a dict (name/text/emotion), but older
                     # backends send a plain string; accept both.
                     if isinstance(text, dict):
-                        text = text.get("text") or json.dumps(
-                            text, ensure_ascii=False
-                        )
+                        text = text.get("text") or json.dumps(text, ensure_ascii=False)
                     result.texts.append(str(text))
             elif msg_type == "control":
                 text = message.get("text")

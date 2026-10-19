@@ -114,8 +114,7 @@ class CronExpression:
             if candidate > limit:
                 # Year bound: expressions such as "0 0 30 2 *" never match
                 raise ValueError(
-                    f"No run scheduled within a year for crontab "
-                    f"'{self.expression}'"
+                    f"No run scheduled within a year for crontab '{self.expression}'"
                 )
             if candidate.month not in self.months:
                 # Jump to the first minute of the next month
@@ -124,9 +123,7 @@ class CronExpression:
                 )
                 continue
             if not self._day_matches(candidate):
-                candidate = (candidate + timedelta(days=1)).replace(
-                    hour=0, minute=0
-                )
+                candidate = (candidate + timedelta(days=1)).replace(hour=0, minute=0)
                 continue
             if candidate.hour not in self.hours:
                 candidate = (candidate + timedelta(hours=1)).replace(minute=0)
@@ -271,9 +268,7 @@ class SchedulerService:
             if planned.cron:
                 planned.next_run = planned.cron.next_after(now)
             else:
-                planned.next_run = now + timedelta(
-                    minutes=planned.job.interval_minutes
-                )
+                planned.next_run = now + timedelta(minutes=planned.job.interval_minutes)
 
             try:
                 await self._fire(planned.job)
@@ -291,9 +286,7 @@ class SchedulerService:
     async def _fire(self, job) -> None:
         """Send one segment, retrying while the overlay is busy."""
         if not self._pick_client():
-            logger.warning(
-                f"Scheduler: job '{job.name}' skipped, no overlay connected"
-            )
+            logger.warning(f"Scheduler: job '{job.name}' skipped, no overlay connected")
             return
 
         if job.scene:
@@ -307,13 +300,10 @@ class SchedulerService:
             if not client_uid:
                 break
             try:
-                triggered = await self._ws.trigger_proactive_speak(
-                    client_uid, job.text
-                )
+                triggered = await self._ws.trigger_proactive_speak(client_uid, job.text)
             except Exception as e:
                 logger.error(
-                    f"Scheduler: failed to reach {client_uid} for job "
-                    f"'{job.name}': {e}"
+                    f"Scheduler: failed to reach {client_uid} for job '{job.name}': {e}"
                 )
                 triggered = False
 
@@ -326,6 +316,4 @@ class SchedulerService:
             if attempt < self.MAX_ATTEMPTS:
                 await asyncio.sleep(self.RETRY_DELAY)
 
-        logger.warning(
-            f"Scheduler: job '{job.name}' dropped, overlay busy or absent"
-        )
+        logger.warning(f"Scheduler: job '{job.name}' dropped, overlay busy or absent")

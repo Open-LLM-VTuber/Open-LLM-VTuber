@@ -78,9 +78,7 @@ def main():
             logger.info("Shutting down TikTok Live platform")
             return 0
         except Exception as e:
-            logger.opt(exception=True).error(
-                f"Connector crashed: {e}; retrying in 5 s"
-            )
+            logger.opt(exception=True).error(f"Connector crashed: {e}; retrying in 5 s")
             time.sleep(5)
 
 

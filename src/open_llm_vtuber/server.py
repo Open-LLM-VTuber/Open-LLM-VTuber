@@ -143,9 +143,7 @@ class WebSocketServer:
         if hasattr(system_config, "enable_proxy") and system_config.enable_proxy:
             # Construct the server URL for the proxy. The proxy connects to its
             # own /client-ws, so it has to carry the token when auth is on.
-            server_url = with_token(
-                f"ws://{host}:{port}/client-ws", self.ws_token
-            )
+            server_url = with_token(f"ws://{host}:{port}/client-ws", self.ws_token)
             self.app.include_router(
                 init_proxy_route(server_url=server_url, token=self.ws_token),
             )

@@ -276,9 +276,7 @@ class CorsTests(unittest.TestCase):
             "http://10.0.0.7:12393",
             "http://172.20.3.4:12393",
         ):
-            self.assertTrue(
-                origin_allowed(origin, [], LOCAL_ORIGIN_REGEX), origin
-            )
+            self.assertTrue(origin_allowed(origin, [], LOCAL_ORIGIN_REGEX), origin)
         for origin in (
             "https://evil.example.com",
             "http://8.8.8.8:12393",
@@ -495,9 +493,7 @@ class InstrumentationTests(unittest.TestCase):
 
     def test_chain_end_completes_turn(self):
         self.clock.advance(2.0)
-        end_payload = json.dumps(
-            {"type": "control", "text": "conversation-chain-end"}
-        )
+        end_payload = json.dumps({"type": "control", "text": "conversation-chain-end"})
         snapshot = asyncio.run(self._send(end_payload))
         self.assertEqual(snapshot["turns"]["completed"], 1)
         self.assertEqual(snapshot["turns"]["active"], 0)

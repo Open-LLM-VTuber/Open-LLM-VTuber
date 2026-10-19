@@ -16,9 +16,7 @@ class ScheduledJob(I18nMixin):
     enabled: bool = Field(True, alias="enabled")
 
     DESCRIPTIONS: ClassVar[Dict[str, Description]] = {
-        "name": Description(
-            en="Job name, used in the logs", zh="任务名称，用于日志"
-        ),
+        "name": Description(en="Job name, used in the logs", zh="任务名称，用于日志"),
         "cron": Description(
             en="Crontab expression with 5 fields (minute hour day month weekday)",
             zh="5 字段的 crontab 表达式（分 时 日 月 周）",
@@ -36,9 +34,7 @@ class ScheduledJob(I18nMixin):
             en="Optional OBS scene to switch to (reserved for phase 3)",
             zh="可选的 OBS 场景（为第三阶段保留）",
         ),
-        "enabled": Description(
-            en="Enable this job", zh="启用该任务"
-        ),
+        "enabled": Description(en="Enable this job", zh="启用该任务"),
     }
 
 
@@ -63,7 +59,5 @@ class SchedulerConfig(I18nMixin):
             en="Client that receives the segment: 'first' or a client_uid",
             zh="接收播出的客户端：'first' 或指定 client_uid",
         ),
-        "jobs": Description(
-            en="List of scheduled segments", zh="定时播出任务列表"
-        ),
+        "jobs": Description(en="List of scheduled segments", zh="定时播出任务列表"),
     }
