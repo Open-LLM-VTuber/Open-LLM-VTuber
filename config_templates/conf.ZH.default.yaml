@@ -541,15 +541,27 @@ scheduler_config:
   timezone: 'Europe/Madrid'
   # 'first' = 第一个已连接的客户端（OBS overlay）；也可以填具体的 client_uid
   target_client: 'first'
+  # OBS Studio 控制（可选）。先在 OBS 中启用 WebSocket 服务器：
+  # 工具 -> WebSocket 服务器设置。需要 OBS 28 或更新版本。
+  obs:
+    enabled: false
+    host: '127.0.0.1'
+    port: 4455
+    password: ''
+    timeout: 3.0                 # 连接与每个请求的超时（秒）
+    switch_scenes: true          # 允许任务切换当前场景
+    start_stream: false          # 调度器启动时调用 StartStream
+    stop_stream_on_shutdown: false
   jobs:
     - name: 'pre_show'
       cron: '50 19 * * *'          # 每天 19:50
       text: 'Quedan diez minutos para empezar. Saluda a quien ya esté en el chat y pide que se queden.'
-      scene: 'starting_soon'       # 为 OBS 集成预留
+      scene: 'starting_soon'       # OBS 场景（需要 obs.enabled）
     - name: 'card_of_the_day'
       cron: '0 20 * * *'
       text: 'Abre el directo, presenta la carta del día y pide preguntas.'
       scene: 'tarot_main'
+      background: '/bg/tarot_table.png'   # overlay 的 stage-update（Ruta B）
     - name: 'break'
       interval_minutes: 45
       text: 'Haz una pausa breve, recuerda que sigues leyendo el tarot y pide que compartan el directo.'

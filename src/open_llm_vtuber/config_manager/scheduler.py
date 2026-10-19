@@ -12,7 +12,10 @@ class ScheduledJob(I18nMixin):
     cron: str = Field("", alias="cron")  # "minute hour day month weekday"
     interval_minutes: int = Field(0, alias="interval_minutes")
     text: str = Field("", alias="text")  # empty -> proactive_speak_prompt
-    scene: str = Field("", alias="scene")  # reserved for the OBS integration
+    scene: str = Field("", alias="scene")  # OBS scene switched before speaking
+    background: str = Field("", alias="background")  # stage-update background
+    transition: str = Field("fade", alias="transition")
+    duration_ms: int = Field(800, alias="duration_ms")
     enabled: bool = Field(True, alias="enabled")
 
     DESCRIPTIONS: ClassVar[Dict[str, Description]] = {
@@ -31,10 +34,63 @@ class ScheduledJob(I18nMixin):
             zh="给 LLM 的指令；留空则使用配置的主动发言提示词",
         ),
         "scene": Description(
-            en="Optional OBS scene to switch to (reserved for phase 3)",
-            zh="可选的 OBS 场景（为第三阶段保留）",
+            en="OBS scene to switch to when the job fires (needs obs.enabled)",
+            zh="任务触发时切换到的 OBS 场景（需要 obs.enabled）",
+        ),
+        "background": Description(
+            en="Background sent to the overlay as a stage-update "
+            "(the job name is used as the stage id)",
+            zh="作为 stage-update 发送给 overlay 的背景（任务名作为舞台 id）",
+        ),
+        "transition": Description(
+            en="Stage transition: 'fade' or 'none'", zh="舞台过渡：'fade' 或 'none'"
+        ),
+        "duration_ms": Description(
+            en="Stage transition duration in milliseconds",
+            zh="舞台过渡时长（毫秒）",
         ),
         "enabled": Description(en="Enable this job", zh="启用该任务"),
+    }
+
+
+class OBSConfig(I18nMixin):
+    """OBS Studio WebSocket settings (scene switching and stream control)."""
+
+    enabled: bool = Field(False, alias="enabled")
+    host: str = Field("127.0.0.1", alias="host")
+    port: int = Field(4455, alias="port", ge=1, le=65535)
+    password: str = Field("", alias="password")
+    timeout: float = Field(3.0, alias="timeout", ge=0.5, le=30.0)
+    start_stream: bool = Field(False, alias="start_stream")
+    stop_stream_on_shutdown: bool = Field(False, alias="stop_stream_on_shutdown")
+    switch_scenes: bool = Field(True, alias="switch_scenes")
+
+    DESCRIPTIONS: ClassVar[Dict[str, Description]] = {
+        "enabled": Description(
+            en="Connect to OBS so jobs can switch scenes and start the stream",
+            zh="连接 OBS，以便任务切换场景并启动直播",
+        ),
+        "host": Description(en="OBS WebSocket host", zh="OBS WebSocket 主机"),
+        "port": Description(en="OBS WebSocket port", zh="OBS WebSocket 端口"),
+        "password": Description(
+            en="Password shown in OBS -> Tools -> WebSocket Server Settings",
+            zh="OBS -> 工具 -> WebSocket 服务器设置中显示的密码",
+        ),
+        "timeout": Description(
+            en="Connection and request timeout in seconds", zh="连接与请求超时（秒）"
+        ),
+        "start_stream": Description(
+            en="Call StartStream when the scheduler starts",
+            zh="调度器启动时调用 StartStream",
+        ),
+        "stop_stream_on_shutdown": Description(
+            en="Call StopStream when the server shuts down",
+            zh="服务器关闭时调用 StopStream",
+        ),
+        "switch_scenes": Description(
+            en="Allow jobs to switch the OBS program scene",
+            zh="允许任务切换 OBS 当前场景",
+        ),
     }
 
 
@@ -44,6 +100,7 @@ class SchedulerConfig(I18nMixin):
     enabled: bool = Field(False, alias="enabled")
     timezone: str = Field("Europe/Madrid", alias="timezone")
     target_client: str = Field("first", alias="target_client")
+    obs: OBSConfig = Field(default_factory=OBSConfig, alias="obs")
     jobs: List[ScheduledJob] = Field(default_factory=list, alias="jobs")
 
     DESCRIPTIONS: ClassVar[Dict[str, Description]] = {
@@ -58,6 +115,10 @@ class SchedulerConfig(I18nMixin):
         "target_client": Description(
             en="Client that receives the segment: 'first' or a client_uid",
             zh="接收播出的客户端：'first' 或指定 client_uid",
+        ),
+        "obs": Description(
+            en="OBS Studio WebSocket integration (optional)",
+            zh="OBS Studio WebSocket 集成（可选）",
         ),
         "jobs": Description(en="List of scheduled segments", zh="定时播出任务列表"),
     }
