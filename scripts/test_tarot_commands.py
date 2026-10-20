@@ -70,6 +70,32 @@ class ParseCommandTests(unittest.TestCase):
         request = parse_draw_command("!carta " + "x" * 500)
         self.assertEqual(len(request.question), MAX_QUESTION)
 
+    def test_connector_wrapper_is_understood(self):
+        # tiktok_live.py sends comments as f'{username} dice: "{text}"'.
+        request = parse_draw_command('pepe dice: "!carta"')
+        self.assertEqual(request.count, 1)
+        self.assertEqual(request.question, "")
+
+        request = parse_draw_command('pepe dice: "!tirada 3 ¿y el amor?"')
+        self.assertEqual(request.count, 3)
+        self.assertEqual(request.question, "¿y el amor?")
+
+        request = parse_draw_command("ana dice: '!tarot 2'")
+        self.assertEqual(request.count, 2)
+
+    def test_command_inside_a_sentence_is_not_a_command(self):
+        for text in (
+            "me encanta tu !carta",
+            'pepe dice: "hola !carta"',
+            "!cartas",
+            "!cartas 2",
+        ):
+            self.assertIsNone(parse_draw_command(text), text)
+
+    def test_bad_count_inside_the_wrapper_still_raises(self):
+        with self.assertRaises(ValueError):
+            parse_draw_command('pepe dice: "!tirada 9"')
+
 
 class BuildResultTests(unittest.TestCase):
     """Overlay payload and LLM brief are built from the same cards."""

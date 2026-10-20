@@ -391,6 +391,8 @@ La tirada por horario es la base; además se puede disparar a mano o desde el ch
 
 Decisiones:
 
+- El comando tiene que **abrir el mensaje**: al principio (`!carta`) o justo detrás de dos puntos/comilla, porque el conector de TikTok envía `pepe dice: "!carta …"`. Así "me encanta tu !carta" sigue siendo un comentario normal.
+- Si el turno proactivo se rechaza (ya hay uno en marcha), el comando cae a un **turno de texto normal** con el brief: las cartas se leen igual y el conector recibe su `conversation-chain-end` (si no, esperaría a su watchdog de 90 s).
 - Un comando **mal formado** (`!tirada 9`) se registra y sigue como mensaje normal: se pierde una tirada, no la frase del espectador.
 - `speak` viene **apagado** por defecto en HTTP: quién habla depende del despliegue (proxy/conector). Si se activa, usa `target` (por defecto el primer socket, que es el overlay en el montaje recomendado).
 - El chat habla **en el cliente que escribió el comando**, igual que un `text-input` normal; así el audio viaja por el proxy a todos los clientes.

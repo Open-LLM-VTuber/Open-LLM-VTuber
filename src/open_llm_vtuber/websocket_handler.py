@@ -624,11 +624,15 @@ class WebSocketHandler:
                 count=request.count, question=request.question
             )
             spoken = await self.trigger_proactive_speak(client_uid, result.brief)
-            if not spoken:
-                logger.warning(
-                    "Tarot draw: the cards are on screen but the turn did not start"
-                )
-            return
+            if spoken:
+                return
+
+            # The proactive path refuses while another turn is running. Fall
+            # back to a normal text turn with the brief, so the cards are still
+            # read and the connector gets its ``conversation-chain-end``
+            # (otherwise it waits for its 90 s watchdog).
+            logger.info("Tarot draw: proactive turn refused, using a text turn")
+            data = {"type": "text-input", "text": result.brief}
 
         await handle_conversation_trigger(
             msg_type=data.get("type", ""),
