@@ -592,6 +592,46 @@ python scripts/test_stage_obs.py        # 38 tests: contrato + draw del schedule
     7. Qué mirar: `Tarot: 3 card(s) -> 1 overlay(s)` en el log, `Scheduler: job '…' drew …` si es por
        horario, y `GET /api/tarot` con `asker`/`question`/`cards`.
 
+### 6.13.1 Resultado de la prueba en vivo (2026-10-20)
+
+Ejecutada con Docker arriba y `http://127.0.0.1:12393` respondiendo `200`.
+
+| Prueba | Resultado |
+|---|---|
+| `python scripts/smoke_test.py` | ✅ `SMOKE TEST PASSED` — 3 chunks, 289 284 B, `playback ack=1`, `chain end=True` |
+| `python scripts/tarot_smoke.py --no-speak --count 3` | ✅ `TAROT SMOKE PASSED` — 1 `stage-update`, 3 cartas, `delivered=1` |
+| `python scripts/tarot_smoke.py --count 1` | ✅ `TAROT SMOKE PASSED` — 2 `stage-update` (tirada muda + hablada), 5 chunks, 725 980 B, ack=1, `chain end=True` (~30 s) |
+| `GET /api/tarot` / `GET /api/metrics` / `/api/stage` | ✅ `200`; la tirada conserva `asker='smoke-test'` y `question` |
+| `/web-tool/overlay.html`, `operator.html`, `stage-test.html`, `/bg/cards/major_00.jpg` | ✅ `200` |
+| OBS real (Browser Source + cambio de escena) | ⏳ **no ejecutable aquí**; contrato HTTP/WS verificado por los smoke tests |
+| TikTok en vivo (regalo + comentario + `!carta`) | ⏳ **no ejecutable aquí**: requiere cuenta en directo. Además la imagen **no instala el extra** `tiktok` (`TikTokLive` es `optional-dependencies`, `uv sync --extra tiktok`), y `live_config.tiktok_live.enabled: false` en `conf/conf.yaml` |
+
+`GET /api/metrics` tras las pruebas: `turns.completed=3`, `without_audio=0`,
+`turn_seconds.p95=29.5 s`, `first_audio_seconds.p95=26.7 s`, `p95_ok=false`.
+El objetivo `<8 s` **no se cumple** con OpenRouter `deepseek/deepseek-v4.1-flash` + `edge_tts`;
+el cuello es la latencia del LLM/TTS, no la orquestación (§6.9).
+
+**Dos hallazgos de la prueba:**
+
+1. **La imagen del 17-oct no contenía el código del 20-oct** (`/api/tarot` y `/api/metrics` daban `404`;
+   no existían `scheduler/`, `scripts/tarot_smoke.py` ni el mazo). `docker compose up -d --build` vuelve a
+   fallar con `failed to receive status: rpc error: ... no such job ...`, así que se aplicó el plan B de §6.8
+   (`docker cp src/ scripts/ web_tool/ backgrounds/ characters/ prompts/ tests/ config_templates/` + `restart`).
+   **Un `docker compose up -d` sin `--build` repetirá el problema.**
+2. **`tarot_smoke.py` tenía una carrera**: dormía `0.5 s` y dibujaba antes de que el proxy terminase de abrir
+   su `/client-ws` e inicializar MCP (25–60 s en frío). Según el orden, el `POST` llegaba con
+   `delivered=0` (y a veces el `stage-update` se perdía). Ahora el script espera la señal de sesión lista
+   (`control/start-mic`, el último frame del handshake) antes de tirar, ignora el `stage` cacheado anterior y
+   solo acepta un `conversation-chain-end` posterior a la tirada hablada. Flags nuevos:
+   `--ready-timeout` (180 s) y `--stage-timeout` (60 s).
+3. **Frame perdido con `audio: null` en el proxy**: `ProxyHandler.broadcast_to_clients` hacía
+   `len(message["audio"])` para el log; con el payload silencioso de A21 (`audio: None`) lanzaba
+   `TypeError`, `forward_server_messages` lo capturaba y **descartaba el frame entero**
+   (`Error processing server message: object of type 'NoneType' has no len()`, visto a las 18:52:36).
+   Corregido en `proxy_handler.py` (tamaño 0 si no es str/bytes, `volumes` solo si es lista/tupla) con
+   dos tests de regresión en `scripts/test_security_metrics.py` (`ProxyBroadcastTests`). Tras reiniciar,
+   `smoke_test.py` vuelve a pasar (4 chunks, 307 716 B, ack=1) y el log ya no muestra ese error.
+
 ## 7. Chuleta de comandos
 
 ```powershell
@@ -733,7 +773,8 @@ uv run pre-commit run --all-files
 #   ruff check .          -> "All checks passed!"
 #   ruff format --check . -> sólo config_manager/asr.py queda fuera, y ya venía así de upstream
 
-# 2) tests de seguridad + métricas (stdlib puro: 39 pasan, 5 se saltan sin numpy/torch)
+# 2) tests de seguridad + métricas (dentro del contenedor: 41 pasan; en el host, 7 se saltan
+#    sin fastapi/numpy/torch). Incluye ProxyBroadcastTests: `audio: null` no debe perder el frame.
 uv run python scripts/test_security_metrics.py
 
 # 3) smoke end-to-end (necesita servidor + LLM + TTS reales)
@@ -750,8 +791,8 @@ uv run python scripts/test_stage_obs.py
 node scripts/test_overlay_protocol.js
 
 # 7) contrato cruzado backend -> overlay con los bytes reales
-node scripts/test_overlay_wire.js            # 11 tests (Node)
-python scripts/test_overlay_fixtures.py      # 10 tests (Python)
+node scripts/test_overlay_wire.js            # 12 tests (Node)
+python scripts/test_overlay_fixtures.py      # 11 tests (Python)
 python scripts/export_overlay_fixtures.py    # regenerar tras tocar el backend
 python scripts/export_overlay_fixtures.py --check   # exit 1 si el fixture es viejo
 
@@ -763,8 +804,10 @@ python scripts/make_tarot_cards.py --check   # el mazo SVG de reserva sigue al d
 python scripts/fetch_tarot_art.ps1           # (re)descarga el mazo RWS (dominio público)
 
 # 9) prueba en vivo del tarot (necesita servidor arrancado)
+#    Espera a que el overlay reciba `start-mic` antes de tirar (MCP en frío tarda 25-60 s).
 python scripts/tarot_smoke.py --no-speak     # cartas + API, sin TTS
 python scripts/tarot_smoke.py                # + audio, ack y chain-end
+#    --ready-timeout 180 --stage-timeout 60 (ajustables)
 ```
 
 **Estado en esta máquina (Windows, sin `uv`):** los pasos 2, 4 y 5 se ejecutan con el Python del
