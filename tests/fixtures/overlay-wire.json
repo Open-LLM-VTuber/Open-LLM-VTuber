@@ -84,7 +84,7 @@
       "name": "tarot_draw_three_cards",
       "note": "SchedulerService._prepare_stage with a three-card spread: the overlay gets 'src' props served from /bg/cards",
       "frames": [
-        "{\"type\": \"stage-update\", \"stage\": \"card_of_the_day\", \"props\": [{\"id\": \"card_1\", \"src\": \"/bg/cards/major_03.svg\", \"x\": 0.28, \"y\": 0.68, \"rot\": 0.0, \"scale\": 0.55}, {\"id\": \"card_2\", \"src\": \"/bg/cards/major_10.svg\", \"x\": 0.5, \"y\": 0.68, \"rot\": 0.0, \"scale\": 0.55}, {\"id\": \"card_3\", \"src\": \"/bg/cards/major_16.svg\", \"x\": 0.72, \"y\": 0.68, \"rot\": 0.0, \"scale\": 0.55}], \"transition\": \"fade\", \"duration_ms\": 800}"
+        "{\"type\": \"stage-update\", \"stage\": \"card_of_the_day\", \"props\": [{\"id\": \"card_1\", \"src\": \"/bg/cards/major_03.jpg\", \"x\": 0.28, \"y\": 0.68, \"rot\": 0.0, \"scale\": 0.55}, {\"id\": \"card_2\", \"src\": \"/bg/cards/major_10.jpg\", \"x\": 0.5, \"y\": 0.68, \"rot\": 0.0, \"scale\": 0.55}, {\"id\": \"card_3\", \"src\": \"/bg/cards/major_16.jpg\", \"x\": 0.72, \"y\": 0.68, \"rot\": 0.0, \"scale\": 0.55}], \"transition\": \"fade\", \"duration_ms\": 800}"
       ]
     },
     {

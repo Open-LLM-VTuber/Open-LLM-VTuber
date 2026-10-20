@@ -1042,9 +1042,11 @@ Durante el resto del tiempo responde a TikTok (4.2) y, si no hay comentarios, el
 | `scheduler/__init__.py`, `service.py` | **nuevos**: crontab stdlib, `interval_minutes`, `stage-update` por job. **Tarot:** `_draw()` una vez por disparo, props en el escenario y brief para el LLM | ~440 |
 | `scheduler/obs.py` | **nuevo**: cliente OBS WebSocket v5 (escena, StartStream/StopStream, GetSceneList) | ~260 |
 | `utils/stage.py` | **nuevo**: `build_stage_payload` + `select_stage_targets` (§2.4). Props de imagen (`src`) o **de texto** (`label`/`sublabel`) | ~150 |
-| `utils/tarot.py` | **nuevo**: 22 arcanos mayores en español, `draw_cards` con semilla, `build_draw_props` (arte `/bg/cards` o texto) y `build_tarot_brief` (lo que lee el LLM) | ~360 |
-| `scripts/make_tarot_cards.py` | **nuevo**: genera los 22 SVG deterministas del mazo; `--check` detecta desfase | ~180 |
-| `backgrounds/cards/*.svg` | **nuevos**: 22 placeholders (marco, numeral, nombre, palabras clave) servidos en `/bg/cards` | 22 files |
+| `src/open_llm_vtuber/utils/tarot.py` | **nuevo**: 22 arcanos mayores en español, `draw_cards` con semilla, `build_draw_props` (arte `/bg/cards` o texto) y `build_tarot_brief` (lo que lee el LLM) | ~360 |
+| `scripts/make_tarot_cards.py` | **nuevo**: genera los 22 SVG deterministas (mazo de reserva); `--check` detecta desfase | ~180 |
+| `scripts/fetch_tarot_art.ps1` | **nuevo**: descarga el mazo Rider–Waite–Smith (dominio público) como JPEG de 960 px | ~90 |
+| `backgrounds/cards/*.jpg` | **nuevos**: 22 arcanos Rider–Waite–Smith (~11,5 MB) servidos en `/bg/cards`; licencia y fuente en `README.md` | 22 files |
+| `backgrounds/cards/*.svg` | **nuevos**: mazo de reserva geométrico, sin licencia | 22 files |
 | `web_tool/operator.html` | **nuevo**: HUD de operador (escenario + última tirada + botones de tirada, `?token=` A22) | ~470 |
 | `config_manager/live.py`, `scripts/run_tiktok_live.py` | **nuevo** `gift_reading` en `TikTokLiveConfig` y su paso al conector | +12 |
 | `utils/tarot_commands.py` | **nuevo**, stdlib pura: `parse_draw_command()` (`!carta`, `!tirada N`, `/carta`), `is_tarot_command()` y `build_draw_result()` (cartas + payload + brief + `summary`) | ~170 |

@@ -644,7 +644,7 @@ class SchedulerDrawTests(unittest.TestCase):
             ["card_1", "card_2", "card_3"],
         )
         for prop in payload["props"]:
-            self.assertRegex(prop["src"], r"^/bg/cards/major_\d\d\.svg$")
+            self.assertRegex(prop["src"], r"^/bg/cards/major_\d\d\.jpg$")
             self.assertEqual(prop["scale"], 0.55)
             self.assertNotIn("label", prop, "the deck has art, so no text cards")
 

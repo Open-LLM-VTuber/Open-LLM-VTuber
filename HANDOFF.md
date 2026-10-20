@@ -426,22 +426,25 @@ Decisiones:
 - El chat habla **en el cliente que escribió el comando**, igual que un `text-input` normal; así el audio viaja por el proxy a todos los clientes.
 - `GET /api/tarot` no dispara nada: solo lee la última tirada.
 
-#### Arte de las cartas (placeholders incluidos)
+#### Arte de las cartas (mazo real, dominio público)
 
-- **22 SVG** en `backgrounds/cards/<id>.svg`, servidos en `/bg/cards/…` (el mismo `/bg` de los fondos).
-- Los genera `python scripts/make_tarot_cards.py`: determinista, sin dependencias y sin fuentes embebidas.
-  `--check` falla si un fichero queda desfasado (y `test_tarot.py` comprueba que existen los 22).
-- `build_draw_props()` devuelve **props de imagen** por defecto: `src: /bg/cards/major_16.svg`, con
-  `rot: 180` para las invertidas (así se ve una carta del revés, como en una mesa real) y una escala de
-  **0.85 / 0.7 / 0.55** para 1, 2 o 3 cartas, de forma que nunca se solapen.
-- **Arte real:** deja los PNG/JPG en `backgrounds/cards/<id>.png` y cambia `CARD_ART_EXT` a `"png"` en
-  `utils/tarot.py` (o genera el SVG con tu propio diseño). El scheduler y el HUD no se tocan.
-- **Respaldo sin arte:** `build_draw_props(drawn, art_prefix=None)` vuelve a las tarjetas de texto
-  (`label`/`sublabel`). El fixture lo cubre con `tarot_draw_text_fallback`.
-- `.gitignore` tiene una excepción (`!/backgrounds/cards/**`) para que el mazo viaje en el repo; el resto
-  de `backgrounds/` sigue siendo local.
-- Aviso honesto: son **placeholders geométricos** (marco, numeral romano, nombre, palabras clave). Se ven
-  bien en OBS a tamaño de tarjeta, pero no son ilustraciones.
+- **Mazo real**: `backgrounds/cards/major_00.jpg … major_21.jpg`, el **Rider–Waite–Smith** (1909) de
+  Pamela Colman Smith. Licencia **dominio público** (Commons: `PD-old-80-expired`), sin atribución
+  obligatoria; fuente, orden y condiciones en `backgrounds/cards/README.md`.
+- **Cómo llegó**: `scripts/fetch_tarot_art.ps1` descarga miniaturas **960 px** de Wikimedia
+  (`thumb.wikimedia.org`; el servicio ya solo expone ese bucket). 22 ficheros, **≈11,5 MB**.
+  `-Force` vuelve a bajarlos.
+- `build_draw_props()` devuelve **props de imagen**: `src: /bg/cards/major_16.jpg`, `rot: 180` para las
+  invertidas (carta del revés, como en una mesa real) y escala **0.85 / 0.7 / 0.55** para 1, 2 o 3 cartas,
+  de modo que nunca se solapen.
+- **Mazo de reserva sin licencia**: los `.svg` que genera `scripts/make_tarot_cards.py` siguen ahí
+  (`--check` detecta desfase). Para usarlos: `build_draw_props(drawn, art_ext="svg")`.
+- **Sin arte**: `build_draw_props(drawn, art_prefix=None)` → tarjetas de texto (`label`/`sublabel`).
+  Los tests del fixture cubren las dos rutas (`tarot_draw_three_cards` y `tarot_draw_text_fallback`).
+- **Tu propio mazo**: deja `<id>.jpg` con los mismos nombres y ya está; si usas otro formato, cambia
+  `CARD_ART_EXT` en `utils/tarot.py`. El scheduler y el HUD no se tocan.
+- `.gitignore` abre `!/backgrounds/cards/**` para que el mazo viaje en el repo; el resto de `backgrounds/`
+  sigue siendo local.
 
 #### HUD de operador (`web_tool/operator.html`)
 
@@ -497,7 +500,7 @@ python scripts/test_stage_obs.py        # 38 tests: contrato + draw del schedule
 | **Smoke test** | `audio chunks 2 / 290392 bytes / playback ack 2 / chain end True` → `SMOKE TEST PASSED`, exit 0 ✅ |
 | **Scheduler** | `Scheduler started with 5 job(s)` → `job 'preflight_test' fired on <uid>`; el cliente recibe audio, ack y `conversation-chain-end` ✅ |
 | **Stage/OBS** | ⏳ contrato, cliente v5 y wiring cubiertos por `python scripts/test_stage_obs.py` (38 tests tras añadir la tirada), overlay de producción por `node scripts/test_overlay_protocol.js` (13) y **contrato cruzado** con los bytes reales (`node scripts/test_overlay_wire.js` = 11, `python scripts/test_overlay_fixtures.py` = 10). La baraja por `python scripts/test_tarot.py` (25). La prueba con OBS real es manual (§6.10) |
-| **Mecánica de tarot** | ✅ **Hecha** (§4.6): 22 arcanos, tirada 1–3 sin repetir, **arte SVG incluido** (`/bg/cards`, invertidas rotadas 180°), props de texto como respaldo, brief para el LLM, `POST /api/tarot/draw`, `GET /api/tarot`, **HUD de operador** (`web_tool/operator.html`), comandos `!carta`/`!tirada N` y **regalos en dos pasos** con interruptor `gift_reading`. ⏳ falta sustituir los placeholders por ilustraciones reales (§6.12) |
+| **Mecánica de tarot** | ✅ **Hecha** (§4.6): 22 arcanos, tirada 1–3 sin repetir, **mazo real Rider–Waite–Smith** (dominio público, `/bg/cards`, invertidas rotadas 180°), mazo SVG de reserva, props de texto como último recurso, brief para el LLM, `POST /api/tarot/draw`, `GET /api/tarot`, **HUD de operador** (`web_tool/operator.html`), comandos `!carta`/`!tirada N` y **regalos en dos pasos** con `gift_reading`. ⏳ falta solo la prueba en vivo (§6.12) |
 
 ## 6. Pendientes / siguientes pasos
 
@@ -572,11 +575,12 @@ python scripts/test_stage_obs.py        # 38 tests: contrato + draw del schedule
     `overlay-protocol.js`, §4.5) ya reproduce los mensajes `audio` en orden y manda
     `frontend-playback-complete`, así que el turno cierra al terminar el audio. Falta lo de siempre: el
     arte definitivo y el lip-sync con Live2D (el overlay pinta escenario/props/subtítulo y la voz).
-12. **[Tarot — lo que falta]** Hecho: tirada por horario, bajo demanda (`POST /api/tarot/draw`), comandos
-    `!carta`/`!tirada N`, `GET /api/tarot`, **HUD** (`web_tool/operator.html`), regalos en dos pasos,
-    interruptor `gift_reading` y **mazo SVG de 22 cartas** (§4.6). Pendiente: (a) sustituir los placeholders
-    por **ilustraciones reales** (`backgrounds/cards/<id>.png` + `CARD_ART_EXT = "png"`); (b) la prueba en
-    vivo con un regalo real, que es la única que valida el flujo completo de TikTok.
+12. **[Tarot — lo que falta]** Todo el código está hecho: tirada por horario, bajo demanda
+    (`POST /api/tarot/draw`), comandos `!carta`/`!tirada N`, `GET /api/tarot`, **HUD**
+    (`web_tool/operator.html`), regalos en dos pasos, `gift_reading` y **mazo real Rider–Waite–Smith**
+    en `backgrounds/cards/*.jpg`. Pendiente: (a) la **prueba en vivo** con un regalo y un comentario
+    reales, que valida el flujo completo de TikTok; (b) opcional: cambiar el mazo por uno propio
+    (`<id>.jpg` con los mismos nombres).
 
 ## 7. Chuleta de comandos
 

@@ -286,25 +286,31 @@ _SPREAD_X = {1: (0.5,), 2: (0.36, 0.64), 3: (0.28, 0.5, 0.72)}
 #: Cards sit low on the frame so the avatar keeps the upper half.
 _SPREAD_Y = 0.68
 
-#: Where ``scripts/make_tarot_cards.py`` writes the deck (served at ``/bg``).
+#: Where the deck lives (served at ``/bg``). ``scripts/fetch_tarot_art.ps1``
+#: downloads the public-domain Rider-Waite-Smith art here; the SVGs from
+#: ``scripts/make_tarot_cards.py`` are the art-free fallback.
 CARD_ART_DIR = "/bg/cards"
-CARD_ART_EXT = "svg"
-#: On-screen size per spread: the raw art is 512x768, three of them must fit.
+CARD_ART_EXT = "jpg"
+#: On-screen size per spread: the art is 2:3, three cards must fit side by side.
 _ART_SCALE = {1: 0.85, 2: 0.7, 3: 0.55}
 
 
 def build_draw_props(
-    drawn: Iterable[DrawnCard], art_prefix: Optional[str] = CARD_ART_DIR
+    drawn: Iterable[DrawnCard],
+    art_prefix: Optional[str] = CARD_ART_DIR,
+    art_ext: str = CARD_ART_EXT,
 ) -> List[dict]:
     """Turn a spread into ``stage-update`` props.
 
     With ``art_prefix`` (the default) each prop is an image served by the
-    backend: ``/bg/cards/major_16.svg``. A reversed card is simply rotated 180°,
+    backend: ``/bg/cards/major_16.jpg``. A reversed card is simply rotated 180°,
     which is what a physical reading looks like, and the scale shrinks as the
     spread grows so three cards never overlap.
 
     With ``art_prefix=None`` the props are **text cards** (``label``/``sublabel``)
-    that the overlay draws itself: the fallback for a deck without art.
+    that the overlay draws itself: the fallback for a deck without art. Use
+    ``art_ext="svg"`` to point at the generated placeholder deck instead of the
+    Rider-Waite-Smith JPEGs.
 
     Raises:
         ValueError: when the spread size has no layout.
@@ -324,7 +330,7 @@ def build_draw_props(
             "y": _SPREAD_Y,
         }
         if art_prefix:
-            prop["src"] = f"{art_prefix}/{drawn_card.card.id}.{CARD_ART_EXT}"
+            prop["src"] = f"{art_prefix}/{drawn_card.card.id}.{art_ext}"
             prop["rot"] = 180 if drawn_card.reversed else 0
             prop["scale"] = _ART_SCALE[len(cards)]
         else:

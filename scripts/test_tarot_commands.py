@@ -117,7 +117,7 @@ class BuildResultTests(unittest.TestCase):
         sources = [prop["src"] for prop in result.payload["props"]]
         self.assertEqual(
             sources,
-            [f"/bg/cards/{card.card.id}.svg" for card in result.cards],
+            [f"/bg/cards/{card.card.id}.jpg" for card in result.cards],
             "the overlay must show the same cards the brief describes",
         )
 

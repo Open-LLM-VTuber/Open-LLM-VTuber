@@ -1,13 +1,14 @@
-"""Generate the placeholder art of the 22 Major Arcana as SVG.
+"""Generate a license-free placeholder deck of the 22 Major Arcana as SVG.
 
-The show needs *something* on screen before a real deck exists, so this script
-draws a deterministic, geometric card per arcanum: double frame, roman numeral,
-card name and keywords. No fonts are embedded and no randomness is involved, so
-the same file comes out on every machine.
+The show ships with the public-domain Rider-Waite-Smith JPEGs
+(``scripts/fetch_tarot_art.ps1``), so this script is the **fallback**: a
+deterministic, geometric card per arcanum (double frame, roman numeral, name and
+keywords) for a repo without that art, or for anyone who prefers a minimal deck.
 
-When the real illustrations arrive, drop ``backgrounds/cards/<id>.png`` (or
-``.jpg``) and point ``ART_EXT`` at the new extension: the overlay props are the
-same ``<img src="/bg/cards/<id>.<ext>">``.
+No fonts are embedded and no randomness is involved, so the same file comes out
+on every machine. To use it:
+
+    build_draw_props(drawn, art_ext="svg")
 
     python scripts/make_tarot_cards.py            # (re)write the 22 SVGs
     python scripts/make_tarot_cards.py --check    # exit 1 when a file is stale

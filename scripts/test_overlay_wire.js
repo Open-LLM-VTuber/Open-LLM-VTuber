@@ -233,7 +233,7 @@ const expectations = {
             ["card_1", "card_2", "card_3"]
         );
         for (const prop of stage.props) {
-            assert.match(prop.src, /^\/bg\/cards\/major_\d\d\.svg$/);
+            assert.match(prop.src, /^\/bg\/cards\/major_\d\d\.jpg$/);
             assert.equal("label" in prop, false, "art props are images");
             assert.ok(prop.x > 0 && prop.x < 1, "cards are spread inside the frame");
             assert.equal(prop.y, 0.68, "cards sit low, the avatar keeps the top");

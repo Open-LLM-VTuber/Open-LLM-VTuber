@@ -133,7 +133,7 @@ class DrawPropTests(unittest.TestCase):
         self.assertEqual([prop["x"] for prop in props], [0.28, 0.5, 0.72])
         self.assertTrue(all(prop["y"] == 0.68 for prop in props))
         for prop, card in zip(props, drawn):
-            self.assertEqual(prop["src"], f"/bg/cards/{card.card.id}.svg")
+            self.assertEqual(prop["src"], f"/bg/cards/{card.card.id}.jpg")
             self.assertEqual(prop["scale"], 0.55)
             self.assertEqual(prop["rot"], 180 if card.reversed else 0)
             self.assertNotIn("label", prop, "art props are images, not text cards")
@@ -180,7 +180,7 @@ class DrawPropTests(unittest.TestCase):
         payload = build_stage_payload(stage="tarot_draw", props=props)
 
         self.assertNotIn("background", payload)
-        self.assertRegex(payload["props"][0]["src"], r"^/bg/cards/major_\d\d\.svg$")
+        self.assertRegex(payload["props"][0]["src"], r"^/bg/cards/major_\d\d\.jpg$")
 
 
 class CardArtTests(unittest.TestCase):
@@ -191,13 +191,18 @@ class CardArtTests(unittest.TestCase):
         for card in tarot.DECK:
             path = os.path.join(folder, f"{card.id}.{tarot.CARD_ART_EXT}")
             self.assertTrue(os.path.exists(path), path)
-            with open(path, encoding="utf-8") as handle:
-                content = handle.read()
-            self.assertIn(card.name, content, path)
+            self.assertGreater(os.path.getsize(path), 10_000, f"{path} looks empty")
+
+    def test_placeholder_deck_is_available_too(self):
+        # The SVG generator is the fallback for a repo without the JPEG deck.
+        folder = os.path.join(project_root, "backgrounds", "cards")
+        for card in tarot.DECK:
+            path = os.path.join(folder, f"{card.id}.svg")
+            self.assertTrue(os.path.exists(path), path)
 
     def test_art_is_served_where_the_props_point(self):
         self.assertEqual(tarot.CARD_ART_DIR, "/bg/cards")
-        self.assertEqual(tarot.CARD_ART_EXT, "svg")
+        self.assertEqual(tarot.CARD_ART_EXT, "jpg")
 
     def test_props_survive_the_sanitiser(self):
         props = tarot.build_draw_props(tarot.draw_cards(3, seed=1))
