@@ -92,24 +92,28 @@ async def handle_sentence_output(
     """Handle sentence output type with optional translation support"""
     full_response = ""
     async for display_text, tts_text, actions in output:
-        logger.debug(f"🏃 Processing output: '''{tts_text}'''...")
+        try:
+            logger.debug(f"🏃 Processing output: '''{tts_text}'''...")
 
-        if translate_engine:
-            if len(re.sub(r'[\s.,!?，。！？\'"』」）】\s]+', "", tts_text)):
-                tts_text = translate_engine.translate(tts_text)
-            logger.info(f"🏃 Text after translation: '''{tts_text}'''...")
-        else:
-            logger.debug("🚫 No translation engine available. Skipping translation.")
+            if translate_engine:
+                if len(re.sub(r'[\s.,!?，。！？\'"』」）】\s]+', "", tts_text)):
+                    tts_text = translate_engine.translate(tts_text)
+                logger.info(f"🏃 Text after translation: '''{tts_text}'''...")
+            else:
+                logger.debug("🚫 No translation engine available. Skipping translation.")
 
-        full_response += display_text.text
-        await tts_manager.speak(
-            tts_text=tts_text,
-            display_text=display_text,
-            actions=actions,
-            live2d_model=live2d_model,
-            tts_engine=tts_engine,
-            websocket_send=websocket_send,
-        )
+            full_response += display_text.text
+            await tts_manager.speak(
+                tts_text=tts_text,
+                display_text=display_text,
+                actions=actions,
+                live2d_model=live2d_model,
+                tts_engine=tts_engine,
+                websocket_send=websocket_send,
+            )
+        except Exception as e:
+            logger.error(f"Error processing sentence output: {e}")
+            continue
     return full_response
 
 
@@ -167,7 +171,7 @@ async def finalize_conversation_turn(
 ) -> None:
     """Finalize a conversation turn"""
     if tts_manager.task_list:
-        await asyncio.gather(*tts_manager.task_list)
+        await asyncio.gather(*tts_manager.task_list, return_exceptions=True)
         await websocket_send(json.dumps({"type": "backend-synth-complete"}))
 
         response = await message_handler.wait_for_response(

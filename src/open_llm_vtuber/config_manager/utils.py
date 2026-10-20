@@ -70,7 +70,7 @@ def validate_config(config_data: dict) -> Config:
     except ValidationError as e:
         logger.critical(f"Error validating configuration: {e}")
         logger.error("Configuration data:")
-        logger.error(config_data)
+        logger.error("Config data error (details redacted)")
         raise e
 
 

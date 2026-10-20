@@ -27,7 +27,7 @@ class TTSEngine(TTSInterface):
         import json
 
         file_name = self.generate_cache_file_name(file_name_no_ext, self.file_extension)
-        url = "https://api.minimax.chat/v1/t2a_v2?GroupId=" + self.group_id
+        url = "https://api.minimaxi.com/v1/t2a_v2?GroupId=" + self.group_id
         headers = {
             "accept": "application/json, text/plain, */*",
             "content-type": "application/json",

@@ -244,7 +244,7 @@ class ServiceContext:
             self.character_config.agent_config.agent_settings.basic_memory_agent.mcp_enabled_servers,
         )
 
-        logger.debug(f"Loaded service context with cache: {character_config}")
+        logger.debug("Loaded service context with cache (config redacted)")
 
     async def load_from_config(self, config: Config) -> None:
         """
@@ -335,10 +335,13 @@ class ServiceContext:
     def init_tts(self, tts_config: TTSConfig) -> None:
         if not self.tts_engine or (self.character_config.tts_config != tts_config):
             logger.info(f"Initializing TTS: {tts_config.tts_model}")
-            self.tts_engine = TTSFactory.get_tts_engine(
-                tts_config.tts_model,
-                **getattr(tts_config, tts_config.tts_model.lower()).model_dump(),
-            )
+            if tts_config.tts_model == "none":
+                self.tts_engine = TTSFactory.get_tts_engine("none")
+            else:
+                self.tts_engine = TTSFactory.get_tts_engine(
+                    tts_config.tts_model,
+                    **getattr(tts_config, tts_config.tts_model.lower()).model_dump(),
+                )
             # saving config should be done after successful initialization
             self.character_config.tts_config = tts_config
         else:
@@ -513,10 +516,8 @@ class ServiceContext:
                 }
                 new_config = validate_config(new_config)
                 await self.load_from_config(new_config)  # Await the async load
-                logger.debug(f"New config: {self}")
-                logger.debug(
-                    f"New character config: {self.character_config.model_dump()}"
-                )
+                logger.debug("New config loaded (redacted)")
+                logger.debug("New character config loaded (redacted)")
 
                 # Send responses to client
                 await websocket.send_text(
@@ -547,7 +548,7 @@ class ServiceContext:
 
         except Exception as e:
             logger.error(f"Error switching configuration: {e}")
-            logger.debug(self)
+            logger.debug("Service context (redacted)")
             await websocket.send_text(
                 json.dumps(
                     {

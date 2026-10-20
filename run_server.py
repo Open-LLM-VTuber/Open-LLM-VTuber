@@ -43,7 +43,7 @@ def init_logger(console_log_level: str = "INFO") -> None:
         level="DEBUG",
         format="{time:YYYY-MM-DD HH:mm:ss.SSS} | {level: <8} | {name}:{function}:{line} | {message} | {extra}",
         backtrace=True,
-        diagnose=True,
+        diagnose=False,
     )
 
 

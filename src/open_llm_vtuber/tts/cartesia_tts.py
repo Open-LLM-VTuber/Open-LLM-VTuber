@@ -30,7 +30,7 @@ CartesiaModels = Literal[
 wav_output_format: OutputFormat_WavParams = {
     "container": "wav",
     "sample_rate": 44100,
-    "encoding": "pcm_f32le",
+    "encoding": "pcm_s16le",
 }
 mp3_output_format: OutputFormat_Mp3Params = {
     "container": "mp3",
