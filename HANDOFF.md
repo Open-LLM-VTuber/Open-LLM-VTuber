@@ -373,6 +373,34 @@ Decisiones:
 - **Sin arte**: `label` = "La Torre", `sublabel` = "ruptura · verdad · derrumbe · invertida". Cuando haya
   cartas dibujadas se cambia el prop a `src` y el scheduler no se toca.
 
+#### Donaciones: regalo → gracias → pregunta → tirada
+
+Un regalo **no** se lee en el mismo turno: sería adivinar qué quiere saber el donante. El flujo es de dos
+pasos y el segundo solo ocurre si el donante escribe.
+
+| Paso | Quién | Qué pasa |
+|---|---|---|
+| 1 | conector (`GiftEvent`) | `PendingDonors.remember(donante, regalo, monedas)` y encola un `text-input`: *"dale las gracias… pregúntale qué quiere saber… **no leas cartas todavía**"* |
+| 2 | el donante comenta | `PendingDonors.consume(donante)` → encola `{"type":"tarot-draw","asker":"pepe","question":"…","count":1}` con prioridad de regalo |
+| 3 | servidor (`_handle_tarot_draw`) | `draw_tarot(..., asker="pepe")` → cartas en el overlay y brief `Pregunta de pepe: …` + `Responde directamente a pepe` |
+
+| Fichero | Contenido |
+|---|---|
+| `utils/donations.py` | **nuevo**, stdlib pura: `PendingDonors` (un uso, TTL 10 min), `build_gift_thanks()`, `build_donor_draw_payload()` |
+| `live/tiktok_live.py` | la cola pasa a llevar **frames** (`text-input` o `tarot-draw`) en vez de solo texto; `on_gift` arma la pregunta y `on_comment` la convierte en tirada si viene del donante |
+| `websocket_handler.py` | `_handle_tarot_draw()` (frame `tarot-draw`) y `_run_brief_turn()` como red de seguridad para no dejar al conector esperando |
+| `utils/tarot.py`, `utils/tarot_commands.py` | `asker` en el brief y en el `summary()` de la tirada |
+
+Decisiones:
+
+- **Un solo uso**: responder consume la entrada, así un regalo no compra lecturas infinitas.
+- **Caduca a los 10 minutos** (`DEFAULT_TTL_SECONDS`): un regalo de las 19:00 no convierte un comentario de
+  las 23:30 en una lectura pagada.
+- Si el donante comenta **sin** haber regalado, es un comentario normal; si regala y no vuelve a escribir,
+  se queda en el agradecimiento.
+- El `asker` viaja también en `POST /api/tarot/draw` (`"asker": "pepe"`), por si quieres tirar desde un
+  panel para una persona concreta.
+
 #### Bajo demanda (operador y chat)
 
 La tirada por horario es la base; además se puede disparar a mano o desde el chat:
@@ -433,7 +461,7 @@ python scripts/test_stage_obs.py        # 38 tests: contrato + draw del schedule
 | **Smoke test** | `audio chunks 2 / 290392 bytes / playback ack 2 / chain end True` → `SMOKE TEST PASSED`, exit 0 ✅ |
 | **Scheduler** | `Scheduler started with 5 job(s)` → `job 'preflight_test' fired on <uid>`; el cliente recibe audio, ack y `conversation-chain-end` ✅ |
 | **Stage/OBS** | ⏳ contrato, cliente v5 y wiring cubiertos por `python scripts/test_stage_obs.py` (38 tests tras añadir la tirada), overlay de producción por `node scripts/test_overlay_protocol.js` (13) y **contrato cruzado** con los bytes reales (`node scripts/test_overlay_wire.js` = 11, `python scripts/test_overlay_fixtures.py` = 10). La baraja por `python scripts/test_tarot.py` (25). La prueba con OBS real es manual (§6.10) |
-| **Mecánica de tarot** | ✅ **Hecha** (§4.6): 22 arcanos, tirada 1–3 sin repetir, props de texto en el overlay, brief para el LLM, `POST /api/tarot/draw`, `GET /api/tarot` y comandos de chat `!carta`/`!tirada N`. ⏳ falta el arte de las cartas y priorizar el comando en la cola del conector (§6.12) |
+| **Mecánica de tarot** | ✅ **Hecha** (§4.6): 22 arcanos, tirada 1–3 sin repetir, props de texto en el overlay, brief para el LLM, `POST /api/tarot/draw`, `GET /api/tarot`, comandos de chat `!carta`/`!tirada N` y **regalos en dos pasos** (gracias + pregunta → tirada para el donante, un uso, TTL 10 min). ⏳ falta el arte de las cartas y el HUD de operador (§6.12) |
 
 ## 6. Pendientes / siguientes pasos
 
@@ -508,12 +536,11 @@ python scripts/test_stage_obs.py        # 38 tests: contrato + draw del schedule
     `overlay-protocol.js`, §4.5) ya reproduce los mensajes `audio` en orden y manda
     `frontend-playback-complete`, así que el turno cierra al terminar el audio. Falta lo de siempre: el
     arte definitivo y el lip-sync con Live2D (el overlay pinta escenario/props/subtítulo y la voz).
-12. **[Tarot — lo que falta]** La mayor parte está hecha: tirada por horario (§4.6), tirada bajo demanda
-    por HTTP (`POST /api/tarot/draw`), comando de chat (`!carta`, `!tirada 3`) y `GET /api/tarot`.
-    Pendiente: (a) **arte de las 22 cartas** en `backgrounds/cards/*.png` y cambiar `label` por `src` en
-    `build_draw_props`; (b) que el conector de TikTok marque los comentarios que empiezan por `!carta`
-    para que la cola los priorice (hoy funcionan, pero compiten con el resto de mensajes); (c) HUD de
-    operador que pinte `GET /api/tarot` (el overlay ya muestra las cartas).
+12. **[Tarot — lo que falta]** Hecho: tirada por horario, bajo demanda (`POST /api/tarot/draw`), comandos
+    `!carta`/`!tirada N`, `GET /api/tarot` y **regalos en dos pasos** (§4.6). Pendiente: (a) **arte de las
+    22 cartas** en `backgrounds/cards/*.png` y cambiar `label` por `src` en `build_draw_props`; (b) HUD de
+    operador que pinte `GET /api/tarot` (el overlay ya muestra las cartas); (c) opcional: un interruptor
+    `gift_reading` en `live_config.tiktok_live` para quien prefiera solo agradecer el regalo sin tirada.
 
 ## 7. Chuleta de comandos
 
@@ -679,8 +706,9 @@ python scripts/export_overlay_fixtures.py    # regenerar tras tocar el backend
 python scripts/export_overlay_fixtures.py --check   # exit 1 si el fixture es viejo
 
 # 8) baraja y tirada de tarot (§4.6)
-python scripts/test_tarot.py                 # 25 tests, sin dependencias
-python scripts/test_tarot_commands.py        # 14 tests: !carta / !tirada y payload compartido
+python scripts/test_tarot.py                 # 27 tests, sin dependencias
+python scripts/test_tarot_commands.py        # 19 tests: !carta / !tirada y payload compartido
+python scripts/test_donations.py             # 15 tests: donantes pendientes, TTL y frames
 ```
 
 **Estado en esta máquina (Windows, sin `uv`):** los pasos 2, 4 y 5 se ejecutan con el Python del

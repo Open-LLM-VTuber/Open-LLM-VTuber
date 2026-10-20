@@ -24,6 +24,7 @@ from src.open_llm_vtuber.utils.tarot_commands import (  # noqa: E402
     DRAW_STAGE,
     MAX_QUESTION,
     build_draw_result,
+    is_tarot_command,
     parse_draw_command,
 )
 
@@ -96,6 +97,12 @@ class ParseCommandTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             parse_draw_command('pepe dice: "!tirada 9"')
 
+    def test_is_tarot_command(self):
+        for text in ("!carta", "!tirada 3", "/carta", "  !TAROT  ", "!carta ¿y?"):
+            self.assertTrue(is_tarot_command(text), text)
+        for text in (None, 3, "", "hola", "!cartas", "quiero !carta"):
+            self.assertFalse(is_tarot_command(text), text)
+
 
 class BuildResultTests(unittest.TestCase):
     """Overlay payload and LLM brief are built from the same cards."""
@@ -149,6 +156,12 @@ class BuildResultTests(unittest.TestCase):
         result = build_draw_result(count=1, seed=1)
         self.assertEqual(result.delivered, 0)
         self.assertFalse(result.spoken)
+
+    def test_asker_reaches_the_brief_and_the_summary(self):
+        result = build_draw_result(count=1, question="¿sí?", asker="pepe", seed=3)
+        self.assertEqual(result.asker, "pepe")
+        self.assertIn("Pregunta de pepe: ¿sí?", result.brief)
+        self.assertEqual(result.summary()["asker"], "pepe")
 
 
 if __name__ == "__main__":

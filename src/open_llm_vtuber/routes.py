@@ -247,6 +247,7 @@ def init_tarot_route(
                 seed=seed,
                 target_client=str(body.get("target", "first")),
                 speak=bool(body.get("speak", False)),
+                asker=str(body.get("asker", "")),
             )
         except ValueError as e:
             return JSONResponse({"error": str(e)}, status_code=400)

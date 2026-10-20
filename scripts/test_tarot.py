@@ -187,6 +187,16 @@ class TarotBriefTests(unittest.TestCase):
     def test_question_is_optional(self):
         self.assertNotIn("Pregunta:", tarot.build_tarot_brief(self.drawn))
 
+    def test_asker_is_named(self):
+        brief = tarot.build_tarot_brief(self.drawn, "¿y el amor?", asker="pepe")
+        self.assertIn("Pregunta de pepe: ¿y el amor?", brief)
+        self.assertIn("Responde directamente a pepe.", brief)
+
+    def test_asker_without_question(self):
+        brief = tarot.build_tarot_brief(self.drawn, asker="ana")
+        self.assertIn("Pregunta de ana", brief)
+        self.assertIn("todavía no ha escrito su pregunta", brief)
+
     def test_no_cards_no_brief(self):
         self.assertEqual(tarot.build_tarot_brief([]), "")
 

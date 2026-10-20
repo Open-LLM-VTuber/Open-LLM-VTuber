@@ -316,12 +316,15 @@ def build_draw_props(drawn: Iterable[DrawnCard]) -> List[dict]:
     ]
 
 
-def build_tarot_brief(drawn: Iterable[DrawnCard], question: str = "") -> str:
+def build_tarot_brief(
+    drawn: Iterable[DrawnCard], question: str = "", asker: str = ""
+) -> str:
     """Instruction block that tells the LLM which cards came out.
 
     The scheduler puts it before ``job.text`` in the ``ai-speak-signal``
     payload, so the vtuber narrates the spread that is already on screen
-    instead of inventing one.
+    instead of inventing one. ``asker`` is the donor or viewer who paid for the
+    reading: the brief names them so the answer is addressed to that person.
     """
     cards = list(drawn)
     if not cards:
@@ -329,12 +332,20 @@ def build_tarot_brief(drawn: Iterable[DrawnCard], question: str = "") -> str:
 
     lines = ["[Tirada de tarot preparada por el sistema]"]
     cleaned = (question or "").strip()
-    if cleaned:
+    who = (asker or "").strip()
+    if cleaned and who:
+        lines.append(f"Pregunta de {who}: {cleaned}")
+    elif cleaned:
         lines.append(f"Pregunta: {cleaned}")
+    elif who:
+        lines.append(f"Pregunta de {who}: (todavía no ha escrito su pregunta)")
+
     for drawn_card in cards:
         lines.append(f"- {drawn_card.describe()}. {drawn_card.meaning()}")
+
+    target = f"Responde directamente a {who}. " if who else ""
     lines.append(
-        f"Interpreta esta tirada de {len(cards)} carta(s) en 3-5 frases, en "
-        "español y mirando a cámara. No inventes otras cartas."
+        target + f"Interpreta esta tirada de {len(cards)} carta(s) en 3-5 frases, "
+        "en español y mirando a cámara. No inventes otras cartas."
     )
     return "\n".join(lines)

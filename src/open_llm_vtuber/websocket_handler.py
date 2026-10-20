@@ -17,6 +17,7 @@ from .message_handler import message_handler
 from .utils.stream_audio import prepare_audio_payload
 from .utils.stage import select_stage_targets
 from .utils.tarot_commands import (
+    MAX_QUESTION,
     DrawResult,
     build_draw_result,
     parse_draw_command,
@@ -47,7 +48,7 @@ class MessageType(Enum):
     ]
     CONVERSATION = ["mic-audio-end", "text-input", "ai-speak-signal"]
     CONFIG = ["fetch-configs", "switch-config"]
-    CONTROL = ["interrupt-signal", "audio-play-start", "fetch-stage"]
+    CONTROL = ["interrupt-signal", "audio-play-start", "fetch-stage", "tarot-draw"]
     DATA = ["mic-audio-data"]
 
 
@@ -95,6 +96,7 @@ class WebSocketHandler:
             "create-new-history": self._handle_create_history,
             "delete-history": self._handle_delete_history,
             "interrupt-signal": self._handle_interrupt,
+            "tarot-draw": self._handle_tarot_draw,
             "mic-audio-data": self._handle_audio_data,
             "mic-audio-end": self._handle_conversation_trigger,
             "raw-audio-data": self._handle_raw_audio_data,
@@ -395,11 +397,13 @@ class WebSocketHandler:
         seed: Optional[int] = None,
         target_client: str = "first",
         speak: bool = False,
+        asker: str = "",
     ) -> DrawResult:
         """Draw a spread, show it on the overlay and remember it (audit §4.6).
 
-        Shared by ``POST /api/tarot/draw`` and the chat commands (``!carta``),
-        so the overlay and the voice always describe the same cards.
+        Shared by ``POST /api/tarot/draw``, the chat commands (``!carta``) and
+        the donor flow (``tarot-draw``), so the overlay and the voice always
+        describe the same cards.
 
         Args:
             count: 1-3 cards.
@@ -409,11 +413,14 @@ class WebSocketHandler:
             speak: also start a proactive turn that reads the cards. Off by
                 default: the chat path speaks on the *commanding* client
                 instead (see ``_handle_conversation_trigger``).
+            asker: donor/viewer the reading belongs to; the brief addresses them.
 
         Returns:
             DrawResult: cards, payload, brief and what was actually sent.
         """
-        result = build_draw_result(count=count, question=question, seed=seed)
+        result = build_draw_result(
+            count=count, question=question, seed=seed, asker=asker
+        )
         result.delivered = await self.broadcast_stage_update(
             result.payload, target_client
         )
@@ -601,6 +608,53 @@ class WebSocketHandler:
                         json.dumps({"type": "control", "text": "mic-audio-end"})
                     )
 
+    async def _run_brief_turn(
+        self, websocket: WebSocket, client_uid: str, brief: str
+    ) -> None:
+        """Speak ``brief`` as a normal turn when the proactive path refuses.
+
+        Keeps the connector unblocked: it only advances its queue on
+        ``conversation-chain-end``, which a normal turn always sends.
+        """
+        await handle_conversation_trigger(
+            msg_type="text-input",
+            data={"type": "text-input", "text": brief},
+            client_uid=client_uid,
+            context=self.client_contexts[client_uid],
+            websocket=websocket,
+            client_contexts=self.client_contexts,
+            client_connections=self.client_connections,
+            chat_group_manager=self.chat_group_manager,
+            received_data_buffers=self.received_data_buffers,
+            current_conversation_tasks=self.current_conversation_tasks,
+            broadcast_to_group=self.broadcast_to_group,
+        )
+
+    async def _handle_tarot_draw(
+        self, websocket: WebSocket, client_uid: str, data: WSMessage
+    ) -> None:
+        """Draw a spread for a donor and read it aloud.
+
+        The TikTok connector sends this frame when a donor answers the "what do
+        you need?" question that followed their gift, so the reading is
+        addressed to that person (audit §4.6).
+        """
+        count = data.get("count", 1)
+        if isinstance(count, bool) or not isinstance(count, int):
+            count = 1
+        if count < 1 or count > 3:
+            count = 1
+
+        result = await self.draw_tarot(
+            count=count,
+            question=str(data.get("question", ""))[:MAX_QUESTION],
+            asker=str(data.get("asker", "")),
+        )
+        spoken = await self.trigger_proactive_speak(client_uid, result.brief)
+        if not spoken:
+            logger.info("Tarot draw: proactive turn refused, using a text turn")
+            await self._run_brief_turn(websocket, client_uid, result.brief)
+
     async def _handle_conversation_trigger(
         self, websocket: WebSocket, client_uid: str, data: WSMessage
     ) -> None:
@@ -627,12 +681,9 @@ class WebSocketHandler:
             if spoken:
                 return
 
-            # The proactive path refuses while another turn is running. Fall
-            # back to a normal text turn with the brief, so the cards are still
-            # read and the connector gets its ``conversation-chain-end``
-            # (otherwise it waits for its 90 s watchdog).
             logger.info("Tarot draw: proactive turn refused, using a text turn")
-            data = {"type": "text-input", "text": result.brief}
+            await self._run_brief_turn(websocket, client_uid, result.brief)
+            return
 
         await handle_conversation_trigger(
             msg_type=data.get("type", ""),

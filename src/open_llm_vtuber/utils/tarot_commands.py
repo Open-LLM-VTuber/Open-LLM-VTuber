@@ -66,6 +66,8 @@ class DrawResult:
     payload: dict
     brief: str
     question: str = ""
+    #: Donor/viewer the reading is for (empty for a scheduled or generic draw).
+    asker: str = ""
     #: Filled in by the caller that actually sends the payload.
     delivered: int = 0
     spoken: bool = False
@@ -74,6 +76,7 @@ class DrawResult:
         """JSON-friendly view for ``GET /api/tarot`` (no audio, no brief)."""
         return {
             "question": self.question,
+            "asker": self.asker,
             "stage": self.payload.get("stage"),
             "cards": [
                 {
@@ -133,11 +136,24 @@ def parse_draw_command(text: object) -> Optional[DrawRequest]:
     return DrawRequest(count=count, question=rest[:MAX_QUESTION])
 
 
+def is_tarot_command(text: object) -> bool:
+    """True when the message starts with a draw command.
+
+    Used by the TikTok connector to give those comments the same priority as a
+    question, without duplicating the command list.
+    """
+    if not isinstance(text, str):
+        return False
+    head = text.strip().split(" ", 1)[0].lower()
+    return head in CHAT_COMMANDS
+
+
 def build_draw_result(
     count: int = 1,
     question: str = "",
     seed: Optional[int] = None,
     stage: str = DRAW_STAGE,
+    asker: str = "",
 ) -> DrawResult:
     """Draw, build the overlay payload and the brief for the LLM.
 
@@ -148,11 +164,13 @@ def build_draw_result(
         ValueError: when ``count`` is out of range (``1..MAX_CARDS``).
     """
     cleaned = (question or "").strip()[:MAX_QUESTION]
+    who = (asker or "").strip()[:64]
     drawn = draw_cards(count, seed=seed)
     payload = build_stage_payload(stage=stage, props=build_draw_props(drawn))
     return DrawResult(
         cards=drawn,
         payload=payload,
-        brief=build_tarot_brief(drawn, cleaned),
+        brief=build_tarot_brief(drawn, cleaned, asker=who),
         question=cleaned,
+        asker=who,
     )

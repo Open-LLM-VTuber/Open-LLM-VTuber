@@ -9,6 +9,12 @@ from loguru import logger
 import websockets
 
 from .live_interface import LivePlatformInterface
+from ..utils.donations import (
+    PendingDonors,
+    build_donor_draw_payload,
+    build_gift_thanks,
+)
+from ..utils.tarot_commands import is_tarot_command
 
 try:
     from TikTokLive import TikTokLiveClient
@@ -26,9 +32,13 @@ class TikTokLivePlatform(LivePlatformInterface):
     Implementation of LivePlatformInterface for TikTok Live.
 
     Forwards comments, gifts and follows to the VTuber proxy. Only one
-    conversation runs at a time: the worker sends a ``text-input`` and waits
-    for the ``control/conversation-chain-end`` signal before sending the next
-    one, so the LLM and the TTS are never overloaded.
+    conversation runs at a time: the worker sends a frame and waits for the
+    ``control/conversation-chain-end`` signal before sending the next one, so
+    the LLM and the TTS are never overloaded.
+
+    A gift is answered in two steps: the connector thanks the donor and asks
+    what they need, remembers the donor for ten minutes, and turns that donor's
+    next comment into a ``tarot-draw`` frame addressed to them.
     """
 
     # Priority levels (higher is served first)
@@ -76,11 +86,13 @@ class TikTokLivePlatform(LivePlatformInterface):
         self._cooldown = max(0.0, cooldown_seconds)
         self._last_reply = 0.0
 
-        self._queues: Dict[int, Deque[str]] = {
+        self._queues: Dict[int, Deque[Dict[str, Any]]] = {
             self.PRIORITY_GIFT: deque(),
             self.PRIORITY_QUESTION: deque(),
             self.PRIORITY_COMMENT: deque(),
         }
+        # Donors who were asked "what do you need?" and still owe the answer.
+        self._donors = PendingDonors()
         self._max_queue = max(1, max_queue)
         self._queued = 0
         self._wakeup = asyncio.Event()  # wakes the worker when something arrives
@@ -134,10 +146,14 @@ class TikTokLivePlatform(LivePlatformInterface):
 
     async def send_message(self, text: str) -> bool:
         """Send a message from the live platform to the VTuber."""
+        return await self.send_payload({"type": "text-input", "text": text})
+
+    async def send_payload(self, payload: Dict[str, Any]) -> bool:
+        """Send a ready-made frame to the proxy (``text-input``, ``tarot-draw``)."""
         try:
             if self._websocket is None:
                 return False
-            await self._websocket.send(json.dumps({"type": "text-input", "text": text}))
+            await self._websocket.send(json.dumps(payload))
             return True
         except Exception as e:
             logger.error(f"Error sending to proxy: {e}")
@@ -201,13 +217,30 @@ class TikTokLivePlatform(LivePlatformInterface):
             # TikTokLive 7.x exposes `content`; `comment` is its legacy alias.
             raw = getattr(event, "content", None) or getattr(event, "comment", "") or ""
             text = " ".join(raw.split())[:200]
-            if text:
-                level = (
-                    self.PRIORITY_QUESTION
-                    if "?" in text or "¿" in text
-                    else self.PRIORITY_COMMENT
+            if not text:
+                return
+
+            username = self._username(event)
+            donor = self._donors.consume(username)
+            if donor is not None:
+                # The donor is answering "what do you need?": draw for them and
+                # let the server address the reading to their name.
+                logger.info(f"Donor {username} asks for a reading: {text[:60]}")
+                self._enqueue(
+                    build_donor_draw_payload(username, text),
+                    self.PRIORITY_GIFT,
                 )
-                self._enqueue(f'{self._username(event)} dice: "{text}"', level)
+                return
+
+            level = (
+                self.PRIORITY_QUESTION
+                if is_tarot_command(text) or "?" in text or "¿" in text
+                else self.PRIORITY_COMMENT
+            )
+            self._enqueue(
+                {"type": "text-input", "text": f'{username} dice: "{text}"'},
+                level,
+            )
 
         @client.on(GiftEvent)
         async def on_gift(event: GiftEvent) -> None:
@@ -224,9 +257,16 @@ class TikTokLivePlatform(LivePlatformInterface):
                 return
             gift_name = getattr(gift, "name", None) or "un regalo"
             count = getattr(event, "repeat_count", 1) or 1
+            username = self._username(event)
+
+            # Thank the donor and ask what they need; the reading comes when
+            # they answer, so it is about *their* question (audit §4.6).
+            self._donors.remember(username, gift=gift_name, coins=coins or 0)
             self._enqueue(
-                f"{self._username(event)} te envió {gift_name} x{count}. "
-                "Dale las gracias en una frase y sigue con la lectura.",
+                {
+                    "type": "text-input",
+                    "text": build_gift_thanks(username, gift_name, count, coins or 0),
+                },
                 self.PRIORITY_GIFT,
             )
 
@@ -234,7 +274,10 @@ class TikTokLivePlatform(LivePlatformInterface):
         async def on_follow(event: FollowEvent) -> None:
             if self._reply_to_follows:
                 self._enqueue(
-                    f"{self._username(event)} acaba de seguirte. Salúdale.",
+                    {
+                        "type": "text-input",
+                        "text": f"{self._username(event)} acaba de seguirte. Salúdale.",
+                    },
                     self.PRIORITY_GIFT,
                 )
 
@@ -276,8 +319,21 @@ class TikTokLivePlatform(LivePlatformInterface):
         return unique_id or "alguien"
 
     # --- One-turn-at-a-time queue, with priority -----------------------
-    def _enqueue(self, text: str, level: int = PRIORITY_COMMENT) -> None:
-        """Queue an event. Synchronous: TikTokLive handlers must not block."""
+    @staticmethod
+    def _describe(payload: Dict[str, Any]) -> str:
+        """Short label for logs: the text if there is one, else the frame type."""
+        text = payload.get("text")
+        if isinstance(text, str) and text:
+            return text[:60]
+        return str(payload.get("type", "frame"))
+
+    def _enqueue(self, payload: Dict[str, Any], level: int = PRIORITY_COMMENT) -> None:
+        """Queue an event. Synchronous: TikTokLive handlers must not block.
+
+        The queue stores whole frames, because a donor's answer is not a
+        ``text-input``: it is a ``tarot-draw`` that the server turns into cards
+        plus a reading.
+        """
         if self._queued >= self._max_queue:
             # Drop the oldest item of the lowest non-empty level, so a gift is
             # only dropped when the queue is full of gifts.
@@ -289,13 +345,13 @@ class TikTokLivePlatform(LivePlatformInterface):
                 if self._queues[candidate]:
                     dropped = self._queues[candidate].popleft()
                     self._queued -= 1
-                    logger.warning(f"Queue full: dropped «{dropped[:60]}»")
+                    logger.warning(f"Queue full: dropped «{self._describe(dropped)}»")
                     break
-        self._queues[level].append(text)
+        self._queues[level].append(payload)
         self._queued += 1
         self._wakeup.set()
 
-    def _next(self) -> Optional[str]:
+    def _next(self) -> Optional[Dict[str, Any]]:
         for level in (
             self.PRIORITY_GIFT,
             self.PRIORITY_QUESTION,
@@ -309,8 +365,8 @@ class TikTokLivePlatform(LivePlatformInterface):
     async def _worker(self) -> None:
         """Send queued events one turn at a time, honouring the cooldown."""
         while self._running:
-            text = self._next()
-            if text is None:
+            payload = self._next()
+            if payload is None:
                 self._wakeup.clear()
                 # Timeout so disconnect() can end the worker.
                 try:
@@ -323,7 +379,7 @@ class TikTokLivePlatform(LivePlatformInterface):
             if wait > 0:
                 await asyncio.sleep(wait)
             self._turn_done.clear()
-            sent = await self.send_message(text)
+            sent = await self.send_payload(payload)
             self._last_reply = time.monotonic()
             if not sent:
                 logger.warning("Turn not delivered to the proxy; skipping its wait")
