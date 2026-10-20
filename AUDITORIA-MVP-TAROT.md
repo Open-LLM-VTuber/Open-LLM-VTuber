@@ -1045,6 +1045,7 @@ Durante el resto del tiempo responde a TikTok (4.2) y, si no hay comentarios, el
 | `src/open_llm_vtuber/utils/tarot.py` | **nuevo**: 22 arcanos mayores en español, `draw_cards` con semilla, `build_draw_props` (arte `/bg/cards` o texto) y `build_tarot_brief` (lo que lee el LLM) | ~360 |
 | `scripts/make_tarot_cards.py` | **nuevo**: genera los 22 SVG deterministas (mazo de reserva); `--check` detecta desfase | ~180 |
 | `scripts/fetch_tarot_art.ps1` | **nuevo**: descarga el mazo Rider–Waite–Smith (dominio público) como JPEG de 960 px | ~90 |
+| `scripts/tarot_smoke.py` | **nuevo**: prueba en vivo (hace de overlay + operador): cartas, `GET /api/tarot`, audio, ack y fin de turno | ~285 |
 | `backgrounds/cards/*.jpg` | **nuevos**: 22 arcanos Rider–Waite–Smith (~11,5 MB) servidos en `/bg/cards`; licencia y fuente en `README.md` | 22 files |
 | `backgrounds/cards/*.svg` | **nuevos**: mazo de reserva geométrico, sin licencia | 22 files |
 | `web_tool/operator.html` | **nuevo**: HUD de operador (escenario + última tirada + botones de tirada, `?token=` A22) | ~470 |
@@ -1081,12 +1082,15 @@ convive con Docker; el protocolo de prueba manual está en `HANDOFF.md` §4.4.
 `test_overlay_fixtures.py` 11/11, `test_tarot.py` 32/32, `test_tarot_commands.py` 19/19,
 `test_donations.py` 16/16, `test_stage_obs.py` 38/38, `test_audio_hardening.py` 12/12 (sin cambios),
 `test_security_metrics.py` 39/39 (5 *skipped* por numpy); `ruff 0.9.6` → `All checks passed!`;
-`make_tarot_cards.py --check` → 22 cartas al día y XML válido; los cuatro ficheros de configuración se
-cargan con las clases reales (`SchedulerConfig` con `draw=1`, `TikTokLiveConfig` con `gift_reading=True`).
-`routes.py`/`websocket_handler.py`/`server.py`/`live/tiktok_live.py` se validan con `py_compile`
-(importarlos exige fastapi + TikTokLive + `service_context`, que no están instalados aquí): el endpoint,
-el comando de chat y el flujo de regalos están cubiertos por los tests puros de `tarot_commands.py` y
-`donations.py`, y quedan a falta de la prueba en vivo con un directo real.
+`make_tarot_cards.py --check` → 22 SVG al día y XML válido; el mazo real son 22 JPEG de 960 px
+(~11,5 MB) descargados con `fetch_tarot_art.ps1`, con cabecera JFIF verificada y licencia documentada en
+`backgrounds/cards/README.md`; los cuatro ficheros de configuración se cargan con las clases reales
+(`SchedulerConfig` con `draw=1`, `TikTokLiveConfig` con `gift_reading=True`).
+`routes.py`/`websocket_handler.py`/`server.py`/`live/tiktok_live.py` se validan con `py_compile` y
+`scripts/tarot_smoke.py` con `py_compile` + ruff, pero **no se ha ejecutado**: requiere servidor y aquí el
+motor de Docker no responde (`docker info` se cuelga). El endpoint, el comando de chat y el flujo de
+regalos están cubiertos por los tests puros de `tarot_commands.py` y `donations.py`; la prueba en vivo
+está protocolizada en `HANDOFF.md` §6.13.
 
 **Riesgo residual:** ni `TikTokLive` ni el cambio de escena OBS son críticos para arrancar: se pueden desarrollar en paralelo y el directo funciona con OBS manual + operador escribiendo en el chat de la UI. Con la fase 3, si OBS no responde el scheduler emite el segmento igualmente (solo se pierde el cambio de escena y el `stage-update` queda cacheado para el próximo overlay que conecte).
 

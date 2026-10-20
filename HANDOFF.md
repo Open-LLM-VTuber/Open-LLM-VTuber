@@ -575,12 +575,22 @@ python scripts/test_stage_obs.py        # 38 tests: contrato + draw del schedule
     `overlay-protocol.js`, §4.5) ya reproduce los mensajes `audio` en orden y manda
     `frontend-playback-complete`, así que el turno cierra al terminar el audio. Falta lo de siempre: el
     arte definitivo y el lip-sync con Live2D (el overlay pinta escenario/props/subtítulo y la voz).
-12. **[Tarot — lo que falta]** Todo el código está hecho: tirada por horario, bajo demanda
-    (`POST /api/tarot/draw`), comandos `!carta`/`!tirada N`, `GET /api/tarot`, **HUD**
-    (`web_tool/operator.html`), regalos en dos pasos, `gift_reading` y **mazo real Rider–Waite–Smith**
-    en `backgrounds/cards/*.jpg`. Pendiente: (a) la **prueba en vivo** con un regalo y un comentario
-    reales, que valida el flujo completo de TikTok; (b) opcional: cambiar el mazo por uno propio
-    (`<id>.jpg` con los mismos nombres).
+13. **[Prueba en vivo del tarot — pendiente de motor]** El código está cerrado; falta ejecutarlo con
+    servidor real. **Aquí el motor de Docker no responde** (`docker info` se cuelga), así que el orden es:
+    1. `docker compose up -d --build` y esperar `Uvicorn running on http://0.0.0.0:12393`.
+    2. `python scripts/smoke_test.py` → `SMOKE TEST PASSED` (LLM + TTS vivos).
+    3. `python scripts/tarot_smoke.py --no-speak` → cartas en el socket + `GET /api/tarot` correcto
+       (no necesita TTS).
+    4. `python scripts/tarot_smoke.py` → además audio, `frontend-playback-complete` y
+       `conversation-chain-end` en menos de 120 s.
+    5. OBS: Browser Source `http://localhost:12393/web-tool/overlay.html` y, en otra ventana,
+       `http://localhost:12393/web-tool/operator.html`; pulsar **Tirada de 3** y ver las tres cartas
+       (las invertidas salen del revés). El HUD debe reflejar stage, props y la tirada.
+    6. TikTok: arrancar `scripts/run_tiktok_live.py`, mandar un regalo de prueba (≥ `min_gift_coins`) y
+       comprobar el turno de agradecimiento + «¿qué quieres saber?»; después comentar con la pregunta y
+       ver la tirada dirigida a ese usuario. Probar también `!carta` y `!tirada 3` en un comentario.
+    7. Qué mirar: `Tarot: 3 card(s) -> 1 overlay(s)` en el log, `Scheduler: job '…' drew …` si es por
+       horario, y `GET /api/tarot` con `asker`/`question`/`cards`.
 
 ## 7. Chuleta de comandos
 
@@ -746,10 +756,15 @@ python scripts/export_overlay_fixtures.py    # regenerar tras tocar el backend
 python scripts/export_overlay_fixtures.py --check   # exit 1 si el fixture es viejo
 
 # 8) baraja y tirada de tarot (§4.6)
-python scripts/test_tarot.py                 # 32 tests, sin dependencias
+python scripts/test_tarot.py                 # 33 tests, sin dependencias
 python scripts/test_tarot_commands.py        # 19 tests: !carta / !tirada y payload compartido
 python scripts/test_donations.py             # 16 tests: donantes pendientes, TTL y frames
-python scripts/make_tarot_cards.py --check   # las 22 cartas SVG siguen al día
+python scripts/make_tarot_cards.py --check   # el mazo SVG de reserva sigue al día
+python scripts/fetch_tarot_art.ps1           # (re)descarga el mazo RWS (dominio público)
+
+# 9) prueba en vivo del tarot (necesita servidor arrancado)
+python scripts/tarot_smoke.py --no-speak     # cartas + API, sin TTS
+python scripts/tarot_smoke.py                # + audio, ack y chain-end
 ```
 
 **Estado en esta máquina (Windows, sin `uv`):** los pasos 2, 4 y 5 se ejecutan con el Python del
