@@ -286,13 +286,25 @@ _SPREAD_X = {1: (0.5,), 2: (0.36, 0.64), 3: (0.28, 0.5, 0.72)}
 #: Cards sit low on the frame so the avatar keeps the upper half.
 _SPREAD_Y = 0.68
 
+#: Where ``scripts/make_tarot_cards.py`` writes the deck (served at ``/bg``).
+CARD_ART_DIR = "/bg/cards"
+CARD_ART_EXT = "svg"
+#: On-screen size per spread: the raw art is 512x768, three of them must fit.
+_ART_SCALE = {1: 0.85, 2: 0.7, 3: 0.55}
 
-def build_draw_props(drawn: Iterable[DrawnCard]) -> List[dict]:
-    """Turn a spread into ``stage-update`` props (text cards, no art needed).
 
-    The overlay draws ``label``/``sublabel`` inside a card-shaped box, so the
-    show works before any card art exists. When the art arrives, the same
-    positions accept ``src`` props without touching the scheduler.
+def build_draw_props(
+    drawn: Iterable[DrawnCard], art_prefix: Optional[str] = CARD_ART_DIR
+) -> List[dict]:
+    """Turn a spread into ``stage-update`` props.
+
+    With ``art_prefix`` (the default) each prop is an image served by the
+    backend: ``/bg/cards/major_16.svg``. A reversed card is simply rotated 180°,
+    which is what a physical reading looks like, and the scale shrinks as the
+    spread grows so three cards never overlap.
+
+    With ``art_prefix=None`` the props are **text cards** (``label``/``sublabel``)
+    that the overlay draws itself: the fallback for a deck without art.
 
     Raises:
         ValueError: when the spread size has no layout.
@@ -304,16 +316,22 @@ def build_draw_props(drawn: Iterable[DrawnCard]) -> List[dict]:
     if xs is None:
         raise ValueError(f"no layout for {len(cards)} cards")
 
-    return [
-        {
+    props: List[dict] = []
+    for index, drawn_card in enumerate(cards):
+        prop: dict = {
             "id": f"card_{index + 1}",
-            "label": drawn_card.label(),
-            "sublabel": drawn_card.sublabel(),
             "x": xs[index],
             "y": _SPREAD_Y,
         }
-        for index, drawn_card in enumerate(cards)
-    ]
+        if art_prefix:
+            prop["src"] = f"{art_prefix}/{drawn_card.card.id}.{CARD_ART_EXT}"
+            prop["rot"] = 180 if drawn_card.reversed else 0
+            prop["scale"] = _ART_SCALE[len(cards)]
+        else:
+            prop["label"] = drawn_card.label()
+            prop["sublabel"] = drawn_card.sublabel()
+        props.append(prop)
+    return props
 
 
 def build_tarot_brief(

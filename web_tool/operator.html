@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tarot · panel de operador</title>
+    <!--
+        Operator HUD for the tarot show (audit §4.6). It reads the backend and
+        never talks to the overlay directly:
+
+          GET  /api/stage      -> what is on screen right now
+          GET  /api/tarot      -> last draw (cards, asker, question)
+          POST /api/tarot/draw -> throw a spread on demand
+
+        Serve it from the server (http://localhost:12393/web-tool/operator.html).
+        With token auth (A22) append ?token=... to the URL; the page adds it to
+        every request.
+    -->
+    <style>
+        :root {
+            color-scheme: dark;
+            --bg: #0d0916;
+            --panel: #171026;
+            --line: rgba(255, 212, 121, 0.28);
+            --gold: #ffd479;
+            --text: #efe9f7;
+            --muted: #a99fc0;
+            --ok: #7ee2a8;
+            --bad: #ff8a8a;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            padding: 22px;
+            background: radial-gradient(circle at 20% 0%, #241735, var(--bg) 55%);
+            color: var(--text);
+            font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+        }
+
+        header {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            gap: 16px;
+            flex-wrap: wrap;
+            margin-bottom: 18px;
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 22px;
+            letter-spacing: 0.04em;
+        }
+
+        h1 span {
+            color: var(--gold);
+        }
+
+        .status {
+            font-size: 13px;
+            color: var(--muted);
+        }
+
+        .status.is-bad {
+            color: var(--bad);
+        }
+
+        main {
+            display: grid;
+            grid-template-columns: minmax(260px, 1fr) minmax(320px, 1.4fr);
+            gap: 16px;
+            align-items: start;
+        }
+
+        @media (max-width: 780px) {
+            main {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        section {
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            padding: 16px 18px;
+        }
+
+        h2 {
+            margin: 0 0 12px;
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            color: var(--gold);
+        }
+
+        dl {
+            display: grid;
+            grid-template-columns: 110px 1fr;
+            gap: 6px 12px;
+            margin: 0;
+            font-size: 14px;
+        }
+
+        dt {
+            color: var(--muted);
+        }
+
+        dd {
+            margin: 0;
+            word-break: break-word;
+        }
+
+        .cards {
+            display: grid;
+            gap: 10px;
+            margin: 0;
+            padding: 0;
+            list-style: none;
+        }
+
+        .card {
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            padding: 10px 12px;
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .card-top {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            gap: 10px;
+        }
+
+        .card-name {
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .card-position {
+            font-size: 12px;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        .card-keywords {
+            margin-top: 4px;
+            font-size: 13px;
+            color: var(--muted);
+        }
+
+        .badge {
+            font-size: 11px;
+            padding: 2px 8px;
+            border-radius: 999px;
+            border: 1px solid var(--line);
+            color: var(--gold);
+        }
+
+        .empty {
+            color: var(--muted);
+            font-size: 14px;
+        }
+
+        .controls {
+            margin-top: 16px;
+            display: grid;
+            gap: 10px;
+        }
+
+        .row {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        button {
+            font: inherit;
+            font-weight: 600;
+            padding: 9px 14px;
+            border-radius: 10px;
+            border: 1px solid var(--gold);
+            background: transparent;
+            color: var(--gold);
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: rgba(255, 212, 121, 0.12);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: default;
+        }
+
+        button.primary {
+            background: var(--gold);
+            color: #1a1024;
+        }
+
+        label {
+            font-size: 13px;
+            color: var(--muted);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        input[type="text"] {
+            font: inherit;
+            flex: 1 1 180px;
+            min-width: 140px;
+            padding: 8px 10px;
+            border-radius: 10px;
+            border: 1px solid var(--line);
+            background: #0f0a18;
+            color: var(--text);
+        }
+
+        .error {
+            margin-top: 10px;
+            font-size: 13px;
+            color: var(--bad);
+            min-height: 18px;
+        }
+
+        .hint {
+            margin-top: 14px;
+            font-size: 12px;
+            color: var(--muted);
+            line-height: 1.5;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Panel de operador · <span>tarot</span></h1>
+        <div class="status" id="status">conectando…</div>
+    </header>
+
+    <main>
+        <section>
+            <h2>Escenario</h2>
+            <dl>
+                <dt>Stage</dt>
+                <dd id="stage-name">—</dd>
+                <dt>Fondo</dt>
+                <dd id="stage-background">—</dd>
+                <dt>Props</dt>
+                <dd id="stage-props">—</dd>
+                <dt>Actualizado</dt>
+                <dd id="stage-seen">—</dd>
+            </dl>
+
+            <div class="controls">
+                <div class="row">
+                    <button class="primary" id="draw-one" type="button">Tirar 1 carta</button>
+                    <button id="draw-three" type="button">Tirada de 3</button>
+                    <label><input type="checkbox" id="speak" /> leer en voz alta</label>
+                </div>
+                <div class="row">
+                    <input type="text" id="question" maxlength="200" placeholder="Pregunta para el LLM (opcional)" />
+                </div>
+                <div class="error" id="error"></div>
+            </div>
+
+            <p class="hint">
+                El overlay recibe las cartas al instante; «leer en voz alta» arranca un turno en el
+                primer cliente (el overlay en el montaje recomendado). Los regalos de TikTok entran
+                por su propio flujo, no por aquí.
+            </p>
+        </section>
+
+        <section>
+            <h2>Última tirada</h2>
+            <dl>
+                <dt>Donante</dt>
+                <dd id="draw-asker">—</dd>
+                <dt>Pregunta</dt>
+                <dd id="draw-question">—</dd>
+                <dt>Cartas</dt>
+                <dd id="draw-count">—</dd>
+            </dl>
+            <ul class="cards" id="draw-cards"></ul>
+            <p class="empty" id="draw-empty">Sin tiradas todavía.</p>
+        </section>
+    </main>
+
+    <script>
+        (function () {
+            "use strict";
+
+            var POLL_MS = 2000;
+            var params = new URLSearchParams(window.location.search);
+            var token = params.get("token");
+
+            var statusEl = document.getElementById("status");
+            var errorEl = document.getElementById("error");
+            var stageName = document.getElementById("stage-name");
+            var stageBackground = document.getElementById("stage-background");
+            var stageProps = document.getElementById("stage-props");
+            var stageSeen = document.getElementById("stage-seen");
+            var drawAsker = document.getElementById("draw-asker");
+            var drawQuestion = document.getElementById("draw-question");
+            var drawCount = document.getElementById("draw-count");
+            var drawCards = document.getElementById("draw-cards");
+            var drawEmpty = document.getElementById("draw-empty");
+            var questionInput = document.getElementById("question");
+            var speakBox = document.getElementById("speak");
+            var drawOne = document.getElementById("draw-one");
+            var drawThree = document.getElementById("draw-three");
+            var lastStage = null;
+
+            function withToken(path) {
+                if (!token) {
+                    return path;
+                }
+                return path + (path.indexOf("?") === -1 ? "?" : "&") + "token=" + encodeURIComponent(token);
+            }
+
+            function setStatus(text, ok) {
+                statusEl.textContent = text;
+                statusEl.className = ok ? "status" : "status is-bad";
+            }
+
+            function showError(text) {
+                errorEl.textContent = text || "";
+            }
+
+            async function getJson(path) {
+                var response = await fetch(withToken(path), { cache: "no-store" });
+                if (!response.ok) {
+                    throw new Error(path + " -> HTTP " + response.status);
+                }
+                return response.json();
+            }
+
+            function text(value, fallback) {
+                return (typeof value === "string" && value) ? value : (fallback || "—");
+            }
+
+            function renderStage(payload) {
+                if (!payload) {
+                    stageName.textContent = "—";
+                    stageBackground.textContent = "—";
+                    stageProps.textContent = "—";
+                    stageSeen.textContent = "—";
+                    return;
+                }
+                stageName.textContent = text(payload.stage);
+                stageBackground.textContent = text(payload.background, "sin cambio");
+                var props = Array.isArray(payload.props) ? payload.props.length : 0;
+                stageProps.textContent = props + (props === 1 ? " prop" : " props");
+                if (payload !== lastStage) {
+                    lastStage = payload;
+                    stageSeen.textContent = new Date().toLocaleTimeString();
+                }
+            }
+
+            function renderDraw(draw) {
+                drawCards.textContent = "";
+                if (!draw || !Array.isArray(draw.cards) || draw.cards.length === 0) {
+                    drawAsker.textContent = "—";
+                    drawQuestion.textContent = "—";
+                    drawCount.textContent = "—";
+                    drawEmpty.hidden = false;
+                    return;
+                }
+                drawEmpty.hidden = true;
+                drawAsker.textContent = text(draw.asker, "general");
+                drawQuestion.textContent = text(draw.question, "sin pregunta");
+                drawCount.textContent = String(draw.cards.length);
+
+                draw.cards.forEach(function (card) {
+                    var item = document.createElement("li");
+                    item.className = "card";
+
+                    var top = document.createElement("div");
+                    top.className = "card-top";
+
+                    var name = document.createElement("span");
+                    name.className = "card-name";
+                    name.textContent = text(card.name, card.id || "?");
+                    top.appendChild(name);
+
+                    if (card.reversed) {
+                        var badge = document.createElement("span");
+                        badge.className = "badge";
+                        badge.textContent = "invertida";
+                        top.appendChild(badge);
+                    }
+                    item.appendChild(top);
+
+                    var position = document.createElement("div");
+                    position.className = "card-position";
+                    position.textContent = text(card.position, "—");
+                    item.appendChild(position);
+
+                    if (Array.isArray(card.keywords) && card.keywords.length) {
+                        var keywords = document.createElement("div");
+                        keywords.className = "card-keywords";
+                        keywords.textContent = card.keywords.join(" · ");
+                        item.appendChild(keywords);
+                    }
+                    drawCards.appendChild(item);
+                });
+            }
+
+            async function refresh() {
+                try {
+                    var results = await Promise.all([
+                        getJson("/api/stage"),
+                        getJson("/api/tarot")
+                    ]);
+                    renderStage(results[0] ? results[0].stage : null);
+                    renderDraw(results[1] ? results[1].draw : null);
+                    setStatus("conectado · " + new Date().toLocaleTimeString(), true);
+                    showError("");
+                } catch (error) {
+                    setStatus("sin conexión", false);
+                    showError(String(error.message || error));
+                }
+            }
+
+            async function draw(count, button) {
+                var body = { count: count, speak: speakBox.checked };
+                var question = questionInput.value.trim();
+                if (question) {
+                    body.question = question;
+                }
+
+                button.disabled = true;
+                showError("");
+                try {
+                    var response = await fetch(withToken("/api/tarot/draw"), {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify(body)
+                    });
+                    var data = await response.json().catch(function () { return {}; });
+                    if (!response.ok) {
+                        throw new Error(data.error || ("HTTP " + response.status));
+                    }
+                    await refresh();
+                    setStatus(
+                        "tirada enviada a " + data.delivered + " overlay(s)" +
+                        (data.spoken ? " · hablando" : ""),
+                        true
+                    );
+                } catch (error) {
+                    showError("No se pudo tirar: " + (error.message || error));
+                } finally {
+                    button.disabled = false;
+                }
+            }
+
+            drawOne.addEventListener("click", function () { draw(1, drawOne); });
+            drawThree.addEventListener("click", function () { draw(3, drawThree); });
+
+            refresh();
+            window.setInterval(refresh, POLL_MS);
+        }());
+    </script>
+</body>
+</html>

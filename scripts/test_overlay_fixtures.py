@@ -37,6 +37,7 @@ STAGE_SCENARIOS = (
     "stage_with_props",
     "stage_transition_none",
     "tarot_draw_three_cards",
+    "tarot_draw_text_fallback",
 )
 
 
@@ -141,7 +142,7 @@ class FixtureContentTests(unittest.TestCase):
             "props", json.loads(self.scenarios["stage_background_only"]["frames"][0])
         )
 
-    def test_tarot_draw_has_text_props(self):
+    def test_tarot_draw_uses_the_art(self):
         message = json.loads(self.scenarios["tarot_draw_three_cards"]["frames"][0])
 
         self.assertEqual(message["stage"], "card_of_the_day")
@@ -150,6 +151,15 @@ class FixtureContentTests(unittest.TestCase):
             [prop["id"] for prop in message["props"]],
             ["card_1", "card_2", "card_3"],
         )
+        for prop in message["props"]:
+            self.assertRegex(prop["src"], r"^/bg/cards/major_\d\d\.svg$")
+            self.assertNotIn("label", prop)
+            self.assertEqual(prop["scale"], 0.55)
+            self.assertIn(prop["rot"], (0, 180))
+
+    def test_tarot_draw_text_fallback(self):
+        message = json.loads(self.scenarios["tarot_draw_text_fallback"]["frames"][0])
+
         for prop in message["props"]:
             self.assertIn("label", prop)
             self.assertIn("sublabel", prop)

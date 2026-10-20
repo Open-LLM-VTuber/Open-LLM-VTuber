@@ -114,8 +114,12 @@ class BuildResultTests(unittest.TestCase):
         self.assertEqual(result.payload["stage"], DRAW_STAGE)
         self.assertNotIn("background", result.payload)
 
-        labels = [prop["label"] for prop in result.payload["props"]]
-        self.assertEqual(labels, [card.card.name for card in result.cards])
+        sources = [prop["src"] for prop in result.payload["props"]]
+        self.assertEqual(
+            sources,
+            [f"/bg/cards/{card.card.id}.svg" for card in result.cards],
+            "the overlay must show the same cards the brief describes",
+        )
 
         for card in result.cards:
             self.assertIn(card.card.name, result.brief)

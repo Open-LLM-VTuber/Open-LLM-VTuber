@@ -443,14 +443,24 @@ def build_scenarios() -> list[dict]:
         )
     )
 
-    # A scheduled job with `draw: 3`: text cards (label/sublabel), no card art.
+    # A scheduled job with `draw: 3`: real props pointing at the deck art.
     drawn = tarot.draw_cards(3, seed=2026)
     scenarios.append(
         _scenario(
             "tarot_draw_three_cards",
             "SchedulerService._prepare_stage with a three-card spread: the "
-            "overlay gets 'label' props and no background",
+            "overlay gets 'src' props served from /bg/cards",
             _stage_frames(stage="card_of_the_day", props=tarot.build_draw_props(drawn)),
+        )
+    )
+    scenarios.append(
+        _scenario(
+            "tarot_draw_text_fallback",
+            "same spread with art_prefix=None: the overlay draws label cards",
+            _stage_frames(
+                stage="card_of_the_day",
+                props=tarot.build_draw_props(drawn, art_prefix=None),
+            ),
         )
     )
     return scenarios

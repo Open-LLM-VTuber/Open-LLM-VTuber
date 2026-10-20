@@ -534,6 +534,8 @@ live_config:
     cooldown_seconds: 6
     # Ignore gifts cheaper than this many coins
     min_gift_coins: 1
+    # A gift asks the donor what they need and reads the cards for them
+    gift_reading: true
     # Thank viewers for gifts / greet new followers
     reply_to_gifts: true
     reply_to_follows: true

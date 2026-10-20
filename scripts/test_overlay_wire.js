@@ -233,11 +233,24 @@ const expectations = {
             ["card_1", "card_2", "card_3"]
         );
         for (const prop of stage.props) {
-            assert.equal("src" in prop, false, "text cards need no art");
-            assert.equal(typeof prop.label, "string");
-            assert.equal(typeof prop.sublabel, "string");
+            assert.match(prop.src, /^\/bg\/cards\/major_\d\d\.svg$/);
+            assert.equal("label" in prop, false, "art props are images");
             assert.ok(prop.x > 0 && prop.x < 1, "cards are spread inside the frame");
             assert.equal(prop.y, 0.68, "cards sit low, the avatar keeps the top");
+            assert.equal(prop.scale, 0.55, "three cards must not overlap");
+            assert.ok(prop.rot === 0 || prop.rot === 180, "reversed cards are rotated");
+        }
+    },
+
+    tarot_draw_text_fallback(h, scenario) {
+        h.feed(scenario.frames);
+
+        const stage = h.stages[0];
+        assert.equal(stage.props.length, 3);
+        for (const prop of stage.props) {
+            assert.equal("src" in prop, false, "no art: the overlay draws the text card");
+            assert.equal(typeof prop.label, "string");
+            assert.equal(typeof prop.sublabel, "string");
         }
     }
 };

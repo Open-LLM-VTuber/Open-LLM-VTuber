@@ -82,7 +82,14 @@
     },
     {
       "name": "tarot_draw_three_cards",
-      "note": "SchedulerService._prepare_stage with a three-card spread: the overlay gets 'label' props and no background",
+      "note": "SchedulerService._prepare_stage with a three-card spread: the overlay gets 'src' props served from /bg/cards",
+      "frames": [
+        "{\"type\": \"stage-update\", \"stage\": \"card_of_the_day\", \"props\": [{\"id\": \"card_1\", \"src\": \"/bg/cards/major_03.svg\", \"x\": 0.28, \"y\": 0.68, \"rot\": 0.0, \"scale\": 0.55}, {\"id\": \"card_2\", \"src\": \"/bg/cards/major_10.svg\", \"x\": 0.5, \"y\": 0.68, \"rot\": 0.0, \"scale\": 0.55}, {\"id\": \"card_3\", \"src\": \"/bg/cards/major_16.svg\", \"x\": 0.72, \"y\": 0.68, \"rot\": 0.0, \"scale\": 0.55}], \"transition\": \"fade\", \"duration_ms\": 800}"
+      ]
+    },
+    {
+      "name": "tarot_draw_text_fallback",
+      "note": "same spread with art_prefix=None: the overlay draws label cards",
       "frames": [
         "{\"type\": \"stage-update\", \"stage\": \"card_of_the_day\", \"props\": [{\"id\": \"card_1\", \"label\": \"La Emperatriz\", \"sublabel\": \"abundancia \\u00b7 cuidado \\u00b7 creatividad\", \"x\": 0.28, \"y\": 0.68}, {\"id\": \"card_2\", \"label\": \"La Rueda de la Fortuna\", \"sublabel\": \"cambio \\u00b7 ciclo \\u00b7 oportunidad\", \"x\": 0.5, \"y\": 0.68}, {\"id\": \"card_3\", \"label\": \"La Torre\", \"sublabel\": \"ruptura \\u00b7 verdad \\u00b7 derrumbe\", \"x\": 0.72, \"y\": 0.68}], \"transition\": \"fade\", \"duration_ms\": 800}"
       ]

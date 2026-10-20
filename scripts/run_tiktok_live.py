@@ -40,6 +40,7 @@ def build_platform(config):
         min_gift_coins=tiktok_config.min_gift_coins,
         reply_to_gifts=tiktok_config.reply_to_gifts,
         reply_to_follows=tiktok_config.reply_to_follows,
+        gift_reading=tiktok_config.gift_reading,
     )
 
 

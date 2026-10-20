@@ -125,7 +125,7 @@ class DrawnCardTests(unittest.TestCase):
 class DrawPropTests(unittest.TestCase):
     """The props reach the overlay through the normal stage sanitiser."""
 
-    def test_props_are_spread_and_labelled(self):
+    def test_props_are_spread_and_point_to_the_art(self):
         drawn = tarot.draw_cards(3, seed=2026)
         props = tarot.build_draw_props(drawn)
 
@@ -133,9 +133,28 @@ class DrawPropTests(unittest.TestCase):
         self.assertEqual([prop["x"] for prop in props], [0.28, 0.5, 0.72])
         self.assertTrue(all(prop["y"] == 0.68 for prop in props))
         for prop, card in zip(props, drawn):
+            self.assertEqual(prop["src"], f"/bg/cards/{card.card.id}.svg")
+            self.assertEqual(prop["scale"], 0.55)
+            self.assertEqual(prop["rot"], 180 if card.reversed else 0)
+            self.assertNotIn("label", prop, "art props are images, not text cards")
+
+    def test_scale_shrinks_with_the_spread(self):
+        self.assertEqual(
+            tarot.build_draw_props(tarot.draw_cards(1, seed=1))[0]["scale"], 0.85
+        )
+        self.assertEqual(
+            tarot.build_draw_props(tarot.draw_cards(2, seed=1))[0]["scale"], 0.7
+        )
+
+    def test_text_props_are_the_fallback(self):
+        drawn = tarot.draw_cards(2, seed=9)
+        props = tarot.build_draw_props(drawn, art_prefix=None)
+
+        for prop, card in zip(props, drawn):
             self.assertEqual(prop["label"], card.label())
             self.assertEqual(prop["sublabel"], card.sublabel())
             self.assertNotIn("src", prop)
+            self.assertNotIn("scale", prop, "text cards are sized by the overlay CSS")
 
     def test_single_card_is_centred(self):
         props = tarot.build_draw_props(tarot.draw_cards(1, seed=3))
@@ -146,7 +165,7 @@ class DrawPropTests(unittest.TestCase):
         self.assertEqual(tarot.build_draw_props([]), [])
 
     def test_payload_needs_no_background(self):
-        props = tarot.build_draw_props(tarot.draw_cards(2, seed=9))
+        props = tarot.build_draw_props(tarot.draw_cards(2, seed=9), art_prefix=None)
         payload = build_stage_payload(stage="card_of_the_day", props=props)
 
         self.assertEqual(payload["type"], "stage-update")
@@ -155,6 +174,30 @@ class DrawPropTests(unittest.TestCase):
         for prop in payload["props"]:
             self.assertIn("label", prop)
             self.assertIn("sublabel", prop)
+
+    def test_art_payload_needs_no_background(self):
+        props = tarot.build_draw_props(tarot.draw_cards(1, seed=9))
+        payload = build_stage_payload(stage="tarot_draw", props=props)
+
+        self.assertNotIn("background", payload)
+        self.assertRegex(payload["props"][0]["src"], r"^/bg/cards/major_\d\d\.svg$")
+
+
+class CardArtTests(unittest.TestCase):
+    """The default props point at files that must exist on disk."""
+
+    def test_every_card_has_art(self):
+        folder = os.path.join(project_root, "backgrounds", "cards")
+        for card in tarot.DECK:
+            path = os.path.join(folder, f"{card.id}.{tarot.CARD_ART_EXT}")
+            self.assertTrue(os.path.exists(path), path)
+            with open(path, encoding="utf-8") as handle:
+                content = handle.read()
+            self.assertIn(card.name, content, path)
+
+    def test_art_is_served_where_the_props_point(self):
+        self.assertEqual(tarot.CARD_ART_DIR, "/bg/cards")
+        self.assertEqual(tarot.CARD_ART_EXT, "svg")
 
     def test_props_survive_the_sanitiser(self):
         props = tarot.build_draw_props(tarot.draw_cards(3, seed=1))

@@ -58,6 +58,7 @@ class TikTokLivePlatform(LivePlatformInterface):
         min_gift_coins: int = 1,
         reply_to_gifts: bool = True,
         reply_to_follows: bool = True,
+        gift_reading: bool = True,
     ):
         """
         Initialize the TikTok Live platform client.
@@ -71,6 +72,8 @@ class TikTokLivePlatform(LivePlatformInterface):
             min_gift_coins: Gifts cheaper than this are ignored
             reply_to_gifts: React to gifts
             reply_to_follows: Greet new followers
+            gift_reading: Ask the donor what they need and read the cards for
+                them; ``False`` only thanks the donor
         """
         if not TIKTOKLIVE_AVAILABLE:
             raise ImportError(
@@ -83,6 +86,7 @@ class TikTokLivePlatform(LivePlatformInterface):
         self._max_gift_coins = min_gift_coins
         self._reply_to_gifts = reply_to_gifts
         self._reply_to_follows = reply_to_follows
+        self._gift_reading = gift_reading
         self._cooldown = max(0.0, cooldown_seconds)
         self._last_reply = 0.0
 
@@ -259,16 +263,19 @@ class TikTokLivePlatform(LivePlatformInterface):
             count = getattr(event, "repeat_count", 1) or 1
             username = self._username(event)
 
-            # Thank the donor and ask what they need; the reading comes when
-            # they answer, so it is about *their* question (audit §4.6).
-            self._donors.remember(username, gift=gift_name, coins=coins or 0)
-            self._enqueue(
-                {
-                    "type": "text-input",
-                    "text": build_gift_thanks(username, gift_name, count, coins or 0),
-                },
-                self.PRIORITY_GIFT,
-            )
+            if self._gift_reading:
+                # Thank the donor and ask what they need; the reading comes
+                # when they answer, so it is about *their* question (audit §4.6).
+                self._donors.remember(username, gift=gift_name, coins=coins or 0)
+                text = build_gift_thanks(username, gift_name, count, coins or 0)
+            else:
+                # gift_reading is off: only thank, nothing is armed, so a later
+                # comment from this donor is a normal comment.
+                text = build_gift_thanks(
+                    username, gift_name, count, coins or 0, ask_question=False
+                )
+
+            self._enqueue({"type": "text-input", "text": text}, self.PRIORITY_GIFT)
 
         @client.on(FollowEvent)
         async def on_follow(event: FollowEvent) -> None:

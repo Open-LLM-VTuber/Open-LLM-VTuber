@@ -630,7 +630,7 @@ class SchedulerDrawTests(unittest.TestCase):
         )
         return service, ws
 
-    def test_draw_becomes_text_props(self):
+    def test_draw_becomes_art_props(self):
         service, ws = self._service()
 
         _run(service._fire(_job(draw=3, draw_seed=11, scene="tarot_main")))
@@ -644,8 +644,9 @@ class SchedulerDrawTests(unittest.TestCase):
             ["card_1", "card_2", "card_3"],
         )
         for prop in payload["props"]:
-            self.assertIn("label", prop)
-            self.assertNotIn("src", prop)
+            self.assertRegex(prop["src"], r"^/bg/cards/major_\d\d\.svg$")
+            self.assertEqual(prop["scale"], 0.55)
+            self.assertNotIn("label", prop, "the deck has art, so no text cards")
 
     def test_the_spoken_text_mentions_the_cards(self):
         service, ws = self._service()

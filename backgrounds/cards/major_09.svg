@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 768" width="512" height="768" role="img" aria-label="El Ermitaño">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0f1c2e" />
+      <stop offset="1" stop-color="#1c3350" />
+    </linearGradient>
+  </defs>
+  <rect width="512" height="768" rx="28" fill="url(#bg)" />
+  <rect x="18" y="18" width="476" height="732" rx="20" fill="none" stroke="#8fd3ff" stroke-width="3" opacity="0.85" />
+  <rect x="30" y="30" width="452" height="708" rx="14" fill="none" stroke="#8fd3ff" stroke-width="1" opacity="0.45" />
+  <text x="256.0" y="96" text-anchor="middle" font-family="Georgia, serif" font-size="42" fill="#8fd3ff" letter-spacing="4">IX</text>
+  <line x1="150" y1="120" x2="362" y2="120" stroke="#8fd3ff" stroke-width="1" opacity="0.5" />
+  <circle cx="256.0" cy="115.0" r="5" fill="#8fd3ff" opacity="0.35" /><circle cx="331.0" cy="135.1" r="7" fill="#8fd3ff" opacity="0.47" /><circle cx="385.9" cy="190.0" r="9" fill="#8fd3ff" opacity="0.59" /><circle cx="406.0" cy="265.0" r="5" fill="#8fd3ff" opacity="0.71" /><circle cx="385.9" cy="340.0" r="7" fill="#8fd3ff" opacity="0.35" /><circle cx="331.0" cy="394.9" r="9" fill="#8fd3ff" opacity="0.47" /><circle cx="256.0" cy="415.0" r="5" fill="#8fd3ff" opacity="0.59" /><circle cx="181.0" cy="394.9" r="7" fill="#8fd3ff" opacity="0.71" /><circle cx="126.1" cy="340.0" r="9" fill="#8fd3ff" opacity="0.35" /><circle cx="106.0" cy="265.0" r="5" fill="#8fd3ff" opacity="0.47" /><circle cx="126.1" cy="190.0" r="7" fill="#8fd3ff" opacity="0.59" /><circle cx="181.0" cy="135.1" r="9" fill="#8fd3ff" opacity="0.71" />
+  <polygon points="256.0,173.0 281.3,221.2 335.7,219.0 306.6,265.0 335.7,311.0 281.3,308.8 256.0,357.0 230.7,308.8 176.3,311.0 205.4,265.0 176.3,219.0 230.7,221.2" fill="none" stroke="#8fd3ff" stroke-width="2.5" opacity="0.9" />
+  <circle cx="256.0" cy="265" r="10" fill="#8fd3ff" opacity="0.9" />
+  <text x="256.0" y="470" text-anchor="middle" font-family="Georgia, serif" font-size="46" fill="#fdf6e3"><tspan x="256.0" dy="0">El Ermitaño</tspan></text>
+  <line x1="120" y1="612" x2="392" y2="612" stroke="#8fd3ff" stroke-width="1" opacity="0.4" />
+  <text x="256.0" y="660" text-anchor="middle" font-family="system-ui, sans-serif" font-size="18" fill="#8fd3ff" opacity="0.9">pausa · introspección · soledad</text>
+  <text x="256.0" y="734" text-anchor="middle" font-family="system-ui, sans-serif" font-size="14" fill="#fdf6e3" opacity="0.35">placeholder · major_09</text>
+</svg>

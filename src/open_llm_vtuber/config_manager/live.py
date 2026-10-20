@@ -31,6 +31,7 @@ class TikTokLiveConfig(I18nMixin):
     min_gift_coins: int = Field(1, alias="min_gift_coins")
     reply_to_gifts: bool = Field(True, alias="reply_to_gifts")
     reply_to_follows: bool = Field(True, alias="reply_to_follows")
+    gift_reading: bool = Field(True, alias="gift_reading")
 
     DESCRIPTIONS: ClassVar[Dict[str, Description]] = {
         "enabled": Description(
@@ -60,6 +61,11 @@ class TikTokLiveConfig(I18nMixin):
         ),
         "reply_to_follows": Description(
             en="Greet new followers", zh="向新关注者打招呼"
+        ),
+        "gift_reading": Description(
+            en="A gift asks the donor what they need and reads the cards for them "
+            "(off = only thank the donor)",
+            zh="送礼后询问需求并为其抽牌解读（关闭则只道谢）",
         ),
     }
 

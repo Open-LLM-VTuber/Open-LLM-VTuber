@@ -12,7 +12,7 @@
 | Capacidad pedida | Estado real en el código | Punto de extensión | Trabajo para el MVP | Riesgo |
 |---|---|---|---|---|
 | **Voz clonada** | ✅ **Nativo** | `tts/gpt_sovits_tts.py`, `tts/tts_factory.py`, `config_manager/tts.py` (`ref_audio_path` + `prompt_text`) | Config + servidor GPT-SoVITS. **0 líneas** de código — §3.2 | Medio: la calidad en español depende del checkpoint (v2Pro/v4) y del ref-audio |
-| **Escenario personalizable** | ⚠️ **Parcial**: OBS por scheduler (escena + *StartStream*/*StopStream*), contrato `stage-update` con props de imagen **y de texto**, tirada de tarot y overlay de producción | `model_dict.json`, `backgrounds/`, `set-model-and-conf`, `scheduler/obs.py`, `utils/stage.py`, `utils/tarot.py`, `utils/tarot_commands.py` — §2.3, §2.4 | **Ruta A: hecha** (sin código de frontend). **Ruta B: contrato + overlay + tirada** (`web_tool/overlay.html`: escena, props, tarjetas de texto, audio en orden y ack `frontend-playback-complete`; tirada por horario, `POST /api/tarot/draw` y `!carta` en el chat); falta el arte y el lip-sync | Medio: el overlay **debe** apuntar su WS a `/proxy-ws` o se queda sin audio (A1) |
+| **Escenario personalizable** | ⚠️ **Parcial**: OBS por scheduler (escena + *StartStream*/*StopStream*), contrato `stage-update` con props de imagen **y de texto**, tirada de tarot con **arte incluido** y overlay de producción | `model_dict.json`, `backgrounds/cards`, `set-model-and-conf`, `scheduler/obs.py`, `utils/stage.py`, `utils/tarot.py`, `utils/tarot_commands.py` — §2.3, §2.4 | **Ruta A: hecha** (sin código de frontend). **Ruta B: contrato + overlay + tirada** (`web_tool/overlay.html`: escena, props, tarjetas de texto, audio en orden y ack `frontend-playback-complete`; tirada por horario, `POST /api/tarot/draw`, `!carta` y regalos; HUD en `web_tool/operator.html`); falta el lip-sync y sustituir los placeholders por ilustraciones | Medio: el overlay **debe** apuntar su WS a `/proxy-ws` o se queda sin audio (A1) |
 | **Chat en directo (TikTok)** | ❌ **Solo Bilibili** (`blivedm`); ignora regalos, entradas y username | `live/live_interface.py` (ABC), `live/bilibili_live.py` (referencia) | **✅ hecho**: `live/tiktok_live.py` (~380 líneas) + `scripts/run_tiktok_live.py` (~60) — §4.2.4. Comentarios, follows y **regalos en dos pasos** (gracias + pregunta → tirada para el donante, `utils/donations.py`) | Alto: API no oficial (`TikTokLive`), cambios de protocolo y ToS |
 | **Emisión programada** | ❌ **No existe** (sin cron ni APScheduler) | `ai-speak-signal` ya existe, pero **ignora `data["text"]`** — §4.3.1 | `scheduler/` (~150) + config (~70) + inyección en `routes.py`/`server.py` (~20) — §4.3.3 | Medio: depende de A18; un turno colgado bloquea el siguiente guion |
 | **Emisión desatendida (robustez)** | ❌ **No**: 7 defectos bloqueantes (A18–A24) | `conversation_utils.py`, `tts_manager.py`, `proxy_handler.py`, `gpt_sovits_tts.py` — §5.1 | Parches 5.2.1–5.2.7 (~80 líneas netas) | **Alto si no se aplican**: A18 ⇒ directo mudo; A20/A24 ⇒ GPU saturada |
@@ -1042,12 +1042,16 @@ Durante el resto del tiempo responde a TikTok (4.2) y, si no hay comentarios, el
 | `scheduler/__init__.py`, `service.py` | **nuevos**: crontab stdlib, `interval_minutes`, `stage-update` por job. **Tarot:** `_draw()` una vez por disparo, props en el escenario y brief para el LLM | ~440 |
 | `scheduler/obs.py` | **nuevo**: cliente OBS WebSocket v5 (escena, StartStream/StopStream, GetSceneList) | ~260 |
 | `utils/stage.py` | **nuevo**: `build_stage_payload` + `select_stage_targets` (§2.4). Props de imagen (`src`) o **de texto** (`label`/`sublabel`) | ~150 |
-| `utils/tarot.py` | **nuevo**: 22 arcanos mayores en español, `draw_cards` con semilla, `build_draw_props` (tarjetas de texto) y `build_tarot_brief` (lo que lee el LLM) | ~340 |
+| `utils/tarot.py` | **nuevo**: 22 arcanos mayores en español, `draw_cards` con semilla, `build_draw_props` (arte `/bg/cards` o texto) y `build_tarot_brief` (lo que lee el LLM) | ~360 |
+| `scripts/make_tarot_cards.py` | **nuevo**: genera los 22 SVG deterministas del mazo; `--check` detecta desfase | ~180 |
+| `backgrounds/cards/*.svg` | **nuevos**: 22 placeholders (marco, numeral, nombre, palabras clave) servidos en `/bg/cards` | 22 files |
+| `web_tool/operator.html` | **nuevo**: HUD de operador (escenario + última tirada + botones de tirada, `?token=` A22) | ~470 |
+| `config_manager/live.py`, `scripts/run_tiktok_live.py` | **nuevo** `gift_reading` en `TikTokLiveConfig` y su paso al conector | +12 |
 | `utils/tarot_commands.py` | **nuevo**, stdlib pura: `parse_draw_command()` (`!carta`, `!tirada N`, `/carta`), `is_tarot_command()` y `build_draw_result()` (cartas + payload + brief + `summary`) | ~170 |
 | `utils/donations.py` | **nuevo**, stdlib pura: `PendingDonors` (un uso, TTL 10 min), `build_gift_thanks()` y `build_donor_draw_payload()` | ~150 |
-| `scripts/test_tarot.py` | **nuevo**: 27 tests de baraja, tirada, props y brief (sin dependencias) | ~200 |
+| `scripts/test_tarot.py` | **nuevo**: 32 tests de baraja, tirada, props, arte y brief (sin dependencias) | ~220 |
 | `scripts/test_tarot_commands.py` | **nuevo**: 19 tests de comandos de chat, prioridad y resultado compartido | ~140 |
-| `scripts/test_donations.py` | **nuevo**: 15 tests de donantes pendientes, TTL y frames del regalo | ~140 |
+| `scripts/test_donations.py` | **nuevo**: 16 tests de donantes pendientes, TTL y frames del regalo | ~145 |
 | `web_tool/stage-test.html` | **nuevo**: overlay de prueba del contrato (no es el overlay final) | ~270 |
 | `web_tool/overlay.html` + `web_tool/overlay-protocol.js` | **nuevo**: overlay de producción (escena + audio + ack `frontend-playback-complete`); la lógica va aparte para poder testearla sin navegador | ~430 + ~225 |
 | `scripts/test_overlay_protocol.js` | **nuevo**: 13 tests de Node del overlay (sin OBS, navegador ni backend) | ~285 |
@@ -1071,12 +1075,12 @@ Durante el resto del tiempo responde a TikTok (4.2) y, si no hay comentarios, el
 convive con Docker; el protocolo de prueba manual está en `HANDOFF.md` §4.4.
 
 **Verificado sin red (2026-10-20, overlay + tarot):** `test_overlay_protocol.js` 13/13,
-`test_overlay_wire.js` 11/11 (fixture de bytes reales), `test_overlay_fixtures.py` 10/10,
-`test_tarot.py` 27/27, `test_tarot_commands.py` 19/19, `test_donations.py` 15/15,
-`test_stage_obs.py` 38/38, `test_audio_hardening.py` 12/12 (sin cambios),
+`test_overlay_wire.js` 12/12 (fixture de bytes reales, con arte y con respaldo de texto),
+`test_overlay_fixtures.py` 11/11, `test_tarot.py` 32/32, `test_tarot_commands.py` 19/19,
+`test_donations.py` 16/16, `test_stage_obs.py` 38/38, `test_audio_hardening.py` 12/12 (sin cambios),
 `test_security_metrics.py` 39/39 (5 *skipped* por numpy); `ruff 0.9.6` → `All checks passed!`;
-los cuatro ficheros de configuración se cargan con la clase real `SchedulerConfig` y el job
-`card_of_the_day` sale con `draw=1`, `draw_seed=0` y `question` presente.
+`make_tarot_cards.py --check` → 22 cartas al día y XML válido; los cuatro ficheros de configuración se
+cargan con las clases reales (`SchedulerConfig` con `draw=1`, `TikTokLiveConfig` con `gift_reading=True`).
 `routes.py`/`websocket_handler.py`/`server.py`/`live/tiktok_live.py` se validan con `py_compile`
 (importarlos exige fastapi + TikTokLive + `service_context`, que no están instalados aquí): el endpoint,
 el comando de chat y el flujo de regalos están cubiertos por los tests puros de `tarot_commands.py` y

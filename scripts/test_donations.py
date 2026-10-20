@@ -123,6 +123,13 @@ class GiftThanksTests(unittest.TestCase):
         self.assertIn("un regalo", text)
         self.assertNotIn("monedas", text)
 
+    def test_thanks_only_when_reading_is_off(self):
+        text = build_gift_thanks("pepe", "Rosa", coins=5, ask_question=False)
+        self.assertIn("Dale las gracias", text)
+        self.assertIn("Sigue con la lectura", text)
+        self.assertNotIn("qué quiere saber", text)
+        self.assertNotIn("No leas cartas", text)
+
 
 class DonorPayloadTests(unittest.TestCase):
     def test_payload_is_a_tarot_draw_for_that_donor(self):

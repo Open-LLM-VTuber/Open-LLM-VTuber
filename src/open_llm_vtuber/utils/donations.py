@@ -82,22 +82,30 @@ class PendingDonors:
 
 
 def build_gift_thanks(
-    username: object, gift: str = "", count: int = 1, coins: int = 0
+    username: object,
+    gift: str = "",
+    count: int = 1,
+    coins: int = 0,
+    ask_question: bool = True,
 ) -> str:
     """Turn for the gift: thank, ask what they need, and do **not** read yet.
 
     The last sentence matters: without it the LLM tends to invent a spread
-    before the donor has said what they want.
+    before the donor has said what they want. With ``ask_question=False``
+    (``gift_reading`` off) it only thanks.
     """
     name = str(username or "alguien").strip().lstrip("@") or "alguien"
     item = (gift or "").strip()[:MAX_GIFT_NAME] or "un regalo"
     times = max(1, int(count or 1))
     extra = f" ({int(coins)} monedas)" if coins else ""
+    thanks = f"{name} te envió {item} x{times}{extra}. Dale las gracias en una frase."
+    if not ask_question:
+        return f"{thanks} Sigue con la lectura."
+
     return (
-        f"{name} te envió {item} x{times}{extra}. "
-        f"Dale las gracias en una frase y pregúntale a {name} qué quiere saber "
-        "del tarot. Dile que escriba su pregunta en un comentario. "
-        "No leas cartas todavía: espera su pregunta."
+        f"{thanks} Pregúntale a {name} qué quiere saber del tarot y dile que "
+        "escriba su pregunta en un comentario. No leas cartas todavía: espera "
+        "su pregunta."
     )
 
 

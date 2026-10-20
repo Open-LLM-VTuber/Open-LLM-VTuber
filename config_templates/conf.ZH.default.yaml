@@ -529,6 +529,8 @@ live_config:
     cooldown_seconds: 6
     # 忽略低于该币值的礼物
     min_gift_coins: 1
+    # 礼物后询问需求，并为送礼者抽牌解读
+    gift_reading: true
     # 感谢礼物 / 向新关注者打招呼
     reply_to_gifts: true
     reply_to_follows: true

@@ -426,7 +426,42 @@ Decisiones:
 - El chat habla **en el cliente que escribió el comando**, igual que un `text-input` normal; así el audio viaja por el proxy a todos los clientes.
 - `GET /api/tarot` no dispara nada: solo lee la última tirada.
 
+#### Arte de las cartas (placeholders incluidos)
+
+- **22 SVG** en `backgrounds/cards/<id>.svg`, servidos en `/bg/cards/…` (el mismo `/bg` de los fondos).
+- Los genera `python scripts/make_tarot_cards.py`: determinista, sin dependencias y sin fuentes embebidas.
+  `--check` falla si un fichero queda desfasado (y `test_tarot.py` comprueba que existen los 22).
+- `build_draw_props()` devuelve **props de imagen** por defecto: `src: /bg/cards/major_16.svg`, con
+  `rot: 180` para las invertidas (así se ve una carta del revés, como en una mesa real) y una escala de
+  **0.85 / 0.7 / 0.55** para 1, 2 o 3 cartas, de forma que nunca se solapen.
+- **Arte real:** deja los PNG/JPG en `backgrounds/cards/<id>.png` y cambia `CARD_ART_EXT` a `"png"` en
+  `utils/tarot.py` (o genera el SVG con tu propio diseño). El scheduler y el HUD no se tocan.
+- **Respaldo sin arte:** `build_draw_props(drawn, art_prefix=None)` vuelve a las tarjetas de texto
+  (`label`/`sublabel`). El fixture lo cubre con `tarot_draw_text_fallback`.
+- `.gitignore` tiene una excepción (`!/backgrounds/cards/**`) para que el mazo viaje en el repo; el resto
+  de `backgrounds/` sigue siendo local.
+- Aviso honesto: son **placeholders geométricos** (marco, numeral romano, nombre, palabras clave). Se ven
+  bien en OBS a tamaño de tarjeta, pero no son ilustraciones.
+
+#### HUD de operador (`web_tool/operator.html`)
+
+Página estática servida por el propio backend: `http://localhost:12393/web-tool/operator.html`
+(con `?token=…` si A22 está activo; la añade a todas las peticiones).
+
+| Panel | De dónde lee |
+|---|---|
+| Escenario | `GET /api/stage` → stage, fondo, nº de props, hora del último cambio |
+| Última tirada | `GET /api/tarot` → donante, pregunta y cartas (posición, invertida, palabras clave) |
+| Botones | `POST /api/tarot/draw` con `count` 1 o 3; casilla **«leer en voz alta»** (manda `speak`) y campo de pregunta |
+
+Refresca cada **2 s** y muestra el error tal cual si el servidor responde 401/500. No usa librerías ni
+build: un solo HTML con CSS/JS.
+
 ```powershell
+# arte de las cartas (determinista; --check detecta desfase)
+python scripts/make_tarot_cards.py
+python scripts/make_tarot_cards.py --check
+
 # tirada de 3 cartas y que la lea en voz alta
 curl.exe -X POST http://127.0.0.1:12393/api/tarot/draw -H "Content-Type: application/json" `
   -d '{"count":3,"question":"¿Cambio de trabajo?","speak":true}'
@@ -440,8 +475,9 @@ curl.exe -X POST http://127.0.0.1:12393/api/stage -H "Content-Type: application/
   -d '{"stage":"card_of_the_day","props":[{"id":"card_1","label":"La Torre","sublabel":"ruptura, verdad","x":0.5,"y":0.68}]}'
 
 # tests
-python scripts/test_tarot.py            # 25 tests: baraja, tirada, props, brief
-python scripts/test_tarot_commands.py   # 14 tests: comandos y resultado compartido
+python scripts/test_tarot.py            # 32 tests: baraja, tirada, props, arte, brief
+python scripts/test_tarot_commands.py   # 19 tests: comandos y resultado compartido
+python scripts/test_donations.py        # 16 tests: donantes, TTL y frames
 python scripts/test_stage_obs.py        # 38 tests: contrato + draw del scheduler
 ```
 
@@ -461,7 +497,7 @@ python scripts/test_stage_obs.py        # 38 tests: contrato + draw del schedule
 | **Smoke test** | `audio chunks 2 / 290392 bytes / playback ack 2 / chain end True` → `SMOKE TEST PASSED`, exit 0 ✅ |
 | **Scheduler** | `Scheduler started with 5 job(s)` → `job 'preflight_test' fired on <uid>`; el cliente recibe audio, ack y `conversation-chain-end` ✅ |
 | **Stage/OBS** | ⏳ contrato, cliente v5 y wiring cubiertos por `python scripts/test_stage_obs.py` (38 tests tras añadir la tirada), overlay de producción por `node scripts/test_overlay_protocol.js` (13) y **contrato cruzado** con los bytes reales (`node scripts/test_overlay_wire.js` = 11, `python scripts/test_overlay_fixtures.py` = 10). La baraja por `python scripts/test_tarot.py` (25). La prueba con OBS real es manual (§6.10) |
-| **Mecánica de tarot** | ✅ **Hecha** (§4.6): 22 arcanos, tirada 1–3 sin repetir, props de texto en el overlay, brief para el LLM, `POST /api/tarot/draw`, `GET /api/tarot`, comandos de chat `!carta`/`!tirada N` y **regalos en dos pasos** (gracias + pregunta → tirada para el donante, un uso, TTL 10 min). ⏳ falta el arte de las cartas y el HUD de operador (§6.12) |
+| **Mecánica de tarot** | ✅ **Hecha** (§4.6): 22 arcanos, tirada 1–3 sin repetir, **arte SVG incluido** (`/bg/cards`, invertidas rotadas 180°), props de texto como respaldo, brief para el LLM, `POST /api/tarot/draw`, `GET /api/tarot`, **HUD de operador** (`web_tool/operator.html`), comandos `!carta`/`!tirada N` y **regalos en dos pasos** con interruptor `gift_reading`. ⏳ falta sustituir los placeholders por ilustraciones reales (§6.12) |
 
 ## 6. Pendientes / siguientes pasos
 
@@ -537,10 +573,10 @@ python scripts/test_stage_obs.py        # 38 tests: contrato + draw del schedule
     `frontend-playback-complete`, así que el turno cierra al terminar el audio. Falta lo de siempre: el
     arte definitivo y el lip-sync con Live2D (el overlay pinta escenario/props/subtítulo y la voz).
 12. **[Tarot — lo que falta]** Hecho: tirada por horario, bajo demanda (`POST /api/tarot/draw`), comandos
-    `!carta`/`!tirada N`, `GET /api/tarot` y **regalos en dos pasos** (§4.6). Pendiente: (a) **arte de las
-    22 cartas** en `backgrounds/cards/*.png` y cambiar `label` por `src` en `build_draw_props`; (b) HUD de
-    operador que pinte `GET /api/tarot` (el overlay ya muestra las cartas); (c) opcional: un interruptor
-    `gift_reading` en `live_config.tiktok_live` para quien prefiera solo agradecer el regalo sin tirada.
+    `!carta`/`!tirada N`, `GET /api/tarot`, **HUD** (`web_tool/operator.html`), regalos en dos pasos,
+    interruptor `gift_reading` y **mazo SVG de 22 cartas** (§4.6). Pendiente: (a) sustituir los placeholders
+    por **ilustraciones reales** (`backgrounds/cards/<id>.png` + `CARD_ART_EXT = "png"`); (b) la prueba en
+    vivo con un regalo real, que es la única que valida el flujo completo de TikTok.
 
 ## 7. Chuleta de comandos
 
@@ -706,9 +742,10 @@ python scripts/export_overlay_fixtures.py    # regenerar tras tocar el backend
 python scripts/export_overlay_fixtures.py --check   # exit 1 si el fixture es viejo
 
 # 8) baraja y tirada de tarot (§4.6)
-python scripts/test_tarot.py                 # 27 tests, sin dependencias
+python scripts/test_tarot.py                 # 32 tests, sin dependencias
 python scripts/test_tarot_commands.py        # 19 tests: !carta / !tirada y payload compartido
-python scripts/test_donations.py             # 15 tests: donantes pendientes, TTL y frames
+python scripts/test_donations.py             # 16 tests: donantes pendientes, TTL y frames
+python scripts/make_tarot_cards.py --check   # las 22 cartas SVG siguen al día
 ```
 
 **Estado en esta máquina (Windows, sin `uv`):** los pasos 2, 4 y 5 se ejecutan con el Python del
