@@ -21,6 +21,7 @@ from typing import List, Optional, Set
 from loguru import logger
 
 from ..utils.stage import build_stage_payload
+from ..utils.tarot import build_draw_props, build_tarot_brief, draw_cards
 from .obs import OBSController
 
 
@@ -321,11 +322,13 @@ class SchedulerService:
         if getattr(obs_config, "start_stream", False):
             await self._obs.start_stream()
 
-    async def _prepare_stage(self, job) -> None:
+    async def _prepare_stage(self, job, drawn=None) -> None:
         """Switch the OBS scene and broadcast the overlay stage for ``job``.
 
-        Both steps are best-effort: a closed OBS or an absent overlay must not
-        cancel the spoken segment.
+        ``drawn`` is the spread of this fire (see ``_draw``) and becomes the
+        ``props`` of the payload, so the cards appear on screen while the turn
+        is being spoken. Both steps are best-effort: a closed OBS or an absent
+        overlay must not cancel the spoken segment.
         """
         if job.scene:
             if self._obs is None:
@@ -336,38 +339,76 @@ class SchedulerService:
             elif getattr(self._config.obs, "switch_scenes", True):
                 await self._obs.set_scene(job.scene)
 
-        if not job.background:
+        props = build_draw_props(drawn) if drawn else []
+        if not job.background and not props:
             return
 
         payload = build_stage_payload(
             stage=job.name,
             background=job.background,
+            props=props or None,
             transition=job.transition,
             duration_ms=job.duration_ms,
         )
         delivered = await self._ws.broadcast_stage_update(
             payload, self._config.target_client
         )
+        detail = job.background or f"{len(props)} card(s)"
         logger.info(
-            f"Scheduler: stage '{job.name}' -> {job.background} ({delivered} client(s))"
+            f"Scheduler: stage '{job.name}' -> {detail} ({delivered} client(s))"
         )
+
+    def _draw(self, job):
+        """Draw the cards of a job, once per fire.
+
+        The spread is drawn before the stage update and before the turn, so the
+        overlay and the LLM always see the same cards. A bad configuration is
+        logged and treated as "no draw": the segment is still spoken.
+        """
+        count = int(getattr(job, "draw", 0) or 0)
+        if count <= 0:
+            return []
+        seed = int(getattr(job, "draw_seed", 0) or 0)
+        try:
+            drawn = draw_cards(count, seed=seed or None)
+        except ValueError as e:
+            logger.error(f"Scheduler: job '{job.name}' has an invalid draw: {e}")
+            return []
+        logger.info(
+            f"Scheduler: job '{job.name}' drew "
+            + ", ".join(card.describe() for card in drawn)
+        )
+        return drawn
+
+    @staticmethod
+    def _compose_text(job, drawn) -> str:
+        """Brief for the LLM plus the job text (empty keeps the default prompt)."""
+        parts = []
+        if drawn:
+            parts.append(build_tarot_brief(drawn, getattr(job, "question", "") or ""))
+        text = (job.text or "").strip()
+        if text:
+            parts.append(text)
+        return "\n\n".join(parts)
 
     async def _fire(self, job) -> None:
         """Send one segment, retrying while the overlay is busy."""
+        drawn = self._draw(job)
         # The scene change is useful even without an overlay: OBS keeps showing
         # the right camera/board while the chat is answered by the connector.
-        await self._prepare_stage(job)
+        await self._prepare_stage(job, drawn)
 
         if not self._pick_client():
             logger.warning(f"Scheduler: job '{job.name}' skipped, no overlay connected")
             return
 
+        text = self._compose_text(job, drawn)
         for attempt in range(1, self.MAX_ATTEMPTS + 1):
             client_uid = self._pick_client()
             if not client_uid:
                 break
             try:
-                triggered = await self._ws.trigger_proactive_speak(client_uid, job.text)
+                triggered = await self._ws.trigger_proactive_speak(client_uid, text)
             except Exception as e:
                 logger.error(
                     f"Scheduler: failed to reach {client_uid} for job '{job.name}': {e}"

@@ -338,6 +338,50 @@ node --check web_tool/overlay-protocol.js
 Ojo: el overlay **no** pinta Live2D ni hace lip-sync; dibuja escenario, props y subtítulo y reproduce la
 voz. Para el avatar hay que añadir el Live2D Web SDK (o seguir usando la UI oficial como Browser Source).
 
+### 4.6 Mecánica de tarot — tirada real + props de texto
+
+Hasta aquí el "tarotista" era un prompt y cuatro frases programadas: no había baraja. Ahora un job puede
+**barajar, sacar cartas, ponerlas en el escenario y decírselas al LLM**, sin arte y sin platós nuevos.
+
+| Fichero | Contenido |
+|---|---|
+| `utils/tarot.py` | **nuevo**, stdlib pura: 22 arcanos mayores en español (nombre, palabras clave, lectura al derecho y invertida), `draw_cards(count, seed=…)` sin repetir cartas, `build_draw_props()` y `build_tarot_brief()` |
+| `utils/stage.py` | un prop puede ser imagen (`src`) **o tarjeta de texto** (`label`/`sublabel`, recortados a 64/96 caracteres); si vienen los dos gana `src` |
+| `scheduler/service.py` | `_draw()` dibuja **una sola vez por disparo**, `_prepare_stage(job, drawn)` manda las cartas como props y `_compose_text()` pone el brief delante de `job.text` |
+| `config_manager/scheduler.py` | campos nuevos de job: `draw` (0–3), `draw_seed` (0 = aleatoria) y `question` |
+| `web_tool/overlay.html` | pinta los props de texto como tarjeta (`.card`), compartiendo posición/rotación con las imágenes |
+
+Configuración (ya viene en `conf.yaml`, `conf/conf.yaml` y las dos plantillas):
+
+```yaml
+    - name: 'card_of_the_day'
+      cron: '0 20 * * *'
+      scene: 'tarot_main'
+      draw: 1                                    # 1-3 cartas
+      # draw_seed: 2024                          # fijo = misma tirada siempre
+      question: '¿Qué energía trae el día?'      # opcional, va al brief del LLM
+```
+
+Decisiones:
+
+- La tirada se dibuja **antes** del `stage-update` y antes del turno: el overlay y el LLM ven **las mismas
+  cartas** (dibujar dos veces sería un bug garantizado).
+- `draw_seed` fijo ⇒ misma tirada en cada disparo (ensayos y demos); `0` ⇒ distinta cada vez.
+- Un `draw` inválido **no** rompe el segmento: se registra y el job se habla sin cartas.
+- Posiciones según el tamaño: 1 carta al centro, 2 a `0.36/0.64`, 3 a `0.28/0.50/0.72`; `y = 0.68` deja la
+  mitad superior libre para el avatar.
+- **Sin arte**: `label` = "La Torre", `sublabel` = "ruptura · verdad · derrumbe · invertida". Cuando haya
+  cartas dibujadas se cambia el prop a `src` y el scheduler no se toca.
+
+```powershell
+# probar una tirada sin scheduler ni OBS (se ve en /web-tool/stage-test.html)
+curl.exe -X POST http://127.0.0.1:12393/api/stage -H "Content-Type: application/json" `
+  -d '{"stage":"card_of_the_day","props":[{"id":"card_1","label":"La Torre","sublabel":"ruptura, verdad","x":0.5,"y":0.68}]}'
+# tests
+python scripts/test_tarot.py          # 25 tests: baraja, tirada, props, brief
+python scripts/test_stage_obs.py      # 38 tests: contrato + draw del scheduler
+```
+
 ## 5. Estado verificado (¡importante!)
 
 
@@ -353,7 +397,8 @@ voz. Para el avatar hay que añadir el Live2D Web SDK (o seguir usando la UI ofi
 | **TTS real** | `TTS OK size = 11232 bytes` (antes 0 bytes + 403) ✅ |
 | **Smoke test** | `audio chunks 2 / 290392 bytes / playback ack 2 / chain end True` → `SMOKE TEST PASSED`, exit 0 ✅ |
 | **Scheduler** | `Scheduler started with 5 job(s)` → `job 'preflight_test' fired on <uid>`; el cliente recibe audio, ack y `conversation-chain-end` ✅ |
-| **Stage/OBS** | ⏳ contrato, cliente v5 y wiring cubiertos por `python scripts/test_stage_obs.py` (`Ran 27 tests ... OK`); overlay de producción cubierto por `node scripts/test_overlay_protocol.js` (13 tests: audio, ack, interrupción, reconexión); y **contrato cruzado** con los bytes reales: `node scripts/test_overlay_wire.js` (10 tests) + `python scripts/test_overlay_fixtures.py` (9 tests). La prueba con OBS real es manual (§6.10) |
+| **Stage/OBS** | ⏳ contrato, cliente v5 y wiring cubiertos por `python scripts/test_stage_obs.py` (38 tests tras añadir la tirada), overlay de producción por `node scripts/test_overlay_protocol.js` (13) y **contrato cruzado** con los bytes reales (`node scripts/test_overlay_wire.js` = 11, `python scripts/test_overlay_fixtures.py` = 10). La baraja por `python scripts/test_tarot.py` (25). La prueba con OBS real es manual (§6.10) |
+| **Mecánica de tarot** | ✅ **Hecha** (§4.6): 22 arcanos, tirada 1–3 sin repetir, props de texto en el overlay y brief para el LLM. ⏳ falta el arte de las cartas y la tirada bajo demanda desde el chat (§6.12) |
 
 ## 6. Pendientes / siguientes pasos
 
@@ -428,6 +473,11 @@ voz. Para el avatar hay que añadir el Live2D Web SDK (o seguir usando la UI ofi
     `overlay-protocol.js`, §4.5) ya reproduce los mensajes `audio` en orden y manda
     `frontend-playback-complete`, así que el turno cierra al terminar el audio. Falta lo de siempre: el
     arte definitivo y el lip-sync con Live2D (el overlay pinta escenario/props/subtítulo y la voz).
+12. **[Tarot — lo que falta]** La tirada ya es real (§4.6), pero se dispara **por horario**. Pendiente:
+    (a) **arte de las 22 cartas** en `backgrounds/cards/*.png` y cambiar `label` por `src` en
+    `build_draw_props`; (b) tirada **bajo demanda** desde el chat (el conector no manda todavía una
+    intención "sácame una carta" → hace falta un comando o un `POST /api/tarot/draw`); (c) un
+    `GET /api/tarot` con la última tirada para el HUD. Nada de eso bloquea el show programado.
 
 ## 7. Chuleta de comandos
 
@@ -587,10 +637,13 @@ uv run python scripts/test_stage_obs.py
 node scripts/test_overlay_protocol.js
 
 # 7) contrato cruzado backend -> overlay con los bytes reales
-node scripts/test_overlay_wire.js            # 10 tests (Node)
-python scripts/test_overlay_fixtures.py      # 9 tests (Python)
+node scripts/test_overlay_wire.js            # 11 tests (Node)
+python scripts/test_overlay_fixtures.py      # 10 tests (Python)
 python scripts/export_overlay_fixtures.py    # regenerar tras tocar el backend
 python scripts/export_overlay_fixtures.py --check   # exit 1 si el fixture es viejo
+
+# 8) baraja y tirada de tarot (§4.6)
+python scripts/test_tarot.py                 # 25 tests, sin dependencias
 ```
 
 **Estado en esta máquina (Windows, sin `uv`):** los pasos 2, 4 y 5 se ejecutan con el Python del

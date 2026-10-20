@@ -4,12 +4,17 @@ The payload is documented in ``AUDITORIA-MVP-TAROT.md`` §2.4: the server tells
 the Ruta B overlay which background/props to show. It is deliberately
 dependency-free so the scheduler can build it without importing FastAPI.
 
-Example::
+A prop is either an image (``src``) or a text card (``label``/``sublabel``), so a
+tarot draw can be shown before the card art exists::
 
     build_stage_payload(
         stage="tarot_main",
         background="/bg/tarot_table.png",
         props=[{"id": "card_1", "src": "/bg/cards/death.png", "x": 0.7, "y": 0.5}],
+    )
+    build_stage_payload(
+        stage="card_of_the_day",
+        props=[{"id": "card_1", "label": "La Torre", "sublabel": "ruptura · verdad"}],
     )
 """
 
@@ -17,6 +22,9 @@ from typing import Any, Dict, Iterable, List, Optional
 
 MAX_PROPS = 32
 TRANSITIONS = ("fade", "none")
+#: A label is drawn on stream, so it must fit in a card without wrapping wildly.
+MAX_LABEL = 64
+MAX_SUBLABEL = 96
 
 
 def _number(value: Any, low: float, high: float, default: float) -> float:
@@ -31,17 +39,28 @@ def _number(value: Any, low: float, high: float, default: float) -> float:
 
 
 def _normalise_prop(raw: Any, index: int) -> Optional[Dict[str, Any]]:
-    """Return a sanitised prop, or ``None`` when it has no usable ``src``."""
+    """Return a sanitised prop, or ``None`` when it has neither ``src`` nor ``label``.
+
+    An image prop keeps ``src``; a text prop keeps ``label`` (title) and the
+    optional ``sublabel`` (keywords). Numbers below are shared by both.
+    """
     if not isinstance(raw, dict):
         return None
+
     src = raw.get("src")
-    if not isinstance(src, str) or not src.strip():
+    label = raw.get("label")
+    prop: Dict[str, Any] = {"id": str(raw.get("id") or f"prop_{index}")}
+
+    if isinstance(src, str) and src.strip():
+        prop["src"] = src.strip()
+    elif isinstance(label, str) and label.strip():
+        prop["label"] = label.strip()[:MAX_LABEL]
+        sublabel = raw.get("sublabel")
+        if isinstance(sublabel, str) and sublabel.strip():
+            prop["sublabel"] = sublabel.strip()[:MAX_SUBLABEL]
+    else:
         return None
 
-    prop: Dict[str, Any] = {
-        "id": str(raw.get("id") or f"prop_{index}"),
-        "src": src.strip(),
-    }
     # x/y are normalised (0..1) so the same payload works at any resolution.
     if "x" in raw:
         prop["x"] = _number(raw["x"], 0.0, 1.0, 0.5)
@@ -70,7 +89,9 @@ def build_stage_payload(
         stage: Stage identifier (free-form, truncated to 64 characters).
         background: Image URL/path served by the backend (``/bg/...``).
         props: Optional iterable of ``{"id", "src", "x", "y", "rot", ...}``
-            dicts. Entries without a usable ``src`` are dropped.
+            dicts (images) or ``{"id", "label", "sublabel", ...}`` dicts (text
+            cards). Entries with neither a usable ``src`` nor a ``label`` are
+            dropped.
         transition: ``"fade"`` or ``"none"``; anything else falls back to fade.
         duration_ms: Transition duration, clamped to 0..10000 ms.
 
@@ -99,7 +120,7 @@ def build_stage_payload(
 
     if len(payload) == 1:
         raise ValueError(
-            "stage-update needs 'stage', 'background' or a prop with 'src'"
+            "stage-update needs 'stage', 'background' or a prop with 'src'/'label'"
         )
 
     payload["transition"] = transition if transition in TRANSITIONS else "fade"

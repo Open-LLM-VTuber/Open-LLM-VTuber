@@ -190,7 +190,7 @@ STUBBED = {
 
 from src.open_llm_vtuber.agent.output_types import Actions, DisplayText  # noqa: E402
 from src.open_llm_vtuber.conversations import conversation_utils  # noqa: E402
-from src.open_llm_vtuber.utils import stream_audio  # noqa: E402
+from src.open_llm_vtuber.utils import stream_audio, tarot  # noqa: E402
 from src.open_llm_vtuber.utils.stage import build_stage_payload  # noqa: E402
 
 
@@ -440,6 +440,17 @@ def build_scenarios() -> list[dict]:
                 transition="none",
                 duration_ms=0,
             ),
+        )
+    )
+
+    # A scheduled job with `draw: 3`: text cards (label/sublabel), no card art.
+    drawn = tarot.draw_cards(3, seed=2026)
+    scenarios.append(
+        _scenario(
+            "tarot_draw_three_cards",
+            "SchedulerService._prepare_stage with a three-card spread: the "
+            "overlay gets 'label' props and no background",
+            _stage_frames(stage="card_of_the_day", props=tarot.build_draw_props(drawn)),
         )
     )
     return scenarios

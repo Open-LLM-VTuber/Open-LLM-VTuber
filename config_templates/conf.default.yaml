@@ -567,6 +567,9 @@ scheduler_config:
       text: 'Abre el directo, presenta la carta del día y pide preguntas.'
       scene: 'tarot_main'
       background: '/bg/tarot_table.png'   # overlay stage-update (Ruta B)
+      draw: 1                     # tarot draw: 1-3 cards (0 = no draw)
+      # draw_seed: 2024           # uncomment to replay the same spread every day
+      question: '¿Qué energía trae el día?'   # optional, added to the brief
     - name: 'break'
       interval_minutes: 45
       text: 'Haz una pausa breve, recuerda que sigues leyendo el tarot y pide que compartan el directo.'

@@ -96,6 +96,8 @@ _install_websockets_shim()
 from src.open_llm_vtuber.scheduler import obs as obs_module  # noqa: E402
 from src.open_llm_vtuber.scheduler import service as service_module  # noqa: E402
 from src.open_llm_vtuber.utils.stage import (  # noqa: E402
+    MAX_LABEL,
+    MAX_SUBLABEL,
     build_stage_payload,
     select_stage_targets,
 )
@@ -283,6 +285,41 @@ class StagePayloadTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             build_stage_payload(stage="   ", background="  ", props=[{"id": "x"}])
 
+    def test_label_props_need_no_art(self):
+        payload = build_stage_payload(
+            stage="card_of_the_day",
+            props=[
+                {"id": "card_1", "label": "La Torre", "sublabel": "ruptura · verdad"},
+                {"label": "El Sol"},
+            ],
+        )
+        self.assertNotIn("background", payload)
+        self.assertEqual(len(payload["props"]), 2)
+        first = payload["props"][0]
+        self.assertEqual(first["label"], "La Torre")
+        self.assertEqual(first["sublabel"], "ruptura · verdad")
+        self.assertNotIn("src", first)
+        self.assertEqual(payload["props"][1]["id"], "prop_1")
+        self.assertNotIn("sublabel", payload["props"][1])
+
+    def test_label_is_trimmed_and_capped(self):
+        payload = build_stage_payload(
+            props=[{"label": "  " + "x" * 120 + "  ", "sublabel": "y" * 200}]
+        )
+        prop = payload["props"][0]
+        self.assertEqual(prop["label"], "x" * MAX_LABEL)
+        self.assertEqual(prop["sublabel"], "y" * MAX_SUBLABEL)
+
+    def test_src_wins_over_label(self):
+        payload = build_stage_payload(props=[{"src": "/bg/a.png", "label": "La Torre"}])
+        prop = payload["props"][0]
+        self.assertEqual(prop["src"], "/bg/a.png")
+        self.assertNotIn("label", prop)
+
+    def test_blank_label_is_dropped(self):
+        payload = build_stage_payload(stage="x", props=[{"id": "a", "label": "   "}])
+        self.assertNotIn("props", payload)
+
     def test_target_selection(self):
         uids = ["overlay", "guest"]
         self.assertEqual(select_stage_targets(uids), ["overlay"])
@@ -460,17 +497,22 @@ class _FakeOBS:
 
 
 class _FakeWSHandler:
-    """Minimal ``WebSocketHandler`` surface used by ``_prepare_stage``."""
+    """Minimal ``WebSocketHandler`` surface used by ``_prepare_stage``/``_fire``."""
 
     def __init__(self):
-        self.client_connections = {}
+        self.client_connections = {"overlay-1": object()}
         self.current_stage = None
         self.stage_updates = []
+        self.spoken = []
 
     async def broadcast_stage_update(self, payload, target_client="first"):
         self.stage_updates.append((payload, target_client))
         self.current_stage = payload
         return 1
+
+    async def trigger_proactive_speak(self, client_uid, text):
+        self.spoken.append((client_uid, text))
+        return True
 
 
 def _scheduler_config(obs_enabled: bool = False, switch_scenes: bool = True):
@@ -504,6 +546,9 @@ def _job(**overrides):
         "background": "",
         "transition": "fade",
         "duration_ms": 800,
+        "draw": 0,
+        "draw_seed": 0,
+        "question": "",
         "enabled": True,
     }
     base.update(overrides)
@@ -573,6 +618,90 @@ class SchedulerStageTests(unittest.TestCase):
 
         self.assertEqual(service._obs.scenes, ["tarot_main"])
         self.assertEqual(ws.stage_updates, [])
+
+
+class SchedulerDrawTests(unittest.TestCase):
+    """A job with ``draw`` puts the spread on screen and in the prompt."""
+
+    def _service(self):
+        ws = _FakeWSHandler()
+        service = service_module.SchedulerService(
+            ws, _scheduler_config(obs_enabled=False)
+        )
+        return service, ws
+
+    def test_draw_becomes_text_props(self):
+        service, ws = self._service()
+
+        _run(service._fire(_job(draw=3, draw_seed=11, scene="tarot_main")))
+
+        self.assertEqual(len(ws.stage_updates), 1)
+        payload, _ = ws.stage_updates[0]
+        self.assertEqual(payload["stage"], "card_of_the_day")
+        self.assertNotIn("background", payload)
+        self.assertEqual(
+            [prop["id"] for prop in payload["props"]],
+            ["card_1", "card_2", "card_3"],
+        )
+        for prop in payload["props"]:
+            self.assertIn("label", prop)
+            self.assertNotIn("src", prop)
+
+    def test_the_spoken_text_mentions_the_cards(self):
+        service, ws = self._service()
+        job = _job(draw=1, draw_seed=11, question="¿Me cambio de trabajo?")
+
+        _run(service._fire(job))
+
+        _, text = ws.spoken[0]
+        drawn = service._draw(job)
+        self.assertIn(drawn[0].card.name, text)
+        self.assertIn("¿Me cambio de trabajo?", text)
+
+    def test_seed_replays_the_same_spread(self):
+        service, ws = self._service()
+        job = _job(draw=3, draw_seed=4242)
+
+        _run(service._fire(job))
+        _run(service._fire(job))
+
+        self.assertEqual(
+            ws.stage_updates[0][0]["props"], ws.stage_updates[1][0]["props"]
+        )
+
+    def test_invalid_draw_still_speaks(self):
+        # pydantic caps draw at 3; a bad value from elsewhere must not kill the
+        # segment: it is logged and the job is spoken without cards.
+        service, ws = self._service()
+
+        _run(service._fire(_job(draw=9, text="Sigue leyendo.")))
+
+        self.assertEqual(ws.stage_updates, [])
+        self.assertIn("Sigue leyendo.", ws.spoken[0][1])
+
+    def test_no_draw_keeps_the_old_behaviour(self):
+        service, ws = self._service()
+
+        _run(service._fire(_job(text="Hola.")))
+
+        self.assertEqual(ws.stage_updates, [])
+        self.assertEqual(ws.spoken[0][1], "Hola.")
+
+    def test_compose_text(self):
+        self.assertEqual(service_module.SchedulerService._compose_text(_job(), []), "")
+        self.assertEqual(
+            service_module.SchedulerService._compose_text(_job(text="Hola."), []),
+            "Hola.",
+        )
+
+    def test_compose_text_puts_the_brief_first(self):
+        with mock.patch.object(
+            service_module, "build_tarot_brief", return_value="BRIEF"
+        ):
+            text = service_module.SchedulerService._compose_text(
+                _job(text="Hola."), [object()]
+            )
+        self.assertEqual(text, "BRIEF\n\nHola.")
 
 
 if __name__ == "__main__":

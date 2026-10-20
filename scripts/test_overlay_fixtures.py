@@ -36,6 +36,7 @@ STAGE_SCENARIOS = (
     "stage_background_only",
     "stage_with_props",
     "stage_transition_none",
+    "tarot_draw_three_cards",
 )
 
 
@@ -139,6 +140,20 @@ class FixtureContentTests(unittest.TestCase):
         self.assertNotIn(
             "props", json.loads(self.scenarios["stage_background_only"]["frames"][0])
         )
+
+    def test_tarot_draw_has_text_props(self):
+        message = json.loads(self.scenarios["tarot_draw_three_cards"]["frames"][0])
+
+        self.assertEqual(message["stage"], "card_of_the_day")
+        self.assertNotIn("background", message, "a draw alone is a valid payload")
+        self.assertEqual(
+            [prop["id"] for prop in message["props"]],
+            ["card_1", "card_2", "card_3"],
+        )
+        for prop in message["props"]:
+            self.assertIn("label", prop)
+            self.assertIn("sublabel", prop)
+            self.assertNotIn("src", prop)
 
 
 if __name__ == "__main__":

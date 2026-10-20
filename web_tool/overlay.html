@@ -66,12 +66,49 @@
             pointer-events: none;
         }
 
-        .props img {
+        .props img,
+        .props .card {
             position: absolute;
-            max-width: 40vw;
-            max-height: 60vh;
             transform-origin: center;
             will-change: transform;
+        }
+
+        .props img {
+            max-width: 40vw;
+            max-height: 60vh;
+        }
+
+        /* Text prop: the tarot draw is readable before any card art exists. */
+        .props .card {
+            min-width: 11vw;
+            max-width: 24vw;
+            padding: 1.1vh 1vw 1.3vh;
+            border-radius: 14px;
+            background: linear-gradient(
+                160deg,
+                rgba(38, 24, 62, 0.94),
+                rgba(16, 10, 26, 0.94)
+            );
+            border: 1px solid rgba(255, 212, 121, 0.55);
+            box-shadow: 0 10px 26px rgba(0, 0, 0, 0.45);
+            text-align: center;
+        }
+
+        .props .card .card-label {
+            display: block;
+            font-size: 26px;
+            font-weight: 600;
+            color: #ffd479;
+            letter-spacing: 0.02em;
+        }
+
+        .props .card .card-sublabel {
+            display: block;
+            margin-top: 6px;
+            font-size: 16px;
+            line-height: 1.3;
+            color: #e8e2f5;
+            opacity: 0.85;
         }
 
         .subtitle {
@@ -221,32 +258,70 @@
                 probe.src = url;
             }
 
+            // Shared placement for image and text props (x/y are 0..1).
+            function placeProp(node, prop) {
+                var x = (typeof prop.x === "number") ? prop.x : 0.5;
+                var y = (typeof prop.y === "number") ? prop.y : 0.5;
+                var rot = (typeof prop.rot === "number") ? prop.rot : 0;
+                var scale = (typeof prop.scale === "number") ? prop.scale : 1;
+                if (prop.id) {
+                    node.dataset.id = prop.id;
+                }
+                if (typeof prop.opacity === "number") {
+                    node.style.opacity = String(prop.opacity);
+                }
+                node.style.left = (x * 100) + "%";
+                node.style.top = (y * 100) + "%";
+                node.style.transform =
+                    "translate(-50%, -50%) rotate(" + rot + "deg) scale(" + scale + ")";
+            }
+
+            function buildCard(prop) {
+                var card = document.createElement("div");
+                card.className = "card";
+                card.setAttribute("role", "img");
+                card.setAttribute(
+                    "aria-label",
+                    prop.label + (prop.sublabel ? " — " + prop.sublabel : "")
+                );
+
+                var title = document.createElement("span");
+                title.className = "card-label";
+                title.textContent = prop.label;
+                card.appendChild(title);
+
+                if (typeof prop.sublabel === "string" && prop.sublabel) {
+                    var sub = document.createElement("span");
+                    sub.className = "card-sublabel";
+                    sub.textContent = prop.sublabel;
+                    card.appendChild(sub);
+                }
+                return card;
+            }
+
             // Only replace the props when the payload carries them: a scheduler
             // job sends just `background`, so the previous cards must stay put.
+            // A prop is an image (`src`) or a text card (`label`/`sublabel`).
             function setProps(props) {
                 propsBox.textContent = "";
                 props.forEach(function (prop) {
-                    if (!prop || typeof prop.src !== "string") {
+                    if (!prop) {
                         return;
                     }
-                    var img = document.createElement("img");
-                    img.src = prop.src;
-                    img.alt = prop.id || "";
-                    if (prop.id) {
-                        img.dataset.id = prop.id;
+                    if (typeof prop.src === "string" && prop.src) {
+                        var img = document.createElement("img");
+                        img.src = prop.src;
+                        img.alt = prop.label || prop.id || "";
+                        placeProp(img, prop);
+                        propsBox.appendChild(img);
+                        return;
                     }
-                    var x = (typeof prop.x === "number") ? prop.x : 0.5;
-                    var y = (typeof prop.y === "number") ? prop.y : 0.5;
-                    var rot = (typeof prop.rot === "number") ? prop.rot : 0;
-                    var scale = (typeof prop.scale === "number") ? prop.scale : 1;
-                    if (typeof prop.opacity === "number") {
-                        img.style.opacity = String(prop.opacity);
+                    if (typeof prop.label !== "string" || !prop.label) {
+                        return;
                     }
-                    img.style.left = (x * 100) + "%";
-                    img.style.top = (y * 100) + "%";
-                    img.style.transform =
-                        "translate(-50%, -50%) rotate(" + rot + "deg) scale(" + scale + ")";
-                    propsBox.appendChild(img);
+                    var card = buildCard(prop);
+                    placeProp(card, prop);
+                    propsBox.appendChild(card);
                 });
             }
 

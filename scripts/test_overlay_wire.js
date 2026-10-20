@@ -216,6 +216,29 @@ const expectations = {
         assert.equal(h.stages[0].transition, "none");
         assert.equal(h.stages[0].duration_ms, 0);
         assert.equal(h.stages[0].stage, "quiet");
+    },
+
+    tarot_draw_three_cards(h, scenario) {
+        h.feed(scenario.frames);
+
+        const stage = h.stages[0];
+        assert.equal(stage.stage, "card_of_the_day");
+        assert.equal(
+            "background" in stage,
+            false,
+            "a draw alone is a valid stage-update: the table art is optional"
+        );
+        assert.deepEqual(
+            stage.props.map((prop) => prop.id),
+            ["card_1", "card_2", "card_3"]
+        );
+        for (const prop of stage.props) {
+            assert.equal("src" in prop, false, "text cards need no art");
+            assert.equal(typeof prop.label, "string");
+            assert.equal(typeof prop.sublabel, "string");
+            assert.ok(prop.x > 0 && prop.x < 1, "cards are spread inside the frame");
+            assert.equal(prop.y, 0.68, "cards sit low, the avatar keeps the top");
+        }
     }
 };
 

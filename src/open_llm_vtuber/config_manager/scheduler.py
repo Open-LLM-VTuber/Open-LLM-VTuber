@@ -16,6 +16,9 @@ class ScheduledJob(I18nMixin):
     background: str = Field("", alias="background")  # stage-update background
     transition: str = Field("fade", alias="transition")
     duration_ms: int = Field(800, alias="duration_ms")
+    draw: int = Field(0, alias="draw", ge=0, le=3)  # 0 = no tarot draw
+    draw_seed: int = Field(0, alias="draw_seed")  # 0 = random spread each fire
+    question: str = Field("", alias="question")  # seeker's question, optional
     enabled: bool = Field(True, alias="enabled")
 
     DESCRIPTIONS: ClassVar[Dict[str, Description]] = {
@@ -48,6 +51,20 @@ class ScheduledJob(I18nMixin):
         "duration_ms": Description(
             en="Stage transition duration in milliseconds",
             zh="舞台过渡时长（毫秒）",
+        ),
+        "draw": Description(
+            en="Draw N tarot cards when the job fires (0 = no draw, max 3). The "
+            "cards appear on the overlay and are described to the LLM",
+            zh="任务触发时抽取 N 张塔罗牌（0 表示不抽，最多 3 张）。牌面显示在 overlay 上并告知 LLM",
+        ),
+        "draw_seed": Description(
+            en="0 = a different spread on every fire; any other number replays "
+            "the same spread",
+            zh="0 表示每次随机；其他数字则重复同一组牌",
+        ),
+        "question": Description(
+            en="Seeker's question added to the tarot brief (optional)",
+            zh="加入塔罗提示中的求问者问题（可选）",
         ),
         "enabled": Description(en="Enable this job", zh="启用该任务"),
     }

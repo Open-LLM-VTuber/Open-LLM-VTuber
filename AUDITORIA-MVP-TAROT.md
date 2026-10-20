@@ -12,7 +12,7 @@
 | Capacidad pedida | Estado real en el código | Punto de extensión | Trabajo para el MVP | Riesgo |
 |---|---|---|---|---|
 | **Voz clonada** | ✅ **Nativo** | `tts/gpt_sovits_tts.py`, `tts/tts_factory.py`, `config_manager/tts.py` (`ref_audio_path` + `prompt_text`) | Config + servidor GPT-SoVITS. **0 líneas** de código — §3.2 | Medio: la calidad en español depende del checkpoint (v2Pro/v4) y del ref-audio |
-| **Escenario personalizable** | ⚠️ **Parcial**: OBS por scheduler (escena + *StartStream*/*StopStream*) y contrato `stage-update`, sin overlay de producción | `model_dict.json`, `backgrounds/`, `set-model-and-conf`, `scheduler/obs.py`, `utils/stage.py` — §2.3, §2.4 | **Ruta A: hecha** (sin código de frontend). **Ruta B: contrato + overlay de producción** (`web_tool/overlay.html`: escena, props, subtítulo, audio en orden y ack `frontend-playback-complete`); falta el arte y el lip-sync | Medio: el overlay **debe** apuntar su WS a `/proxy-ws` o se queda sin audio (A1) |
+| **Escenario personalizable** | ⚠️ **Parcial**: OBS por scheduler (escena + *StartStream*/*StopStream*), contrato `stage-update` con props de imagen **y de texto**, y overlay de producción | `model_dict.json`, `backgrounds/`, `set-model-and-conf`, `scheduler/obs.py`, `utils/stage.py`, `utils/tarot.py` — §2.3, §2.4 | **Ruta A: hecha** (sin código de frontend). **Ruta B: contrato + overlay + tirada de tarot** (`web_tool/overlay.html`: escena, props, tarjetas de texto, audio en orden y ack `frontend-playback-complete`); falta el arte y el lip-sync | Medio: el overlay **debe** apuntar su WS a `/proxy-ws` o se queda sin audio (A1) |
 | **Chat en directo (TikTok)** | ❌ **Solo Bilibili** (`blivedm`); ignora regalos, entradas y username | `live/live_interface.py` (ABC), `live/bilibili_live.py` (referencia) | `live/tiktok_live.py` (~200 líneas) + `scripts/run_tiktok_live.py` (~60) — §4.2.4 | Alto: API no oficial (`TikTokLive`), cambios de protocolo y ToS |
 | **Emisión programada** | ❌ **No existe** (sin cron ni APScheduler) | `ai-speak-signal` ya existe, pero **ignora `data["text"]`** — §4.3.1 | `scheduler/` (~150) + config (~70) + inyección en `routes.py`/`server.py` (~20) — §4.3.3 | Medio: depende de A18; un turno colgado bloquea el siguiente guion |
 | **Emisión desatendida (robustez)** | ❌ **No**: 7 defectos bloqueantes (A18–A24) | `conversation_utils.py`, `tts_manager.py`, `proxy_handler.py`, `gpt_sovits_tts.py` — §5.1 | Parches 5.2.1–5.2.7 (~80 líneas netas) | **Alto si no se aplican**: A18 ⇒ directo mudo; A20/A24 ⇒ GPU saturada |
@@ -244,6 +244,14 @@ En el frontend actual bastaría con escuchar `stage-update` en `websocket-handle
 > Semántica para el overlay: cuando `props` viene en el mensaje **reemplaza** la lista;
 > cuando falta, se **conserva** la anterior (un job que solo cambia el fondo no borra
 > las cartas). Los campos desconocidos se ignoran.
+>
+> **Props de texto (2026-10-20):** un prop ya no necesita arte. Si trae `src` es una
+> imagen; si no, y trae `label` (máx. 64 caracteres) con `sublabel` opcional (máx. 96),
+> es una **tarjeta de texto** que el overlay pinta con posición/rotación idénticas. Si
+> vienen `src` y `label`, gana `src`. Así la tirada de tarot se ve antes de tener las
+> 22 cartas dibujadas: `build_draw_props` genera `label` y, cuando exista el arte, solo
+> hay que cambiar el prop a `src`. Un payload con **solo** props de texto es válido
+> (sin `stage` ni `background` deja de lanzar `ValueError`).
 >
 > Herramienta de verificación manual (no es el overlay final): `web_tool/stage-test.html`,
 > servido en `http://localhost:12393/web-tool/stage-test.html`. Acepta `?token=` (A22)
@@ -1027,13 +1035,15 @@ Durante el resto del tiempo responde a TikTok (4.2) y, si no hay comentarios, el
 | `config_manager/agent.py` | **Fase 2 (5.2.6):** campo `max_history_turns` en `BasicMemoryAgentConfig` (sin él la clave de `conf.yaml` se descarta en silencio) | +1 |
 | `agent/agent_factory.py` | **Fase 2 (5.2.6):** pasar `max_history_turns` al constructor de `BasicMemoryAgent` | +1 |
 | `agent/agents/basic_memory_agent.py` | **Fase 2 (5.2.6):** ventana del prompt en `_to_messages()` (líneas 242-244), sin tocar `self._memory` | ±5 |
-| `config_manager/scheduler.py` | **nuevo** `SchedulerConfig`, `ScheduledJob`, `OBSConfig` | ~70 |
+| `config_manager/scheduler.py` | **nuevo** `SchedulerConfig`, `ScheduledJob`, `OBSConfig`. **Tarot:** `draw`, `draw_seed`, `question` en el job | ~70 |
 | `config_manager/main.py` | añadir `scheduler_config` | +3 |
 | `live/tiktok_live.py` | **nuevo** conector (4.2.4) | ~200 |
 | `scripts/run_tiktok_live.py` | **nuevo** lanzador (calco del de BiliBili) | ~60 |
-| `scheduler/__init__.py`, `service.py` | **nuevos**: crontab stdlib, `interval_minutes`, `stage-update` por job | ~390 |
+| `scheduler/__init__.py`, `service.py` | **nuevos**: crontab stdlib, `interval_minutes`, `stage-update` por job. **Tarot:** `_draw()` una vez por disparo, props en el escenario y brief para el LLM | ~440 |
 | `scheduler/obs.py` | **nuevo**: cliente OBS WebSocket v5 (escena, StartStream/StopStream, GetSceneList) | ~260 |
-| `utils/stage.py` | **nuevo**: `build_stage_payload` + `select_stage_targets` (§2.4) | ~125 |
+| `utils/stage.py` | **nuevo**: `build_stage_payload` + `select_stage_targets` (§2.4). Props de imagen (`src`) o **de texto** (`label`/`sublabel`) | ~150 |
+| `utils/tarot.py` | **nuevo**: 22 arcanos mayores en español, `draw_cards` con semilla, `build_draw_props` (tarjetas de texto) y `build_tarot_brief` (lo que lee el LLM) | ~340 |
+| `scripts/test_tarot.py` | **nuevo**: 25 tests de baraja, tirada, props y brief (sin dependencias) | ~190 |
 | `web_tool/stage-test.html` | **nuevo**: overlay de prueba del contrato (no es el overlay final) | ~270 |
 | `web_tool/overlay.html` + `web_tool/overlay-protocol.js` | **nuevo**: overlay de producción (escena + audio + ack `frontend-playback-complete`); la lógica va aparte para poder testearla sin navegador | ~430 + ~225 |
 | `scripts/test_overlay_protocol.js` | **nuevo**: 13 tests de Node del overlay (sin OBS, navegador ni backend) | ~285 |
@@ -1055,6 +1065,13 @@ Durante el resto del tiempo responde a TikTok (4.2) y, si no hay comentarios, el
 `conf/conf.yaml` se cargan con `SchedulerConfig` (pydantic) → `obs.enabled=False`, `port=4455`,
 4 jobs. **Sin verificar todavía:** OBS real y OBS+overlay juntos, porque en esta máquina OBS no
 convive con Docker; el protocolo de prueba manual está en `HANDOFF.md` §4.4.
+
+**Verificado sin red (2026-10-20, overlay + tarot):** `test_overlay_protocol.js` 13/13,
+`test_overlay_wire.js` 11/11 (fixture de bytes reales), `test_overlay_fixtures.py` 10/10,
+`test_tarot.py` 25/25, `test_stage_obs.py` 38/38, `test_audio_hardening.py` 12/12 (sin cambios),
+`test_security_metrics.py` 39/39 (5 *skipped* por numpy); `ruff 0.9.6` → `All checks passed!`;
+los cuatro ficheros de configuración se cargan con la clase real `SchedulerConfig` y el job
+`card_of_the_day` sale con `draw=1`, `draw_seed=0` y `question` presente.
 
 **Riesgo residual:** ni `TikTokLive` ni el cambio de escena OBS son críticos para arrancar: se pueden desarrollar en paralelo y el directo funciona con OBS manual + operador escribiendo en el chat de la UI. Con la fase 3, si OBS no responde el scheduler emite el segmento igualmente (solo se pierde el cambio de escena y el `stage-update` queda cacheado para el próximo overlay que conecte).
 
