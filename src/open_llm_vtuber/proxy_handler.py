@@ -270,18 +270,22 @@ class ProxyHandler:
 
         disconnected_clients = []
 
-        # Log message, but handle audio data specially to avoid huge logs
-        log_msg = (
-            message.copy()
-            if "audio" not in message
-            else {
+        # Log message, but handle audio data specially to avoid huge logs.
+        # ``audio`` may legitimately be ``None`` (silent payload, audit A21);
+        # calling len() on it used to raise and drop the whole frame.
+        if "audio" in message:
+            audio = message.get("audio")
+            audio_size = len(audio) if isinstance(audio, (str, bytes, bytearray)) else 0
+            log_msg = {
                 **{k: v for k, v in message.items() if k != "audio"},
-                "audio": f"[Audio data, {len(message.get('audio', ''))} bytes truncated]",
+                "audio": f"[Audio data, {audio_size} bytes truncated]",
             }
-        )
+        else:
+            log_msg = message.copy()
 
-        if "volumes" in log_msg and len(log_msg.get("volumes", [])) > 10:
-            log_msg["volumes"] = f"[{len(message.get('volumes', []))} volume values]"
+        volumes = log_msg.get("volumes")
+        if isinstance(volumes, (list, tuple)) and len(volumes) > 10:
+            log_msg["volumes"] = f"[{len(volumes)} volume values]"
 
         logger.debug(f"Broadcasting to clients (excluding {exclude_client}): {log_msg}")
 

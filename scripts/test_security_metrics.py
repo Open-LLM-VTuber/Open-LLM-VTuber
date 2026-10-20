@@ -119,6 +119,15 @@ except Exception as e:  # pragma: no cover - environment without the stack
     PROXY_QUEUE_AVAILABLE = False
     print(f"skip ProxyQueueTests: proxy_message_queue import failed ({e})")
 
+try:  # needs fastapi + aiohttp; skipped in a bare interpreter
+    from src.open_llm_vtuber.proxy_handler import ProxyHandler
+
+    PROXY_HANDLER_AVAILABLE = True
+except Exception as e:  # pragma: no cover - environment without the stack
+    ProxyHandler = None
+    PROXY_HANDLER_AVAILABLE = False
+    print(f"skip ProxyBroadcastTests: proxy_handler import failed ({e})")
+
 try:  # heavy module; skipped when optional runtime deps are missing
     from src.open_llm_vtuber.conversations import conversation_utils
 
@@ -549,6 +558,42 @@ class ProxyQueueTests(unittest.TestCase):
         queue = self.metrics.snapshot()["queue"]
         self.assertEqual(queue["depth"], 2)
         self.assertEqual(queue["max_depth"], 2)
+
+
+@unittest.skipUnless(PROXY_HANDLER_AVAILABLE, "proxy_handler not importable")
+class ProxyBroadcastTests(unittest.TestCase):
+    """Regression: ``audio: null`` (silent payload, A21) must not drop a frame.
+
+    ``broadcast_to_clients`` used to call ``len(message["audio"])`` while
+    building the log line, so a silent payload raised ``TypeError`` inside
+    ``forward_server_messages`` and the whole frame was skipped.
+    """
+
+    class _Socket:
+        def __init__(self):
+            self.sent = []
+
+        async def send_json(self, message):
+            self.sent.append(message)
+
+    def setUp(self):
+        self.handler = ProxyHandler("ws://unused/client-ws")
+        self.socket = self._Socket()
+        self.handler.clients["overlay"] = self.socket
+
+    def test_null_audio_is_delivered(self):
+        message = {"type": "audio", "audio": None, "display_text": {"text": "hola"}}
+        asyncio.run(self.handler.broadcast_to_clients(message))
+        self.assertEqual(self.socket.sent, [message])
+
+    def test_empty_audio_and_large_volumes_are_delivered(self):
+        message = {
+            "type": "audio",
+            "audio": "",
+            "volumes": [0.5] * 11,
+        }
+        asyncio.run(self.handler.broadcast_to_clients(message))
+        self.assertEqual(self.socket.sent, [message])
 
 
 if __name__ == "__main__":
