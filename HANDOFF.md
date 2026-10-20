@@ -225,7 +225,7 @@ Modificados: `config_manager/scheduler.py` (`OBSConfig` + `background`/`transiti
 scheduler_config:
   obs:                       # todo desactivado por defecto
     enabled: false           # true = conectar al arrancar y cambiar escenas
-    host: '127.0.0.1'
+    host: '127.0.0.1'        # con la app en Docker: 'host.docker.internal'
     port: 4455
     password: ''
     timeout: 3.0
@@ -374,6 +374,7 @@ docker compose restart
 ```powershell
 cd d:\Open-LLM-VTuber
 
+powershell -ExecutionPolicy Bypass -File scripts\docker_up.ps1   # preflight (conf.yaml, host, motor) + up -d + espera
 docker compose up -d                  # crear/arrancar
 docker compose ps                     # estado + puertos
 docker compose logs -f                # seguir logs (espera "Uvicorn running on http://0.0.0.0:12393")
@@ -403,6 +404,37 @@ docker compose exec -T open-llm-vtuber ls -la /app/cache                # los .m
   bloquean cualquier otro `uv`; se soluciona recreando el contenedor.
 - La documentación oficial (FAQ y Quick Start) **no** cubre aún este fallo de edge-tts.
 - No se debe usar `network_mode: host` (en Docker Desktop para Windows no expone el localhost de Windows).
+
+### 8.1 `ERROR: conf.yaml is required.` al arrancar el contenedor
+
+Sale del entrypoint (`/usr/local/bin/start-app`, generado en el `dockerfile`) cuando **no existe
+`/app/conf/conf.yaml` dentro del contenedor**. `run_server.py` lee `read_yaml("conf.yaml")`, o sea
+`/app/conf.yaml`, y el entrypoint crea ese symlink → `/app/conf/conf.yaml`; si no hay fichero, sale con
+`exit 1` antes de llegar a Python.
+
+| Causa | Cómo se detecta | Arreglo |
+|---|---|---|
+| Se lanzó la **imagen sin volumen** (`docker run <imagen>` o "Run" de Docker Desktop) | `docker inspect <contenedor> --format '{{json .Mounts}}'` no muestra `/app/conf` como *bind* | `docker compose up -d` desde `d:\Open-LLM-VTuber` (el compose monta `./conf:/app/conf`) |
+| Bind mount a una ruta equivocada (p. ej. `-v ./conf.yaml:/app/conf.yaml`, o `-v ./conf:/app/conf` lanzado desde **otro** directorio) | dentro del contenedor `ls -l /app/conf` está vacío o es un directorio creado por Docker | montar el **directorio** `...\Open-LLM-VTuber\conf` en `/app/conf` y no sobrescribir `command:` (el symlink lo crea `start-app`) |
+| No existe `conf/conf.yaml` en el host (está en `.gitignore`, un clon nuevo no lo tiene) | `Test-Path conf\conf.yaml` → `False` | `Copy-Item conf.yaml conf\conf.yaml` (o `config_templates\conf.default.yaml` + `host: '0.0.0.0'`) |
+| Docker Desktop todavía arrancando | `docker info` → `Internal Server Error ... /v1.47/version` | esperar a "Engine running" / reiniciar Docker Desktop |
+
+Comando único que comprueba todo lo anterior y arranca:
+
+```powershell
+cd d:\Open-LLM-VTuber
+powershell -ExecutionPolicy Bypass -File scripts\docker_up.ps1        # añade -Build para reconstruir
+```
+
+El script se coloca en la raíz, crea `conf\conf.yaml` si falta, avisa si `system_config.host` no es
+`0.0.0.0`, verifica el motor, hace `docker compose up -d`, espera `Uvicorn running` y comprueba con
+`ls -l /app/conf/conf.yaml /app/conf.yaml` que el symlink existe. Los mensajes del entrypoint ahora
+(tras `docker compose build`) también dicen qué montar y apuntan a este script.
+
+> **OBS con la app en Docker:** el contenedor no ve el `127.0.0.1` de Windows. Pon
+> `scheduler_config.obs.host: host.docker.internal` (y `enabled: true`), deja el servidor WebSocket de
+> OBS escuchando en el puerto 4455 y acepta el aviso del Firewall de Windows. El overlay sí se abre
+> desde Windows en `http://localhost:12393/web-tool/stage-test.html`.
 
 
 

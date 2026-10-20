@@ -39,8 +39,12 @@ RUN printf '%s\n' \
   '  echo "Using user-provided conf.yaml"' \
   '  ln -sf /app/conf/conf.yaml /app/conf.yaml' \
   'else' \
-  '  echo "ERROR: conf.yaml is required."' \
-  '  echo "Please mount your config dir to /app/conf"' \
+  '  echo "ERROR: /app/conf/conf.yaml not found: the container needs the config INSIDE the mount."' \
+  '  echo "  * from the repo root: docker compose up -d      (mounts ./conf:/app/conf)"' \
+  '  echo "  * plain docker run:   -v /path/to/repo/conf:/app/conf -p 12393:12393"' \
+  '  echo "  * no config yet:      cp config_templates/conf.default.yaml conf/conf.yaml"' \
+  '  echo "  * then set system_config.host: 0.0.0.0 so the published port answers"' \
+  '  echo "  * helper: powershell -File scripts/docker_up.ps1 (checks all of the above)"' \
   '  exit 1' \
   'fi' \
   '' \
