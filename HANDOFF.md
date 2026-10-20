@@ -264,10 +264,12 @@ Prueba manual (**obligatoria**, aquí no se puede ejecutar OBS junto con Docker)
 2. Con OBS 28+: *Herramientas → Configuración del servidor WebSocket*, activarlo, poner
    `scheduler_config.obs.enabled: true` y la contraseña, crear las escenas (`starting_soon`,
    `tarot_main`, `ending`) y añadir el overlay como **Browser Source**
-   (`http://127.0.0.1:12393/web-tool/stage-test.html`, 1920×1080). Tras reiniciar, el log debe mostrar
+   (`http://127.0.0.1:12393/web-tool/overlay.html`, 1920×1080; `stage-test.html` solo si se quiere
+   probar el contrato sin audio). Tras reiniciar, el log debe mostrar
    `Scheduler: OBS scenes available: …`; al disparar un job, `SetCurrentProgramScene` (y `StartStream`
-   si `start_stream: true`). El overlay de prueba **no** envía `frontend-playback-complete`: el turno se
-   cerrará por timeout (A18) — el overlay definitivo sí debe enviar el ack.
+   si `start_stream: true`). `overlay.html` **sí** manda `frontend-playback-complete`, así que el turno
+   cierra cuando termina el audio y no por timeout (A18); `stage-test.html` no lo manda y por eso el
+   turno acaba en `No playback completion ...; closing the turn anyway`.
 
 Para llevarlo al contenedor ya construido (el build sigue sin ser reproducible, §6.8):
 
@@ -279,10 +281,45 @@ docker cp src\open_llm_vtuber\routes.py open-llm-vtuber:/app/src/open_llm_vtuber
 docker cp src\open_llm_vtuber\server.py open-llm-vtuber:/app/src/open_llm_vtuber/server.py
 docker cp src\open_llm_vtuber\websocket_handler.py open-llm-vtuber:/app/src/open_llm_vtuber/websocket_handler.py
 docker cp web_tool\stage-test.html open-llm-vtuber:/app/web_tool/stage-test.html
+docker cp web_tool\overlay.html open-llm-vtuber:/app/web_tool/overlay.html
+docker cp web_tool\overlay-protocol.js open-llm-vtuber:/app/web_tool/overlay-protocol.js
 docker compose restart
 ```
 
+### 4.5 Fase 3 — overlay de producción (audio + `frontend-playback-complete`)
+
+Cierra el pendiente §6.11: el overlay reproduce el audio de cada turno y responde el ack, así que el
+backend ya no espera `PLAYBACK_ACK_TIMEOUT` (180 s) en cada frase (A18).
+
+| Fichero | Contenido |
+|---|---|
+| `web_tool/overlay-protocol.js` | **Lógica pura** del protocolo, sin DOM ni Web Audio: cola de chunks, `audio-play-start`, un `frontend-playback-complete` por flanco de `backend-synth-complete` cuando la cola se vacía, `interrupt-signal`, `fetch-stage` al reconectar y enrutado de `stage-update` / `full-text` / `expression` |
+| `web_tool/overlay.html` | **Browser Source** de OBS: capas con crossfade, `props`, subtítulo, un `<audio>` con los chunks en orden y HUD oculto (`h` o `?debug=1`). Socket por defecto **`/proxy-ws`** (A1), con `?token=` (A22) y `?ws=` para apuntar a `/client-ws` |
+| `scripts/test_overlay_protocol.js` | **13 tests** de Node (`node:test`) con socket y reproductor falsos: sin OBS, sin navegador y sin backend |
+
+Decisiones del contrato:
+
+- **`audio: null`** y **`forwarded: true`** se muestran como subtítulo y **no** bloquean el ack: son los
+  avisos de los demás clientes del grupo (A21).
+- **`interrupt-signal`** para el audio y vacía la cola **sin** ack: ese turno lo cierra el servidor por la
+  vía de la interrupción.
+- Un chunk que **no se puede reproducir** (autoplay bloqueado, `error` del `<audio>`) se da por terminado
+  para que el turno no se quede colgado.
+- Al **reconectar** se manda `fetch-stage` (el servidor cachea el último `stage-update`) y se descarta la
+  cola; los callbacks viejos del reproductor **no** pueden ackar el turno nuevo.
+
+```powershell
+# lógica del overlay (no necesita Python, ni Docker, ni OBS)
+node scripts/test_overlay_protocol.js
+# comprobar que el JS sigue siendo válido
+node --check web_tool/overlay-protocol.js
+```
+
+Ojo: el overlay **no** pinta Live2D ni hace lip-sync; dibuja escenario, props y subtítulo y reproduce la
+voz. Para el avatar hay que añadir el Live2D Web SDK (o seguir usando la UI oficial como Browser Source).
+
 ## 5. Estado verificado (¡importante!)
+
 
 | Comprobación | Resultado |
 |---|---|
@@ -296,7 +333,7 @@ docker compose restart
 | **TTS real** | `TTS OK size = 11232 bytes` (antes 0 bytes + 403) ✅ |
 | **Smoke test** | `audio chunks 2 / 290392 bytes / playback ack 2 / chain end True` → `SMOKE TEST PASSED`, exit 0 ✅ |
 | **Scheduler** | `Scheduler started with 5 job(s)` → `job 'preflight_test' fired on <uid>`; el cliente recibe audio, ack y `conversation-chain-end` ✅ |
-| **Stage/OBS** | ⏳ contrato, cliente v5 y wiring cubiertos por `python scripts/test_stage_obs.py` (`Ran 27 tests ... OK`); la prueba con OBS real es manual (§6.10) |
+| **Stage/OBS** | ⏳ contrato, cliente v5 y wiring cubiertos por `python scripts/test_stage_obs.py` (`Ran 27 tests ... OK`); overlay de producción cubierto por `node scripts/test_overlay_protocol.js` (13 tests: audio, ack, interrupción, reconexión). La prueba con OBS real es manual (§6.10) |
 
 ## 6. Pendientes / siguientes pasos
 
@@ -357,17 +394,18 @@ docker compose restart
    `GET /api/metrics` cada pocos minutos y comprobar `turn_seconds.p95 < 8`, `first_audio_seconds.p95`
    estable, `queue.max_depth` acotado y `without_audio` a 0. Si el ancho de banda es el problema,
    cambiar `system_config.audio_export.format` a `'mp3'` y repetir: el tráfico debe caer ~10×.
-10. **[Fase 3 · prueba manual obligatoria]** El contrato `stage-update` y el cliente OBS están
-    probados sin red (27 tests), pero **aquí no se puede ejecutar OBS junto con Docker**. Protocolo
-    completo en §4.4: (a) sin OBS, abrir `/web-tool/stage-test.html` y comprobar que
+10. **[Fase 3 · prueba manual pendiente]** El contrato `stage-update`, el cliente OBS y el overlay de
+    producción están probados sin red (`python scripts/test_stage_obs.py` = 27 tests;
+    `node scripts/test_overlay_protocol.js` = 13 tests), pero **aquí no se puede ejecutar OBS junto con
+    Docker**. Protocolo completo en §4.4: (a) sin OBS, abrir `/web-tool/stage-test.html` y comprobar que
     `POST /api/stage` devuelve `delivered: 1` y cambia el fondo; (b) con OBS 28+ y
-    `obs.enabled: true`, ver `Scheduler: OBS scenes available: …` en el log y el cambio de escena al
-    disparar un job. Ojo: el overlay de prueba no manda `frontend-playback-complete`, así que el
-    turno acaba por timeout (A18); el overlay definitivo debe enviar el ack.
-11. **[Audio de la Fase 3]** El overlay de prueba todavía **no reproduce el audio** de los jobs: el
-    contrato `stage-update` solo cubre escena/fondo/props. Para oír al vtuber dentro de OBS hay que
-    añadir la reproducción de los mensajes `audio` en el overlay real (o usar `web_tool/index.html`
-    como Browser Source) y mandar `frontend-playback-complete`.
+    `obs.enabled: true`, añadir `/web-tool/overlay.html` como Browser Source, ver
+    `Scheduler: OBS scenes available: …` en el log y el cambio de escena al disparar un job.
+    **No bloquea el resto del MVP**: el código de la fase 3 está cerrado y cubierto por tests.
+11. **[Audio de la Fase 3 — hecho]** El overlay de producción (`web_tool/overlay.html` +
+    `overlay-protocol.js`, §4.5) ya reproduce los mensajes `audio` en orden y manda
+    `frontend-playback-complete`, así que el turno cierra al terminar el audio. Falta lo de siempre: el
+    arte definitivo y el lip-sync con Live2D (el overlay pinta escenario/props/subtítulo y la voz).
 
 ## 7. Chuleta de comandos
 
@@ -522,6 +560,9 @@ uv run python scripts/test_audio_hardening.py
 
 # 5) tests de la fase 3 (contrato stage-update + cliente OBS v5, sin red ni OBS)
 uv run python scripts/test_stage_obs.py
+
+# 6) lógica del overlay de producción (§4.5): solo necesita Node, nada más
+node scripts/test_overlay_protocol.js
 ```
 
 **Estado en esta máquina (Windows, sin `uv`):** los pasos 2, 4 y 5 se ejecutan con el Python del

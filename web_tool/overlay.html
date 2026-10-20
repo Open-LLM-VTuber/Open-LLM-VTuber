@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tarot overlay (Ruta B)</title>
+    <!--
+        Production Ruta B overlay: OBS Browser Source. It renders the
+        `stage-update` contract (audit §2.4) *and* plays the turn audio, so the
+        backend gets its `frontend-playback-complete` ack (A18) and the turn
+        closes as soon as the last chunk is heard.
+
+        Usage (OBS: 1920x1080, "Shutdown source when not visible" OFF):
+          http://localhost:12393/web-tool/overlay.html
+          http://localhost:12393/web-tool/overlay.html?token=...            (A22 token)
+          .../overlay.html?ws=ws://127.0.0.1:12393/client-ws                (no connector: manual UI)
+          .../overlay.html?debug=1                                          (HUD visible)
+
+        The default socket is /proxy-ws: with the TikTok connector running it is
+        the only socket that receives the audio (audit A1).
+
+        Drive the stage from the operator box:
+          curl -X POST http://127.0.0.1:12393/api/stage \
+               -H "Content-Type: application/json" \
+               -d '{"stage":"tarot_main","background":"/bg/tarot_table.png","props":[{"id":"card_1","src":"/bg/cards/death.png","x":0.7,"y":0.5,"rot":-8}]}'
+
+        Press "h" to hide/show the HUD. The protocol itself lives in
+        overlay-protocol.js so `node scripts/test_overlay_protocol.js` can test
+        it without a browser.
+    -->
+    <style>
+        html,
+        body {
+            margin: 0;
+            height: 100%;
+            overflow: hidden;
+            background: transparent;
+            font-family: system-ui, sans-serif;
+            color: #f5f5f5;
+        }
+
+        .stage {
+            position: fixed;
+            inset: 0;
+            overflow: hidden;
+        }
+
+        .layer {
+            position: absolute;
+            inset: 0;
+            background-position: center;
+            background-size: cover;
+            background-repeat: no-repeat;
+            opacity: 0;
+            will-change: opacity;
+        }
+
+        .layer.is-front {
+            opacity: 1;
+        }
+
+        .props {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+        }
+
+        .props img {
+            position: absolute;
+            max-width: 40vw;
+            max-height: 60vh;
+            transform-origin: center;
+            will-change: transform;
+        }
+
+        .subtitle {
+            position: fixed;
+            left: 50%;
+            bottom: 6vh;
+            transform: translateX(-50%);
+            max-width: min(1100px, 84vw);
+            padding: 14px 22px;
+            border-radius: 14px;
+            background: rgba(12, 8, 20, 0.72);
+            border: 1px solid rgba(255, 212, 121, 0.45);
+            font-size: 30px;
+            line-height: 1.35;
+            text-align: center;
+            white-space: pre-wrap;
+            word-break: break-word;
+            opacity: 0;
+            transition: opacity 240ms ease-in-out;
+            will-change: opacity;
+        }
+
+        .subtitle.is-visible {
+            opacity: 1;
+        }
+
+        .subtitle.is-thinking {
+            font-style: italic;
+            opacity: 0.75;
+        }
+
+        .hud {
+            position: fixed;
+            top: 12px;
+            left: 12px;
+            max-width: min(560px, 90vw);
+            padding: 10px 14px;
+            border-radius: 8px;
+            background: rgba(0, 0, 0, 0.72);
+            font-size: 12px;
+            line-height: 1.45;
+            white-space: pre-wrap;
+            word-break: break-word;
+            z-index: 10;
+        }
+
+        .hud[hidden] {
+            display: none;
+        }
+
+        .hud b {
+            color: #ffd479;
+        }
+
+        .status-ok {
+            color: #7ee787;
+        }
+
+        .status-off {
+            color: #ff7b72;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="stage">
+        <div class="layer is-front" id="layer-a"></div>
+        <div class="layer" id="layer-b"></div>
+        <div class="props" id="props"></div>
+    </div>
+
+    <div class="subtitle" id="subtitle"></div>
+
+    <div class="hud" id="hud" hidden>
+        <div><b>stage</b>: <span id="stage-name">—</span></div>
+        <div><b>ws</b>: <span id="ws-status" class="status-off">connecting…</span></div>
+        <div><b>talk</b>: <span id="talk-state">idle</span></div>
+        <div><b>last</b>: <span id="last-payload">—</span></div>
+        <div>POST /api/stage · press “h” to hide</div>
+    </div>
+
+    <audio id="voice" preload="auto"></audio>
+
+    <script src="overlay-protocol.js"></script>
+    <script>
+        (function () {
+            "use strict";
+
+            var params = new URLSearchParams(window.location.search);
+            var token = params.get("token") || "";
+            var explicitWs = params.get("ws") || "";
+            var wsUrl = explicitWs ||
+                ((window.location.protocol === "https:" ? "wss:" : "ws:") +
+                    "//" + window.location.host + "/proxy-ws" +
+                    (token ? "?token=" + encodeURIComponent(token) : ""));
+
+            var layers = [
+                document.getElementById("layer-a"),
+                document.getElementById("layer-b")
+            ];
+            var propsBox = document.getElementById("props");
+            var subtitle = document.getElementById("subtitle");
+            var player = document.getElementById("voice");
+            var hud = document.getElementById("hud");
+            var stageName = document.getElementById("stage-name");
+            var wsStatus = document.getElementById("ws-status");
+            var talkState = document.getElementById("talk-state");
+            var lastPayload = document.getElementById("last-payload");
+
+            var front = 0;
+            var currentBackground = "";
+            var socket = null;
+            var reconnectTimer = null;
+            var subtitleTimer = null;
+
+            if (params.get("debug") === "1") {
+                hud.hidden = false;
+            }
+
+            function setStatus(text, ok) {
+                wsStatus.textContent = text;
+                wsStatus.className = ok ? "status-ok" : "status-off";
+            }
+
+            // Crossfade between two layers so a slow image never flashes white.
+            function setBackground(url, transition, durationMs) {
+                if (typeof url !== "string" || !url || url === currentBackground) {
+                    return;
+                }
+                var back = layers[1 - front];
+                var probe = new Image();
+                probe.onload = function () {
+                    back.style.backgroundImage = 'url("' + url.replace(/"/g, "%22") + '")';
+                    back.style.transition = (transition === "none")
+                        ? "none"
+                        : "opacity " + durationMs + "ms ease-in-out";
+                    requestAnimationFrame(function () {
+                        back.style.opacity = "1";
+                        layers[front].style.opacity = "0";
+                        front = 1 - front;
+                        currentBackground = url;
+                    });
+                };
+                probe.onerror = function () {
+                    lastPayload.textContent = "background failed to load: " + url;
+                };
+                probe.src = url;
+            }
+
+            // Only replace the props when the payload carries them: a scheduler
+            // job sends just `background`, so the previous cards must stay put.
+            function setProps(props) {
+                propsBox.textContent = "";
+                props.forEach(function (prop) {
+                    if (!prop || typeof prop.src !== "string") {
+                        return;
+                    }
+                    var img = document.createElement("img");
+                    img.src = prop.src;
+                    img.alt = prop.id || "";
+                    if (prop.id) {
+                        img.dataset.id = prop.id;
+                    }
+                    var x = (typeof prop.x === "number") ? prop.x : 0.5;
+                    var y = (typeof prop.y === "number") ? prop.y : 0.5;
+                    var rot = (typeof prop.rot === "number") ? prop.rot : 0;
+                    var scale = (typeof prop.scale === "number") ? prop.scale : 1;
+                    if (typeof prop.opacity === "number") {
+                        img.style.opacity = String(prop.opacity);
+                    }
+                    img.style.left = (x * 100) + "%";
+                    img.style.top = (y * 100) + "%";
+                    img.style.transform =
+                        "translate(-50%, -50%) rotate(" + rot + "deg) scale(" + scale + ")";
+                    propsBox.appendChild(img);
+                });
+            }
+
+            function applyStage(message) {
+                if (typeof message.stage === "string" && message.stage) {
+                    stageName.textContent = message.stage;
+                }
+                if (typeof message.background === "string" && message.background) {
+                    setBackground(message.background, message.transition, message.duration_ms);
+                }
+                if (Array.isArray(message.props)) {
+                    setProps(message.props);
+                }
+                lastPayload.textContent = JSON.stringify(message);
+            }
+
+            function hideSubtitle() {
+                if (subtitleTimer !== null) {
+                    window.clearTimeout(subtitleTimer);
+                    subtitleTimer = null;
+                }
+                subtitle.classList.remove("is-visible", "is-thinking");
+                subtitle.textContent = "";
+            }
+
+            function showSubtitle(text, thinking) {
+                if (!text) {
+                    hideSubtitle();
+                    return;
+                }
+                subtitle.textContent = text;
+                subtitle.classList.add("is-visible");
+                subtitle.classList.toggle("is-thinking", thinking === true);
+                if (subtitleTimer !== null) {
+                    window.clearTimeout(subtitleTimer);
+                }
+                // Keep the last sentence long enough to be read, but fade it.
+                subtitleTimer = window.setTimeout(function () {
+                    subtitleTimer = null;
+                    subtitle.classList.remove("is-visible", "is-thinking");
+                }, thinking === true ? 20000 : 14000);
+            }
+
+            function onDisplayText(displayText) {
+                if (displayText && typeof displayText.text === "string") {
+                    showSubtitle(displayText.text, false);
+                }
+            }
+
+            function setTalkState(text) {
+                talkState.textContent = text;
+            }
+
+            // --- audio: one <audio> element, chunks played strictly in order ---
+            var pendingDone = null;
+
+            function finishChunk() {
+                var callback = pendingDone;
+                pendingDone = null;
+                player.onended = null;
+                player.onerror = null;
+                if (callback) {
+                    callback();
+                }
+            }
+
+            var audioAdapter = {
+                play: function (url, done) {
+                    pendingDone = done;
+                    player.onended = finishChunk;
+                    player.onerror = finishChunk;
+                    player.src = url;
+                    var promise = player.play();
+                    if (promise && typeof promise.catch === "function") {
+                        promise.catch(function (error) {
+                            // OBS allows autoplay; a plain browser may not.
+                            setStatus("audio blocked: allow autoplay", false);
+                            finishChunk();
+                        });
+                    }
+                },
+                stop: function () {
+                    pendingDone = null;
+                    player.onended = null;
+                    player.onerror = null;
+                    try {
+                        player.pause();
+                    } catch (error) {
+                        // Already idle: nothing to stop.
+                    }
+                    player.removeAttribute("src");
+                }
+            };
+
+            // --- protocol: all the message handling lives in overlay-protocol.js ---
+            var protocol = OverlayProtocol.createOverlayProtocol({
+                send: function (message) {
+                    if (socket && socket.readyState === WebSocket.OPEN) {
+                        socket.send(JSON.stringify(message));
+                    }
+                },
+                audio: audioAdapter,
+                onStage: applyStage,
+                onSubtitle: onDisplayText,
+                onSubtitleText: function (text) {
+                    showSubtitle(text, true);
+                },
+                onExpression: function (actions) {
+                    lastPayload.textContent = "expression: " + JSON.stringify(actions);
+                },
+                onUserText: function (text) {
+                    setTalkState("chat: " + text);
+                },
+                onConfig: function (message) {
+                    lastPayload.textContent = "character: " + (message.conf_name || "?");
+                },
+                onStatus: setTalkState
+            });
+
+            function connect() {
+                setStatus("connecting…", false);
+                socket = new WebSocket(wsUrl);
+
+                socket.onopen = function () {
+                    setStatus("connected", true);
+                    protocol.onOpen();
+                };
+
+                socket.onmessage = function (event) {
+                    var message;
+                    try {
+                        message = JSON.parse(event.data);
+                    } catch (error) {
+                        return;
+                    }
+                    protocol.handleMessage(message);
+                };
+
+                socket.onclose = function () {
+                    setStatus("disconnected, retrying…", false);
+                    if (reconnectTimer === null) {
+                        reconnectTimer = window.setTimeout(function () {
+                            reconnectTimer = null;
+                            connect();
+                        }, 2000);
+                    }
+                };
+
+                socket.onerror = function () {
+                    setStatus("error", false);
+                };
+            }
+
+            window.addEventListener("keydown", function (event) {
+                if (event.key === "h" || event.key === "H") {
+                    hud.hidden = !hud.hidden;
+                }
+            });
+
+            // A click unlocks audio in a normal browser; OBS never needs it.
+            window.addEventListener("click", function () {
+                if (player.paused && player.getAttribute("src")) {
+                    var attempt = player.play();
+                    if (attempt && typeof attempt.catch === "function") {
+                        attempt.catch(function () {
+                            // Still blocked: the next click tries again.
+                        });
+                    }
+                }
+            });
+
+            connect();
+        }());
+    </script>
+</body>
+
+</html>

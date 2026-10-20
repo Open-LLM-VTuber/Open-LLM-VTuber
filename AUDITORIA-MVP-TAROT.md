@@ -12,7 +12,7 @@
 | Capacidad pedida | Estado real en el código | Punto de extensión | Trabajo para el MVP | Riesgo |
 |---|---|---|---|---|
 | **Voz clonada** | ✅ **Nativo** | `tts/gpt_sovits_tts.py`, `tts/tts_factory.py`, `config_manager/tts.py` (`ref_audio_path` + `prompt_text`) | Config + servidor GPT-SoVITS. **0 líneas** de código — §3.2 | Medio: la calidad en español depende del checkpoint (v2Pro/v4) y del ref-audio |
-| **Escenario personalizable** | ⚠️ **Parcial**: OBS por scheduler (escena + *StartStream*/*StopStream*) y contrato `stage-update`, sin overlay de producción | `model_dict.json`, `backgrounds/`, `set-model-and-conf`, `scheduler/obs.py`, `utils/stage.py` — §2.3, §2.4 | **Ruta A: hecha** (sin código de frontend). **Ruta B: contrato + overlay de prueba** (`web_tool/stage-test.html`); falta el arte y el lip-sync | Medio: el overlay **debe** apuntar su WS a `/proxy-ws` o se queda sin audio (A1) |
+| **Escenario personalizable** | ⚠️ **Parcial**: OBS por scheduler (escena + *StartStream*/*StopStream*) y contrato `stage-update`, sin overlay de producción | `model_dict.json`, `backgrounds/`, `set-model-and-conf`, `scheduler/obs.py`, `utils/stage.py` — §2.3, §2.4 | **Ruta A: hecha** (sin código de frontend). **Ruta B: contrato + overlay de producción** (`web_tool/overlay.html`: escena, props, subtítulo, audio en orden y ack `frontend-playback-complete`); falta el arte y el lip-sync | Medio: el overlay **debe** apuntar su WS a `/proxy-ws` o se queda sin audio (A1) |
 | **Chat en directo (TikTok)** | ❌ **Solo Bilibili** (`blivedm`); ignora regalos, entradas y username | `live/live_interface.py` (ABC), `live/bilibili_live.py` (referencia) | `live/tiktok_live.py` (~200 líneas) + `scripts/run_tiktok_live.py` (~60) — §4.2.4 | Alto: API no oficial (`TikTokLive`), cambios de protocolo y ToS |
 | **Emisión programada** | ❌ **No existe** (sin cron ni APScheduler) | `ai-speak-signal` ya existe, pero **ignora `data["text"]`** — §4.3.1 | `scheduler/` (~150) + config (~70) + inyección en `routes.py`/`server.py` (~20) — §4.3.3 | Medio: depende de A18; un turno colgado bloquea el siguiente guion |
 | **Emisión desatendida (robustez)** | ❌ **No**: 7 defectos bloqueantes (A18–A24) | `conversation_utils.py`, `tts_manager.py`, `proxy_handler.py`, `gpt_sovits_tts.py` — §5.1 | Parches 5.2.1–5.2.7 (~80 líneas netas) | **Alto si no se aplican**: A18 ⇒ directo mudo; A20/A24 ⇒ GPU saturada |
@@ -248,6 +248,11 @@ En el frontend actual bastaría con escuchar `stage-update` en `websocket-handle
 > Herramienta de verificación manual (no es el overlay final): `web_tool/stage-test.html`,
 > servido en `http://localhost:12393/web-tool/stage-test.html`. Acepta `?token=` (A22)
 > y `?ws=` para apuntar a otro socket; tecla `h` oculta el HUD.
+>
+> Overlay de producción: `web_tool/overlay.html` (+ `overlay-protocol.js`), servido en
+> `http://localhost:12393/web-tool/overlay.html`. Mismo contrato y además reproduce el audio de cada
+> turno y manda `frontend-playback-complete` (A18); su lógica se prueba con
+> `node scripts/test_overlay_protocol.js`.
 
 ---
 
@@ -1023,6 +1028,8 @@ Durante el resto del tiempo responde a TikTok (4.2) y, si no hay comentarios, el
 | `scheduler/obs.py` | **nuevo**: cliente OBS WebSocket v5 (escena, StartStream/StopStream, GetSceneList) | ~260 |
 | `utils/stage.py` | **nuevo**: `build_stage_payload` + `select_stage_targets` (§2.4) | ~125 |
 | `web_tool/stage-test.html` | **nuevo**: overlay de prueba del contrato (no es el overlay final) | ~270 |
+| `web_tool/overlay.html` + `web_tool/overlay-protocol.js` | **nuevo**: overlay de producción (escena + audio + ack `frontend-playback-complete`); la lógica va aparte para poder testearla sin navegador | ~430 + ~225 |
+| `scripts/test_overlay_protocol.js` | **nuevo**: 13 tests de Node del overlay (sin OBS, navegador ni backend) | ~285 |
 | `routes.py` | aceptar `ws_handler` inyectado + `GET/POST /api/stage` | +70 |
 | `websocket_handler.py` | `trigger_proactive_speak()` con guarda de `current_conversation_tasks` (A14) | +14 |
 | `conversations/conversation_handler.py` | `data.get("text") or ...` en `ai-speak-signal` | ±1 |
