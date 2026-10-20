@@ -22,6 +22,10 @@ Notes:
     * It must answer ``frontend-playback-complete``; without that ack the
       backend waits ``PLAYBACK_ACK_TIMEOUT`` before closing the turn (A18).
     * ``--no-speak`` only checks the cards and the API, which needs no TTS.
+    * The draw waits for the overlay session to be ready (``set-model-and-conf``
+      / ``start-mic``). A cold proxy opens ``/client-ws`` on the first client and
+      initialises MCP servers there, which takes tens of seconds; drawing before
+      that ends up with ``delivered=0`` and no cards on screen.
 """
 
 import argparse
@@ -68,6 +72,14 @@ class Result:
         self.draw: Optional[dict] = None
         self.stage_seen = asyncio.Event()
         self.turn_done = asyncio.Event()
+        #: Set when the proxy forwards the session handshake, i.e. when the
+        #: internal ``/client-ws`` socket is registered and a draw can reach us.
+        self.ready = asyncio.Event()
+        #: Ignore stage updates replayed from the *previous* draw until here.
+        self.armed = False
+        #: Only a chain-end after this flag closes the spoken turn (a stale
+        #: broadcast from an earlier turn must not end this test early).
+        self.awaiting_turn = False
         self.error: Optional[str] = None
 
 
@@ -86,10 +98,16 @@ async def _overlay(ws_url: str, result: Result) -> None:
                 continue
 
             msg_type = message.get("type")
+            if msg_type == "control" and message.get("text") == "start-mic":
+                # Last frame of the session handshake: the proxy already
+                # registered its ``/client-ws`` socket, and the cached stage
+                # (if any) was replayed *before* this message.
+                result.ready.set()
             if msg_type == "stage-update":
-                result.stage_updates.append(message)
-                if isinstance(message.get("props"), list):
-                    result.stage_seen.set()
+                if result.armed:
+                    result.stage_updates.append(message)
+                    if isinstance(message.get("props"), list):
+                        result.stage_seen.set()
             elif msg_type == "audio":
                 result.audio_chunks += 1
                 result.audio_bytes += _audio_size(message.get("audio") or "")
@@ -100,6 +118,7 @@ async def _overlay(ws_url: str, result: Result) -> None:
             elif (
                 msg_type == "control"
                 and message.get("text") == "conversation-chain-end"
+                and result.awaiting_turn
             ):
                 result.turn_ended = True
                 result.turn_done.set()
@@ -141,16 +160,23 @@ async def run(
     question: str,
     timeout: float,
     speak: bool,
+    ready_timeout: float = 180.0,
+    stage_timeout: float = 60.0,
 ) -> Result:
-    """Open the overlay socket, draw twice (silent + spoken) and check both."""
+    """Open the overlay socket, wait for the session, draw and check both."""
     result = Result()
     ws_base = url.replace("https://", "wss://").replace("http://", "ws://")
     ws_url = _with_token(f"{ws_base}/proxy-ws", token)
 
     overlay_task = asyncio.create_task(_overlay(ws_url, result))
-    await asyncio.sleep(0.5)  # let the socket connect before the first POST
 
     try:
+        # A cold proxy only opens /client-ws now, and its first session loads
+        # the MCP servers; drawing before that finishes reaches 0 overlays.
+        await asyncio.wait_for(result.ready.wait(), timeout=ready_timeout)
+        print("ok  overlay session ready")
+        result.armed = True
+
         async with httpx.AsyncClient(timeout=30.0) as client:
             silent = await _draw(
                 client,
@@ -158,7 +184,7 @@ async def run(
                 token,
                 {"count": count, "asker": asker, "question": question, "seed": 2026},
             )
-            await asyncio.wait_for(result.stage_seen.wait(), timeout=10.0)
+            await asyncio.wait_for(result.stage_seen.wait(), timeout=stage_timeout)
             print(f"ok  cards delivered ({silent.get('delivered')} overlay(s))")
 
             response = await client.get(_with_token(f"{url}/api/tarot", token))
@@ -176,6 +202,7 @@ async def run(
             print(f"ok  GET /api/tarot reports asker={asker!r} with {count} card(s)")
 
             if speak:
+                result.awaiting_turn = True
                 await _draw(
                     client,
                     url,
@@ -189,7 +216,16 @@ async def run(
                 )
                 await asyncio.wait_for(result.turn_done.wait(), timeout=timeout)
     except asyncio.TimeoutError:
-        result.error = result.error or f"no turn end within {timeout:.0f}s"
+        if not result.ready.is_set():
+            result.error = (
+                result.error or f"overlay session not ready within {ready_timeout:.0f}s"
+            )
+        elif not result.stage_seen.is_set():
+            result.error = (
+                result.error or f"no stage-update within {stage_timeout:.0f}s"
+            )
+        else:
+            result.error = result.error or f"no turn end within {timeout:.0f}s"
     except Exception as e:  # connection refused, HTTP error, ...
         result.error = result.error or f"{type(e).__name__}: {e}"
     finally:
@@ -219,6 +255,18 @@ def main() -> int:
         help="seconds to wait for the spoken turn",
     )
     parser.add_argument(
+        "--ready-timeout",
+        type=float,
+        default=180.0,
+        help="seconds to wait for the overlay session (cold MCP start)",
+    )
+    parser.add_argument(
+        "--stage-timeout",
+        type=float,
+        default=60.0,
+        help="seconds to wait for stage-update after the draw",
+    )
+    parser.add_argument(
         "--token",
         default=os.environ.get(TOKEN_ENV, ""),
         help="shared token (default: env)",
@@ -240,6 +288,8 @@ def main() -> int:
                 args.question,
                 args.timeout,
                 speak=not args.no_speak,
+                ready_timeout=args.ready_timeout,
+                stage_timeout=args.stage_timeout,
             )
         )
     except KeyboardInterrupt:
