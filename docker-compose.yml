@@ -7,8 +7,35 @@ services:
     ports:
       - "12393:12393"
     volumes:
-       - ./conf:/app/conf
-       - ./models:/app/models
+      - ./conf:/app/conf
+      - ./models:/app/models
+      # -----------------------------------------------------------------------
+      # SOURCE AND ASSETS FROM THE HOST
+      #
+      # The image was built before the tarot/MVP branch, and `docker compose
+      # build` currently dies with BuildKit's "failed to receive status: ...
+      # no such job". Without these mounts the only way to get the branch code
+      # into the container is `docker cp`, and the copies live in the writable
+      # layer: `docker compose down`/`up -d --force-recreate` (or editing this
+      # file) throws them away and /api/tarot, /api/metrics go back to 404.
+      #
+      # With them, the container always reads the checkout: `restart`,
+      # `down`+`up -d` and recreations are safe, and code edits only need a
+      # restart. Rebuild only when dependencies change (pyproject.toml).
+      #
+      # Do NOT put characters/backgrounds/avatars inside conf/: the image
+      # entrypoint (/usr/local/bin/start-app) replaces those directories with
+      # symlinks to /app/conf/... when they exist, which would hide the mounts.
+      # -----------------------------------------------------------------------
+      - ./src:/app/src
+      - ./scripts:/app/scripts
+      - ./web_tool:/app/web_tool
+      - ./backgrounds:/app/backgrounds
+      - ./characters:/app/characters
+      - ./prompts:/app/prompts
+      - ./tests:/app/tests
+      - ./config_templates:/app/config_templates
+      - ./upgrade_codes:/app/upgrade_codes
     # ---------------------------------------------------------------------------
     # WHY THIS COMMAND: run_server.py does `read_yaml("conf.yaml")`, i.e. it reads
     # /app/conf.yaml (CWD-relative), NOT /app/conf/conf.yaml. The image does NOT
