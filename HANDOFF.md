@@ -373,13 +373,46 @@ Decisiones:
 - **Sin arte**: `label` = "La Torre", `sublabel` = "ruptura · verdad · derrumbe · invertida". Cuando haya
   cartas dibujadas se cambia el prop a `src` y el scheduler no se toca.
 
+#### Bajo demanda (operador y chat)
+
+La tirada por horario es la base; además se puede disparar a mano o desde el chat:
+
+| Vía | Cómo | Qué hace |
+|---|---|---|
+| HTTP | `POST /api/tarot/draw` | Baraja, manda el `stage-update` al overlay y (si `speak: true`) arranca el turno que lee las cartas |
+| HTTP | `GET /api/tarot` | Devuelve la última tirada (`cards`, `question`, `stage`) para un HUD de operador |
+| Chat | `!carta`, `!tirada 3`, `!carta ¿me cambiaré de trabajo?` | Se intercepta **antes** del LLM: dibuja, pone las cartas y el turno pasa a ser proactivo con el brief. El comando no entra en el historial |
+
+| Fichero | Contenido |
+|---|---|
+| `utils/tarot_commands.py` | **nuevo**, stdlib pura: `parse_draw_command()` (`!carta`/`!tirada N`/`/carta`) y `build_draw_result()` → cartas + payload + brief + `summary()` |
+| `websocket_handler.py` | `draw_tarot(count, question, seed, target_client, speak)` compartido por la ruta y el chat; `current_draw` para `GET /api/tarot`; `_handle_conversation_trigger` intercepta el comando |
+| `routes.py` | `init_tarot_route()`: `GET /api/tarot`, `POST /api/tarot/draw` (token A22, `count` 1–3, `seed` opcional) |
+
+Decisiones:
+
+- Un comando **mal formado** (`!tirada 9`) se registra y sigue como mensaje normal: se pierde una tirada, no la frase del espectador.
+- `speak` viene **apagado** por defecto en HTTP: quién habla depende del despliegue (proxy/conector). Si se activa, usa `target` (por defecto el primer socket, que es el overlay en el montaje recomendado).
+- El chat habla **en el cliente que escribió el comando**, igual que un `text-input` normal; así el audio viaja por el proxy a todos los clientes.
+- `GET /api/tarot` no dispara nada: solo lee la última tirada.
+
 ```powershell
-# probar una tirada sin scheduler ni OBS (se ve en /web-tool/stage-test.html)
+# tirada de 3 cartas y que la lea en voz alta
+curl.exe -X POST http://127.0.0.1:12393/api/tarot/draw -H "Content-Type: application/json" `
+  -d '{"count":3,"question":"¿Cambio de trabajo?","speak":true}'
+# solo pintar las cartas (sin hablar)
+curl.exe -X POST http://127.0.0.1:12393/api/tarot/draw -H "Content-Type: application/json" -d '{"count":1}'
+# qué hay ahora mismo en pantalla
+curl.exe http://127.0.0.1:12393/api/tarot
+
+# pintar cartas a mano en el overlay (sin baraja)
 curl.exe -X POST http://127.0.0.1:12393/api/stage -H "Content-Type: application/json" `
   -d '{"stage":"card_of_the_day","props":[{"id":"card_1","label":"La Torre","sublabel":"ruptura, verdad","x":0.5,"y":0.68}]}'
+
 # tests
-python scripts/test_tarot.py          # 25 tests: baraja, tirada, props, brief
-python scripts/test_stage_obs.py      # 38 tests: contrato + draw del scheduler
+python scripts/test_tarot.py            # 25 tests: baraja, tirada, props, brief
+python scripts/test_tarot_commands.py   # 14 tests: comandos y resultado compartido
+python scripts/test_stage_obs.py        # 38 tests: contrato + draw del scheduler
 ```
 
 ## 5. Estado verificado (¡importante!)
@@ -398,7 +431,7 @@ python scripts/test_stage_obs.py      # 38 tests: contrato + draw del scheduler
 | **Smoke test** | `audio chunks 2 / 290392 bytes / playback ack 2 / chain end True` → `SMOKE TEST PASSED`, exit 0 ✅ |
 | **Scheduler** | `Scheduler started with 5 job(s)` → `job 'preflight_test' fired on <uid>`; el cliente recibe audio, ack y `conversation-chain-end` ✅ |
 | **Stage/OBS** | ⏳ contrato, cliente v5 y wiring cubiertos por `python scripts/test_stage_obs.py` (38 tests tras añadir la tirada), overlay de producción por `node scripts/test_overlay_protocol.js` (13) y **contrato cruzado** con los bytes reales (`node scripts/test_overlay_wire.js` = 11, `python scripts/test_overlay_fixtures.py` = 10). La baraja por `python scripts/test_tarot.py` (25). La prueba con OBS real es manual (§6.10) |
-| **Mecánica de tarot** | ✅ **Hecha** (§4.6): 22 arcanos, tirada 1–3 sin repetir, props de texto en el overlay y brief para el LLM. ⏳ falta el arte de las cartas y la tirada bajo demanda desde el chat (§6.12) |
+| **Mecánica de tarot** | ✅ **Hecha** (§4.6): 22 arcanos, tirada 1–3 sin repetir, props de texto en el overlay, brief para el LLM, `POST /api/tarot/draw`, `GET /api/tarot` y comandos de chat `!carta`/`!tirada N`. ⏳ falta el arte de las cartas y priorizar el comando en la cola del conector (§6.12) |
 
 ## 6. Pendientes / siguientes pasos
 
@@ -473,11 +506,12 @@ python scripts/test_stage_obs.py      # 38 tests: contrato + draw del scheduler
     `overlay-protocol.js`, §4.5) ya reproduce los mensajes `audio` en orden y manda
     `frontend-playback-complete`, así que el turno cierra al terminar el audio. Falta lo de siempre: el
     arte definitivo y el lip-sync con Live2D (el overlay pinta escenario/props/subtítulo y la voz).
-12. **[Tarot — lo que falta]** La tirada ya es real (§4.6), pero se dispara **por horario**. Pendiente:
-    (a) **arte de las 22 cartas** en `backgrounds/cards/*.png` y cambiar `label` por `src` en
-    `build_draw_props`; (b) tirada **bajo demanda** desde el chat (el conector no manda todavía una
-    intención "sácame una carta" → hace falta un comando o un `POST /api/tarot/draw`); (c) un
-    `GET /api/tarot` con la última tirada para el HUD. Nada de eso bloquea el show programado.
+12. **[Tarot — lo que falta]** La mayor parte está hecha: tirada por horario (§4.6), tirada bajo demanda
+    por HTTP (`POST /api/tarot/draw`), comando de chat (`!carta`, `!tirada 3`) y `GET /api/tarot`.
+    Pendiente: (a) **arte de las 22 cartas** en `backgrounds/cards/*.png` y cambiar `label` por `src` en
+    `build_draw_props`; (b) que el conector de TikTok marque los comentarios que empiezan por `!carta`
+    para que la cola los priorice (hoy funcionan, pero compiten con el resto de mensajes); (c) HUD de
+    operador que pinte `GET /api/tarot` (el overlay ya muestra las cartas).
 
 ## 7. Chuleta de comandos
 
@@ -644,6 +678,7 @@ python scripts/export_overlay_fixtures.py --check   # exit 1 si el fixture es vi
 
 # 8) baraja y tirada de tarot (§4.6)
 python scripts/test_tarot.py                 # 25 tests, sin dependencias
+python scripts/test_tarot_commands.py        # 14 tests: !carta / !tirada y payload compartido
 ```
 
 **Estado en esta máquina (Windows, sin `uv`):** los pasos 2, 4 y 5 se ejecutan con el Python del

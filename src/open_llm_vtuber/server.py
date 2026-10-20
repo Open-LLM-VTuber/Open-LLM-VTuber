@@ -19,6 +19,7 @@ from .routes import (
     init_client_ws_route,
     init_metrics_route,
     init_stage_route,
+    init_tarot_route,
     init_webtool_routes,
     init_proxy_route,
 )
@@ -142,6 +143,9 @@ class WebSocketServer:
         # Stage control for the Ruta B overlay (audit §2.4). The handler caches
         # the last payload so a reconnecting overlay restores its scene.
         self.app.include_router(init_stage_route(self.ws_handler, token=self.ws_token))
+        # On-demand tarot draws (audit §4.6): the cards go to the same overlay
+        # and the last draw is readable for an operator HUD.
+        self.app.include_router(init_tarot_route(self.ws_handler, token=self.ws_token))
 
         # Initialize and include proxy routes if proxy is enabled
         system_config = config.system_config

@@ -16,6 +16,11 @@ from .chat_group import (
 from .message_handler import message_handler
 from .utils.stream_audio import prepare_audio_payload
 from .utils.stage import select_stage_targets
+from .utils.tarot_commands import (
+    DrawResult,
+    build_draw_result,
+    parse_draw_command,
+)
 from .chat_history_manager import (
     create_new_history,
     get_history,
@@ -73,6 +78,8 @@ class WebSocketHandler:
         # Last stage-update sent to the overlay (A25): replayed on reconnect so
         # OBS can restart the browser source without losing the scene.
         self.current_stage: Optional[dict] = None
+        # Last on-demand tarot draw, served by GET /api/tarot.
+        self.current_draw: Optional[DrawResult] = None
 
         # Message handlers mapping
         self._message_handlers = self._init_message_handlers()
@@ -381,6 +388,50 @@ class WebSocketHandler:
                 logger.warning(f"stage-update: could not reach {uid}: {e}")
         return delivered
 
+    async def draw_tarot(
+        self,
+        count: int = 1,
+        question: str = "",
+        seed: Optional[int] = None,
+        target_client: str = "first",
+        speak: bool = False,
+    ) -> DrawResult:
+        """Draw a spread, show it on the overlay and remember it (audit §4.6).
+
+        Shared by ``POST /api/tarot/draw`` and the chat commands (``!carta``),
+        so the overlay and the voice always describe the same cards.
+
+        Args:
+            count: 1-3 cards.
+            question: seeker's question, added to the brief for the LLM.
+            seed: reproducible spread (``None`` = random every draw).
+            target_client: ``"first"``/``"all"``/explicit uid for the overlay.
+            speak: also start a proactive turn that reads the cards. Off by
+                default: the chat path speaks on the *commanding* client
+                instead (see ``_handle_conversation_trigger``).
+
+        Returns:
+            DrawResult: cards, payload, brief and what was actually sent.
+        """
+        result = build_draw_result(count=count, question=question, seed=seed)
+        result.delivered = await self.broadcast_stage_update(
+            result.payload, target_client
+        )
+        self.current_draw = result
+
+        if speak:
+            targets = select_stage_targets(self.client_connections, target_client)
+            if targets:
+                result.spoken = await self.trigger_proactive_speak(
+                    targets[0], result.brief
+                )
+
+        logger.info(
+            f"Tarot: {len(result.cards)} card(s) -> {result.delivered} overlay(s)"
+            f"{', spoken' if result.spoken else ''}"
+        )
+        return result
+
     async def send_group_update(self, websocket: WebSocket, client_uid: str):
         """Sends group information to a client"""
         group = self.chat_group_manager.get_client_group(client_uid)
@@ -553,7 +604,32 @@ class WebSocketHandler:
     async def _handle_conversation_trigger(
         self, websocket: WebSocket, client_uid: str, data: WSMessage
     ) -> None:
-        """Handle triggers that start a conversation"""
+        """Handle triggers that start a conversation.
+
+        A tarot command in the text (``!carta``, ``!tirada 3 ¿…?``) is answered
+        here: the spread is drawn and pushed to the overlay **first**, and the
+        turn becomes a proactive segment that reads those cards. The command
+        text never enters the conversation history (audit §4.6).
+        """
+        try:
+            request = parse_draw_command(data.get("text"))
+        except ValueError as e:
+            # Malformed command: fall through as a normal message so the show
+            # keeps going instead of swallowing what the viewer wrote.
+            logger.warning(f"Tarot command ignored: {e}")
+            request = None
+
+        if request is not None:
+            result = await self.draw_tarot(
+                count=request.count, question=request.question
+            )
+            spoken = await self.trigger_proactive_speak(client_uid, result.brief)
+            if not spoken:
+                logger.warning(
+                    "Tarot draw: the cards are on screen but the turn did not start"
+                )
+            return
+
         await handle_conversation_trigger(
             msg_type=data.get("type", ""),
             data=data,

@@ -14,6 +14,7 @@ from .service_context import ServiceContext
 from .websocket_handler import WebSocketHandler
 from .proxy_handler import ProxyHandler
 from .utils.stage import build_stage_payload
+from .utils.tarot_commands import MAX_CARDS, MAX_QUESTION
 
 
 def init_client_ws_route(
@@ -177,6 +178,87 @@ def init_stage_route(
         )
         return JSONResponse(
             {"status": "ok", "delivered": delivered, "payload": payload}
+        )
+
+    return router
+
+
+def init_tarot_route(
+    ws_handler: WebSocketHandler, token: Optional[str] = None
+) -> APIRouter:
+    """Create ``/api/tarot`` and ``/api/tarot/draw`` (audit §4.6).
+
+    Lets the operator draw without waiting for a cron job:
+
+        curl -X POST http://127.0.0.1:12393/api/tarot/draw \\
+             -H 'Content-Type: application/json' \\
+             -d '{"count": 3, "question": "¿Cambio de trabajo?", "speak": true}'
+
+    ``GET /api/tarot`` returns the last draw, which is what an operator HUD
+    needs to show what is already on screen.
+
+    Args:
+        ws_handler: Shared handler; it owns the overlay sockets, the stage cache
+            and ``current_draw``.
+        token: Shared token (audit A22). Same rules as ``/api/metrics``.
+
+    Returns:
+        APIRouter: ``GET`` last draw, ``POST /api/tarot/draw`` a new one.
+    """
+    router = APIRouter()
+
+    @router.get("/api/tarot")
+    async def get_tarot(request: Request):
+        if not http_token_allowed(request, token):
+            return JSONResponse({"error": "unauthorized"}, status_code=401)
+        current = ws_handler.current_draw
+        return JSONResponse({"draw": current.summary() if current else None})
+
+    @router.post("/api/tarot/draw")
+    async def draw_tarot(request: Request):
+        if not http_token_allowed(request, token):
+            return JSONResponse({"error": "unauthorized"}, status_code=401)
+
+        try:
+            body = await request.json()
+        except Exception:
+            body = {}
+        if body is None:
+            body = {}
+        if not isinstance(body, dict):
+            return JSONResponse({"error": "expected a JSON object"}, status_code=400)
+
+        count = body.get("count", 1)
+        if isinstance(count, bool) or not isinstance(count, int):
+            return JSONResponse({"error": "count must be an integer"}, status_code=400)
+        if count < 1 or count > MAX_CARDS:
+            return JSONResponse(
+                {"error": f"count must be between 1 and {MAX_CARDS}"}, status_code=400
+            )
+
+        seed = body.get("seed")
+        if seed is not None and (isinstance(seed, bool) or not isinstance(seed, int)):
+            return JSONResponse({"error": "seed must be an integer"}, status_code=400)
+
+        try:
+            result = await ws_handler.draw_tarot(
+                count=count,
+                question=str(body.get("question", ""))[:MAX_QUESTION],
+                seed=seed,
+                target_client=str(body.get("target", "first")),
+                speak=bool(body.get("speak", False)),
+            )
+        except ValueError as e:
+            return JSONResponse({"error": str(e)}, status_code=400)
+
+        return JSONResponse(
+            {
+                "status": "ok",
+                "delivered": result.delivered,
+                "spoken": result.spoken,
+                "draw": result.summary(),
+                "payload": result.payload,
+            }
         )
 
     return router
