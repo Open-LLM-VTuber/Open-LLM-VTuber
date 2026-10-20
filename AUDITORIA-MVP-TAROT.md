@@ -253,6 +253,13 @@ En el frontend actual bastaría con escuchar `stage-update` en `websocket-handle
 > `http://localhost:12393/web-tool/overlay.html`. Mismo contrato y además reproduce el audio de cada
 > turno y manda `frontend-playback-complete` (A18); su lógica se prueba con
 > `node scripts/test_overlay_protocol.js`.
+>
+> **Contrato cruzado (2026-10-20):** `scripts/export_overlay_fixtures.py` ejecuta los builders reales
+> (`build_stage_payload`, `prepare_audio_payload`, `finalize_conversation_turn`, `build_interrupt_signal`)
+> y guarda las cadenas exactas de `json.dumps()` en `tests/fixtures/overlay-wire.json`;
+> `scripts/test_overlay_wire.js` (10 tests) las reproduce por `overlay-protocol.js` y
+> `scripts/test_overlay_fixtures.py` (9 tests) falla si el fixture queda obsoleto. Así el productor y el
+> consumidor se validan contra **los mismos bytes**, no contra suposiciones separadas.
 
 ---
 
@@ -1030,6 +1037,11 @@ Durante el resto del tiempo responde a TikTok (4.2) y, si no hay comentarios, el
 | `web_tool/stage-test.html` | **nuevo**: overlay de prueba del contrato (no es el overlay final) | ~270 |
 | `web_tool/overlay.html` + `web_tool/overlay-protocol.js` | **nuevo**: overlay de producción (escena + audio + ack `frontend-playback-complete`); la lógica va aparte para poder testearla sin navegador | ~430 + ~225 |
 | `scripts/test_overlay_protocol.js` | **nuevo**: 13 tests de Node del overlay (sin OBS, navegador ni backend) | ~285 |
+| `tests/fixtures/overlay-wire.json` | **nuevo**: frames reales del backend (antes y después del ack), generados, no escritos a mano | ~85 |
+| `scripts/export_overlay_fixtures.py` | **nuevo**: exporta esos frames ejecutando los builders reales; `--check` detecta fixture obsoleto | ~470 |
+| `scripts/test_overlay_wire.js` | **nuevo**: 10 tests que reproducen el fixture por `overlay-protocol.js` (contrato cruzado) | ~270 |
+| `scripts/test_overlay_fixtures.py` | **nuevo**: 9 tests que impiden commitear un fixture desfasado | ~160 |
+| `conversations/conversation_utils.py`, `conversations/conversation_handler.py` | `build_interrupt_signal()` como única fuente del frame `interrupt-signal` (lo usan el broadcast y el exportador) | ±12 |
 | `routes.py` | aceptar `ws_handler` inyectado + `GET/POST /api/stage` | +70 |
 | `websocket_handler.py` | `trigger_proactive_speak()` con guarda de `current_conversation_tasks` (A14) | +14 |
 | `conversations/conversation_handler.py` | `data.get("text") or ...` en `ai-speak-signal` | ±1 |

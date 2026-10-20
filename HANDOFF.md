@@ -258,7 +258,7 @@ curl.exe -X POST http://127.0.0.1:12393/api/stage -H 'Content-Type: application/
 
 Prueba manual (**obligatoria**, aquí no se puede ejecutar OBS junto con Docker):
 
-1. Sin OBS: `python scripts/test_stage_obs.py` y abrir
+1. Sin OBS: `python scripts/test_stage_obs.py`, `node scripts/test_overlay_wire.js` y abrir
    `http://localhost:12393/web-tool/stage-test.html` (con `?token=…` si A22 está activo). El `POST`
    de arriba debe devolver `delivered: 1` y verse el crossfade.
 2. Con OBS 28+: *Herramientas → Configuración del servidor WebSocket*, activarlo, poner
@@ -296,6 +296,19 @@ backend ya no espera `PLAYBACK_ACK_TIMEOUT` (180 s) en cada frase (A18).
 | `web_tool/overlay-protocol.js` | **Lógica pura** del protocolo, sin DOM ni Web Audio: cola de chunks, `audio-play-start`, un `frontend-playback-complete` por flanco de `backend-synth-complete` cuando la cola se vacía, `interrupt-signal`, `fetch-stage` al reconectar y enrutado de `stage-update` / `full-text` / `expression` |
 | `web_tool/overlay.html` | **Browser Source** de OBS: capas con crossfade, `props`, subtítulo, un `<audio>` con los chunks en orden y HUD oculto (`h` o `?debug=1`). Socket por defecto **`/proxy-ws`** (A1), con `?token=` (A22) y `?ws=` para apuntar a `/client-ws` |
 | `scripts/test_overlay_protocol.js` | **13 tests** de Node (`node:test`) con socket y reproductor falsos: sin OBS, sin navegador y sin backend |
+| `tests/fixtures/overlay-wire.json` | **Los bytes reales**: por cada escenario, las cadenas exactas de `json.dumps()` que el backend pasa a `websocket_send`, separadas en «antes del ack» y «después del ack» |
+| `scripts/export_overlay_fixtures.py` | Genera ese fixture ejecutando los builders **reales** (`build_stage_payload`, `prepare_audio_payload`, `finalize_conversation_turn`, `build_interrupt_signal`). Solo los bytes de audio son sintéticos |
+| `scripts/test_overlay_wire.js` | **10 tests** que reproducen el fixture por `overlay-protocol.js`: productor y consumidor contra los mismos bytes |
+| `scripts/test_overlay_fixtures.py` | **9 tests**: el fixture commiteado no está obsoleto y cubre el contrato |
+
+**Por qué hace falta el fixture (§6.11):** los dos suites anteriores se equivocaban por separado. Python se
+probaba contra sus propias suposiciones y el JS contra mensajes escritos a mano; si ambos no coincidían
+(por ejemplo `audio: null` vs `audio: ""`), los dos pasaban y **el directo quedaba mudo**. El fixture
+elimina el supuesto intermedio.
+
+> La captura ya destapó una cosa: el servidor manda `force-new-message` y `conversation-chain-end`
+> **después** de recibir el ack, no antes. Por eso cada turno se guarda partido en `frames` (antes del
+> ack) y `after_ack` (después), y el test comprueba que el `chain-end` **no** repite el ack.
 
 Decisiones del contrato:
 
@@ -311,6 +324,13 @@ Decisiones del contrato:
 ```powershell
 # lógica del overlay (no necesita Python, ni Docker, ni OBS)
 node scripts/test_overlay_protocol.js
+# productor y consumidor contra los mismos bytes (fixture real del backend)
+node scripts/test_overlay_wire.js
+# el fixture sigue correspondiendo al código de hoy
+python scripts/test_overlay_fixtures.py
+# tras tocar stage.py / stream_audio.py / conversation_utils.py: regenerar y commitear
+python scripts/export_overlay_fixtures.py
+python scripts/export_overlay_fixtures.py --check   # exit 1 si está obsoleto
 # comprobar que el JS sigue siendo válido
 node --check web_tool/overlay-protocol.js
 ```
@@ -333,7 +353,7 @@ voz. Para el avatar hay que añadir el Live2D Web SDK (o seguir usando la UI ofi
 | **TTS real** | `TTS OK size = 11232 bytes` (antes 0 bytes + 403) ✅ |
 | **Smoke test** | `audio chunks 2 / 290392 bytes / playback ack 2 / chain end True` → `SMOKE TEST PASSED`, exit 0 ✅ |
 | **Scheduler** | `Scheduler started with 5 job(s)` → `job 'preflight_test' fired on <uid>`; el cliente recibe audio, ack y `conversation-chain-end` ✅ |
-| **Stage/OBS** | ⏳ contrato, cliente v5 y wiring cubiertos por `python scripts/test_stage_obs.py` (`Ran 27 tests ... OK`); overlay de producción cubierto por `node scripts/test_overlay_protocol.js` (13 tests: audio, ack, interrupción, reconexión). La prueba con OBS real es manual (§6.10) |
+| **Stage/OBS** | ⏳ contrato, cliente v5 y wiring cubiertos por `python scripts/test_stage_obs.py` (`Ran 27 tests ... OK`); overlay de producción cubierto por `node scripts/test_overlay_protocol.js` (13 tests: audio, ack, interrupción, reconexión); y **contrato cruzado** con los bytes reales: `node scripts/test_overlay_wire.js` (10 tests) + `python scripts/test_overlay_fixtures.py` (9 tests). La prueba con OBS real es manual (§6.10) |
 
 ## 6. Pendientes / siguientes pasos
 
@@ -396,7 +416,9 @@ voz. Para el avatar hay que añadir el Live2D Web SDK (o seguir usando la UI ofi
    cambiar `system_config.audio_export.format` a `'mp3'` y repetir: el tráfico debe caer ~10×.
 10. **[Fase 3 · prueba manual pendiente]** El contrato `stage-update`, el cliente OBS y el overlay de
     producción están probados sin red (`python scripts/test_stage_obs.py` = 27 tests;
-    `node scripts/test_overlay_protocol.js` = 13 tests), pero **aquí no se puede ejecutar OBS junto con
+    `node scripts/test_overlay_protocol.js` = 13 tests) y **cruzados** contra los bytes reales
+    (`node scripts/test_overlay_wire.js` = 10 tests; `python scripts/test_overlay_fixtures.py` = 9), pero
+    **aquí no se puede ejecutar OBS junto con
     Docker**. Protocolo completo en §4.4: (a) sin OBS, abrir `/web-tool/stage-test.html` y comprobar que
     `POST /api/stage` devuelve `delivered: 1` y cambia el fondo; (b) con OBS 28+ y
     `obs.enabled: true`, añadir `/web-tool/overlay.html` como Browser Source, ver
@@ -563,6 +585,12 @@ uv run python scripts/test_stage_obs.py
 
 # 6) lógica del overlay de producción (§4.5): solo necesita Node, nada más
 node scripts/test_overlay_protocol.js
+
+# 7) contrato cruzado backend -> overlay con los bytes reales
+node scripts/test_overlay_wire.js            # 10 tests (Node)
+python scripts/test_overlay_fixtures.py      # 9 tests (Python)
+python scripts/export_overlay_fixtures.py    # regenerar tras tocar el backend
+python scripts/export_overlay_fixtures.py --check   # exit 1 si el fixture es viejo
 ```
 
 **Estado en esta máquina (Windows, sin `uv`):** los pasos 2, 4 y 5 se ejecutan con el Python del
@@ -574,6 +602,9 @@ ruff standalone **0.9.6** (la versión que fija el pre-commit): `ruff check` + `
 sobre los ficheros tocados en la fase 3 -> `All checks passed!` / `8 files already formatted`.
 Los YAML se validaron cargándolos con `SchedulerConfig` (pydantic) en un venv temporal: las dos
 plantillas y `conf/conf.yaml` dan `obs.enabled=False`, `port=4455` y 4 jobs.
+El paso 7 **no necesita nada instalado**: el exportador pone shims de `loguru`/`numpy`/`pydantic`/`pydub`
+solo si faltan y sustituye el decodificado de audio por un chunk determinista, así que aquí da
+`Ran 9 tests ... OK` y `pass 10 / fail 0`.
 
 ### 9.4 Fase 2 — audio configurable (A23) y resiliencia de GPT-SoVITS (A24)
 

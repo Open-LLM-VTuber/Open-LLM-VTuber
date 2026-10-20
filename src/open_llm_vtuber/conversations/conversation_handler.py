@@ -11,7 +11,7 @@ from ..chat_history_manager import store_message
 from ..service_context import ServiceContext
 from .group_conversation import process_group_conversation
 from .single_conversation import process_single_conversation
-from .conversation_utils import EMOJI_LIST
+from .conversation_utils import EMOJI_LIST, build_interrupt_signal
 from .types import GroupConversationState
 from prompts import prompt_loader
 
@@ -211,8 +211,5 @@ async def handle_group_interrupt(
 
     await broadcast_to_group(
         list(group.members),
-        {
-            "type": "interrupt-signal",
-            "text": "conversation-interrupted",
-        },
+        build_interrupt_signal(),
     )

@@ -281,6 +281,20 @@ async def send_conversation_end_signal(
     logger.info(f"😎👍✅ Conversation Chain {session_emoji} completed!")
 
 
+#: Text of the frame that tells every overlay to drop its audio queue (A20).
+INTERRUPT_SIGNAL_TEXT = "conversation-interrupted"
+
+
+def build_interrupt_signal() -> Dict[str, str]:
+    """Build the ``interrupt-signal`` frame sent when a turn is cancelled.
+
+    Kept next to the other control frames so the payload has a single source of
+    truth: ``conversation_handler`` broadcasts it and
+    ``scripts/export_overlay_fixtures.py`` exports it to the overlay fixtures.
+    """
+    return {"type": "interrupt-signal", "text": INTERRUPT_SIGNAL_TEXT}
+
+
 def cleanup_conversation(tts_manager: TTSTaskManager, session_emoji: str) -> None:
     """Clean up conversation resources"""
     tts_manager.clear()
