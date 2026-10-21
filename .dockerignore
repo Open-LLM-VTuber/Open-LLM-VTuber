@@ -1,5 +1,8 @@
 # User config & backup
 /conf.yaml
+# Never bake the operator's real config (LLM API keys) into a distributable
+# image; docker-compose mounts ./conf at runtime.
+/conf/conf.yaml
 # Avatars
 # avatars/*
 # Backgrounds
@@ -34,6 +37,7 @@ lab.py
 
 # Virtual envs
 .venv/
+.venv-connector/
 .conda/
 conda/
 

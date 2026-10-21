@@ -73,8 +73,11 @@ def main():
         try:
             platform = build_platform(config)
             asyncio.run(platform.run())
-            logger.info("TikTok connector finished; exiting")
-            return 0
+            # A clean return means the proxy or the TikTok stream ended (for
+            # example, the cloud server restarted mid-show). Retrying keeps an
+            # unattended connector alive instead of exiting silently.
+            logger.warning("TikTok connector finished; reconnecting in 5 s")
+            time.sleep(5)
         except KeyboardInterrupt:
             logger.info("Shutting down TikTok Live platform")
             return 0

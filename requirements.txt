@@ -92,7 +92,7 @@ docstring-parser==0.17.0
     # via anthropic
 duckduckgo-mcp-server==0.1.1
     # via open-llm-vtuber
-edge-tts==7.2.7
+edge-tts==7.3.1
     # via open-llm-vtuber
 elevenlabs==2.31.0
     # via open-llm-vtuber

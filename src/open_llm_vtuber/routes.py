@@ -131,7 +131,8 @@ def init_stage_route(
 
         curl -X POST http://127.0.0.1:12393/api/stage \\
              -H 'Content-Type: application/json' \\
-             -d '{"stage": "tarot_main", "background": "/bg/tarot_table.png"}'
+             -d '{"stage": "tarot_main", "background": "/bg/tarot_table.png", \\
+                  "avatar": "/avatars/astrologo.png"}'
 
     Args:
         ws_handler: Shared handler; it owns the ``current_stage`` cache and the
@@ -166,6 +167,7 @@ def init_stage_route(
             payload = build_stage_payload(
                 stage=str(body.get("stage", "")),
                 background=str(body.get("background", "")),
+                avatar=body.get("avatar"),
                 props=body.get("props"),
                 transition=str(body.get("transition", "fade")),
                 duration_ms=body.get("duration_ms", 800),

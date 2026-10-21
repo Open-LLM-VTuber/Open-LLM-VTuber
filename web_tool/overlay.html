@@ -17,6 +17,16 @@
           .../overlay.html?ws=ws://127.0.0.1:12393/client-ws                (no connector: manual UI)
           .../overlay.html?debug=1                                          (HUD visible)
 
+        Character (a still image with life, no Live2D; doc/OVERLAY-AVATAR.md):
+          .../overlay.html?avatar=/avatars/astrologo.png                    (idle image)
+          .../overlay.html?avatar=/avatars/a.png&avatar-blink=/avatars/a_blink.png
+          .../overlay.html?avatar=/avatars/a.png&avatar-talk=/avatars/a_talk.png
+          .../overlay.html?avatar=/avatars/a.png&avatar-x=0.25&avatar-y=0.55&avatar-scale=1
+
+        The avatar is its own layer, so a tarot draw (which replaces `props`)
+        never wipes it. Sending {"avatar": "/avatars/other.png"} to
+        POST /api/stage changes it live; without `avatar` it stays as it is.
+
         The default socket is /proxy-ws: with the TikTok connector running it is
         the only socket that receives the audio (audit A1).
 
@@ -26,8 +36,9 @@
                -d '{"stage":"tarot_main","background":"/bg/tarot_table.png","props":[{"id":"card_1","src":"/bg/cards/death.png","x":0.7,"y":0.5,"rot":-8}]}'
 
         Press "h" to hide/show the HUD. The protocol itself lives in
-        overlay-protocol.js so `node scripts/test_overlay_protocol.js` can test
-        it without a browser.
+        overlay-protocol.js and the character in overlay-avatar.js, so
+        `node scripts/test_overlay_protocol.js` and
+        `node scripts/test_overlay_avatar.js` can test both without a browser.
     -->
     <style>
         html,
@@ -112,6 +123,68 @@
             opacity: 0.85;
         }
 
+        /* Character layer: a still image with life (no Live2D). It is NOT a
+           prop on purpose: setProps() clears the props box on every tarot
+           draw, which would wipe the avatar. */
+        .avatar {
+            position: absolute;
+            left: 27%;
+            top: 52%;
+            transform: translate(-50%, -50%) scale(1);
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 320ms ease-in-out;
+            will-change: transform, opacity;
+        }
+
+        .avatar.is-visible {
+            opacity: 1;
+        }
+
+        .avatar img {
+            display: block;
+            /* 82% of the OBS canvas height works for horizontal (1080p) and
+               vertical (1080x1920) sources; the caps stop a huge original. */
+            height: 82vh;
+            max-height: 1800px;
+            width: auto;
+            max-width: 60vw;
+            object-fit: contain;
+            filter: drop-shadow(0 12px 28px rgba(0, 0, 0, 0.5));
+        }
+
+        /* Two elements so the breathing and the talking pulse never fight
+           over the same transform. */
+        .avatar-body {
+            transform-origin: 50% 92%;
+            animation: avatar-breath 4.6s ease-in-out infinite;
+        }
+
+        .avatar-face {
+            transform-origin: 50% 92%;
+        }
+
+        .avatar.is-talking .avatar-face {
+            animation: avatar-talk 420ms ease-in-out infinite alternate;
+        }
+
+        @keyframes avatar-breath {
+            0%, 100% { transform: scale(1) translateY(0); }
+            50% { transform: scale(1.012) translateY(-0.35%); }
+        }
+
+        @keyframes avatar-talk {
+            from { transform: scale(1); }
+            to { transform: scale(1.014); }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .avatar-body,
+            .avatar.is-talking .avatar-face {
+                animation: none;
+            }
+        }
+
         .subtitle {
             position: fixed;
             left: 50%;
@@ -178,6 +251,11 @@
     <div class="stage">
         <div class="layer is-front" id="layer-a"></div>
         <div class="layer" id="layer-b"></div>
+        <div class="avatar" id="avatar" hidden>
+            <div class="avatar-body">
+                <img class="avatar-face" id="avatar-face" alt="" />
+            </div>
+        </div>
         <div class="props" id="props"></div>
     </div>
 
@@ -194,6 +272,7 @@
     <audio id="voice" preload="auto"></audio>
 
     <script src="overlay-protocol.js"></script>
+    <script src="overlay-avatar.js"></script>
     <script>
         (function () {
             "use strict";
@@ -224,6 +303,30 @@
             var socket = null;
             var reconnectTimer = null;
             var subtitleTimer = null;
+
+            // --- character: still image with idle / blink / talking states ---
+            // The fallback keeps the show alive if overlay-avatar.js is missing
+            // from an old image: the scene and the voice keep working.
+            var noAvatar = {
+                setSource: function () {},
+                setTalking: function () {},
+                setPosition: function () {},
+                start: function () {},
+                stop: function () {}
+            };
+            var avatar = (typeof OverlayAvatar !== "undefined")
+                ? OverlayAvatar.createAvatarController({
+                    root: document.getElementById("avatar"),
+                    image: document.getElementById("avatar-face"),
+                    openSrc: params.get("avatar") || "",
+                    blinkSrc: params.get("avatar-blink") || "",
+                    talkSrc: params.get("avatar-talk") || "",
+                    x: params.get("avatar-x"),
+                    y: params.get("avatar-y"),
+                    scale: params.get("avatar-scale")
+                })
+                : noAvatar;
+            avatar.start();
 
             if (params.get("debug") === "1") {
                 hud.hidden = false;
@@ -336,6 +439,10 @@
                 if (Array.isArray(message.props)) {
                     setProps(message.props);
                 }
+                // Optional: change the character without reloading OBS.
+                if (typeof message.avatar === "string" && message.avatar) {
+                    avatar.setSource(message.avatar);
+                }
                 lastPayload.textContent = JSON.stringify(message);
             }
 
@@ -384,6 +491,7 @@
                 pendingDone = null;
                 player.onended = null;
                 player.onerror = null;
+                avatar.setTalking(false);
                 if (callback) {
                     callback();
                 }
@@ -391,11 +499,20 @@
 
             var audioAdapter = {
                 play: function (url, done) {
+                    avatar.setTalking(true);
                     pendingDone = done;
                     player.onended = finishChunk;
                     player.onerror = finishChunk;
                     player.src = url;
-                    var promise = player.play();
+                    var promise;
+                    try {
+                        promise = player.play();
+                    } catch (error) {
+                        // No audio device: close the mouth and let the turn go.
+                        avatar.setTalking(false);
+                        finishChunk();
+                        return;
+                    }
                     if (promise && typeof promise.catch === "function") {
                         promise.catch(function (error) {
                             // OBS allows autoplay; a plain browser may not.
@@ -405,6 +522,7 @@
                     }
                 },
                 stop: function () {
+                    avatar.setTalking(false);
                     pendingDone = null;
                     player.onended = null;
                     player.onerror = null;

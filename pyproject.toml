@@ -9,7 +9,9 @@ dependencies = [
     "azure-cognitiveservices-speech>=1.41.1",
     "chardet>=5.2.0",
     "cartesia>=2.0.0", 
-    "edge-tts>=7.0.0",
+    # 7.3.0 adds the Sec-MS-GEC v2 token Microsoft made mandatory in Oct 2026;
+    # older versions get HTTP 403 and return silent audio.
+    "edge-tts>=7.3.0",
     "elevenlabs>=1.0.0",
     "fastapi[standard]>=0.115.8",
     "groq>=0.13.0",

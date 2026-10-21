@@ -1,0 +1,107 @@
+# Production compose for the cloud VM (Ubuntu + Docker, e.g. Google Compute
+# Engine). Phase 1 of doc/DESPLIEGUE-NUBE.md.
+#
+#   cp .env.example .env      # DOMAIN, ACME_EMAIL, VTUBER_WS_TOKEN
+#   docker compose -f docker-compose.prod.yml up -d --build
+#
+# Differences with docker-compose.yml (the development one):
+#   * Caddy terminates TLS on 80/443. The app is NOT published to the host, so
+#     there is no plain-HTTP entrance to the agent.
+#   * Only state and assets are mounted; the code comes from the image. After
+#     changing code/assets that are NOT mounted, rebuild:
+#         docker compose -f docker-compose.prod.yml up -d --build
+#   * VTUBER_WS_TOKEN is mandatory: the service refuses to start without it.
+#   * Healthcheck + log rotation, because this container runs for weeks.
+#
+# The TikTok connector does NOT run here: it stays on the operator's PC and
+# connects to wss://<DOMAIN>/proxy-ws (see doc/DESPLIEGUE-NUBE.md).
+
+name: vtuber-prod
+
+services:
+  open-llm-vtuber:
+    build:
+      context: .
+      dockerfile: dockerfile
+      args:
+        UV_IMAGE: ${UV_IMAGE:-ghcr.io/astral-sh/uv:latest}
+    image: vtuber-prod:${APP_TAG:-latest}
+    container_name: vtuber-app
+    init: true
+    restart: unless-stopped
+    stop_grace_period: 30s
+    environment:
+      # A22: every /client-ws, /proxy-ws handshake and /api/metrics call must
+      # present this token. Compose aborts if it is missing from .env.
+      VTUBER_WS_TOKEN: "${VTUBER_WS_TOKEN:?set VTUBER_WS_TOKEN in .env}"
+      # Public origin allowed to read cross-origin responses (https://DOMAIN).
+      VTUBER_CORS_ORIGINS: ${VTUBER_CORS_ORIGINS:-}
+      TZ: ${TZ:-Europe/Madrid}
+    volumes:
+      # ---- State (edit per client, never baked into the image) --------------
+      - ./conf:/app/conf
+      - ./avatars:/app/avatars
+      - ./backgrounds:/app/backgrounds
+      - ./characters:/app/characters
+      - ./prompts:/app/prompts
+      # Uncomment only if you use local ASR/TTS models stored in ./models:
+      # - ./models:/app/models
+      # Optional official web UI. Not needed by the overlay, but the mount
+      # guarantees /app/frontend exists, which StaticFiles requires at startup.
+      - ./frontend-build:/app/frontend
+      # NOTE: /app/cache is deliberately NOT mounted. run_server.py registers
+      # shutil.rmtree("cache") at exit, and rmtree on a bind-mount point fails
+      # with EBUSY. Empty it between shows with:
+      #   docker compose -f docker-compose.prod.yml exec open-llm-vtuber \
+      #     sh -c 'rm -rf /app/cache/*'
+    expose:
+      - "12393"
+    # Uncomment ONLY to debug from the VM itself; never publish this port to
+    # the Internet (Caddy is the public entrance).
+    # ports:
+    #   - "127.0.0.1:12393:12393"
+    healthcheck:
+      test:
+        - CMD
+        - curl
+        - -fsS
+        - -o
+        - /dev/null
+        - http://127.0.0.1:12393/web-tool/overlay.html
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 90s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: vtuber-caddy
+    restart: unless-stopped
+    depends_on:
+      open-llm-vtuber:
+        condition: service_healthy
+    environment:
+      DOMAIN: "${DOMAIN:?set DOMAIN in .env}"
+      ACME_EMAIL: ${ACME_EMAIL:-admin@example.com}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp" # HTTP/3
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  caddy_data:
+  caddy_config:

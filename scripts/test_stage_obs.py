@@ -96,6 +96,7 @@ _install_websockets_shim()
 from src.open_llm_vtuber.scheduler import obs as obs_module  # noqa: E402
 from src.open_llm_vtuber.scheduler import service as service_module  # noqa: E402
 from src.open_llm_vtuber.utils.stage import (  # noqa: E402
+    MAX_AVATAR_URL,
     MAX_LABEL,
     MAX_SUBLABEL,
     build_stage_payload,
@@ -239,6 +240,33 @@ class StagePayloadTests(unittest.TestCase):
     def test_stage_is_trimmed_and_truncated(self):
         payload = build_stage_payload(stage="  " + "x" * 90 + "  ")
         self.assertEqual(payload["stage"], "x" * 64)
+
+    def test_avatar_is_included_and_trimmed(self):
+        payload = build_stage_payload(avatar="  /avatars/astrologo.png  ")
+        self.assertEqual(payload["type"], "stage-update")
+        self.assertEqual(payload["avatar"], "/avatars/astrologo.png")
+
+    def test_avatar_is_capped(self):
+        payload = build_stage_payload(avatar="/avatars/" + "x" * 900 + ".png")
+        self.assertEqual(len(payload["avatar"]), MAX_AVATAR_URL)
+
+    def test_avatar_must_be_a_string(self):
+        payload = build_stage_payload(stage="x", avatar=123)
+        self.assertNotIn("avatar", payload)
+        with self.assertRaises(ValueError):
+            build_stage_payload(avatar=None)
+        with self.assertRaises(ValueError):
+            build_stage_payload(avatar="   ")
+
+    def test_avatar_does_not_replace_props_or_background(self):
+        payload = build_stage_payload(
+            background="/bg/table.png",
+            avatar="/avatars/astrologo.png",
+            props=[{"id": "card_1", "src": "/bg/cards/sun.png"}],
+        )
+        self.assertEqual(payload["background"], "/bg/table.png")
+        self.assertEqual(payload["avatar"], "/avatars/astrologo.png")
+        self.assertEqual(payload["props"][0]["src"], "/bg/cards/sun.png")
 
     def test_props_are_normalised(self):
         payload = build_stage_payload(

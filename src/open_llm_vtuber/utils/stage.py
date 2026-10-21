@@ -1,8 +1,9 @@
 """Stage-update contract shared by the scheduler, the HTTP route and the overlay.
 
 The payload is documented in ``AUDITORIA-MVP-TAROT.md`` §2.4: the server tells
-the Ruta B overlay which background/props to show. It is deliberately
-dependency-free so the scheduler can build it without importing FastAPI.
+the Ruta B overlay which background, character and props to show. It is
+deliberately dependency-free so the scheduler can build it without importing
+FastAPI.
 
 A prop is either an image (``src``) or a text card (``label``/``sublabel``), so a
 tarot draw can be shown before the card art exists::
@@ -16,6 +17,11 @@ tarot draw can be shown before the card art exists::
         stage="card_of_the_day",
         props=[{"id": "card_1", "label": "La Torre", "sublabel": "ruptura · verdad"}],
     )
+    build_stage_payload(avatar="/avatars/astrologo.png")
+
+``avatar`` is the character image of the overlay's own layer: it is unrelated to
+the Live2D model served by the official web UI, so the show needs no Live2D
+licence. Omitting it never clears the character.
 """
 
 from typing import Any, Dict, Iterable, List, Optional
@@ -25,6 +31,8 @@ TRANSITIONS = ("fade", "none")
 #: A label is drawn on stream, so it must fit in a card without wrapping wildly.
 MAX_LABEL = 64
 MAX_SUBLABEL = 96
+#: The character image is a URL served by the backend, not inline art.
+MAX_AVATAR_URL = 512
 
 
 def _number(value: Any, low: float, high: float, default: float) -> float:
@@ -79,6 +87,7 @@ def build_stage_payload(
     *,
     stage: str = "",
     background: str = "",
+    avatar: str = "",
     props: Optional[Iterable[Any]] = None,
     transition: str = "fade",
     duration_ms: Any = 800,
@@ -88,6 +97,9 @@ def build_stage_payload(
     Args:
         stage: Stage identifier (free-form, truncated to 64 characters).
         background: Image URL/path served by the backend (``/bg/...``).
+        avatar: Optional character image (``/avatars/...``). The overlay keeps
+            its own layer, so omitting it leaves the current character alone.
+            Omitted when it is not a non-empty string.
         props: Optional iterable of ``{"id", "src", "x", "y", "rot", ...}``
             dicts (images) or ``{"id", "label", "sublabel", ...}`` dicts (text
             cards). Entries with neither a usable ``src`` nor a ``label`` are
@@ -108,6 +120,8 @@ def build_stage_payload(
         payload["stage"] = stage.strip()[:64]
     if isinstance(background, str) and background.strip():
         payload["background"] = background.strip()
+    if isinstance(avatar, str) and avatar.strip():
+        payload["avatar"] = avatar.strip()[:MAX_AVATAR_URL]
 
     raw_props: List[Any] = list(props) if isinstance(props, (list, tuple)) else []
     cleaned = [
@@ -120,7 +134,8 @@ def build_stage_payload(
 
     if len(payload) == 1:
         raise ValueError(
-            "stage-update needs 'stage', 'background' or a prop with 'src'/'label'"
+            "stage-update needs 'stage', 'background', 'avatar' or a prop "
+            "with 'src'/'label'"
         )
 
     payload["transition"] = transition if transition in TRANSITIONS else "fade"

@@ -1,6 +1,7 @@
 import asyncio
 import contextlib
 import json
+import os
 import time
 from collections import deque
 from typing import Any, Callable, Deque, Dict, List, Optional
@@ -25,6 +26,66 @@ except ImportError as e:
     logger.warning(f"TikTokLive import failed: {e}")
     logger.warning("TikTok live functionality will not be available.")
     TIKTOKLIVE_AVAILABLE = False
+
+
+def _env_client_options() -> Dict[str, Any]:
+    """Optional TikTokLive knobs, taken from the environment.
+
+    TikTokLive 7 has no ``region`` argument: it picks a random browser
+    location preset at import time and delegates the signed WebSocket to Euler
+    Stream. These variables (all optional, read on every connector restart)
+    cover the cases a room abroad needs:
+
+    * ``TIKTOKLIVE_REGION``: ISO country code (``FR``) sent as ``region`` and
+      ``priority_region`` in the webcast parameters.
+    * ``TIKTOKLIVE_SIGN_API_KEY``: Euler Stream key; raises the free signing
+      rate limit (HTTP 429) that otherwise blocks reconnects.
+    * ``TIKTOKLIVE_PROXY``: HTTP/SOCKS proxy URL used for both the HTTP and the
+      WebSocket leg, e.g. ``http://user:pass@eu-proxy:3128``.
+
+    Returns:
+        dict: Keyword arguments for ``TikTokLiveClient`` (empty by default).
+    """
+
+    options: Dict[str, Any] = {}
+
+    def warn(name: str, error: Exception) -> None:
+        logger.warning(f"{name} ignored: {error}")
+
+    region = os.environ.get("TIKTOKLIVE_REGION", "").strip().upper()
+    if region:
+        try:
+            from TikTokLive.client.web.web_settings import WebDefaults
+
+            WebDefaults.web_client_params["region"] = region
+            WebDefaults.web_client_params["priority_region"] = region
+            logger.info(f"TikTokLive webcast region forced to {region}")
+        except Exception as e:  # pragma: no cover - depends on the library
+            warn("TIKTOKLIVE_REGION", e)
+
+    sign_key = os.environ.get("TIKTOKLIVE_SIGN_API_KEY", "").strip()
+    if sign_key:
+        try:
+            from TikTokLive.client.web.web_settings import WebDefaults
+
+            WebDefaults.tiktok_sign_api_key = sign_key
+            logger.info("TikTokLive signing API key configured")
+        except Exception as e:  # pragma: no cover - depends on the library
+            warn("TIKTOKLIVE_SIGN_API_KEY", e)
+
+    proxy_url = os.environ.get("TIKTOKLIVE_PROXY", "").strip()
+    if proxy_url:
+        try:
+            import httpx
+
+            proxy = httpx.Proxy(proxy_url)
+            options["web_proxy"] = proxy
+            options["ws_proxy"] = proxy
+            logger.info("TikTokLive will use the configured proxy")
+        except Exception as e:
+            warn("TIKTOKLIVE_PROXY", e)
+
+    return options
 
 
 class TikTokLivePlatform(LivePlatformInterface):
@@ -213,7 +274,11 @@ class TikTokLivePlatform(LivePlatformInterface):
         if not await self.connect():
             return
 
-        self._client = TikTokLiveClient(unique_id=f"@{self._unique_id}")
+        # Region / signing key / proxy are optional and come from the env
+        # (see _env_client_options). Without them the defaults are unchanged.
+        self._client = TikTokLiveClient(
+            unique_id=f"@{self._unique_id}", **_env_client_options()
+        )
         client = self._client
 
         @client.on(CommentEvent)

@@ -256,6 +256,8 @@
                 <dd id="stage-background">—</dd>
                 <dt>Props</dt>
                 <dd id="stage-props">—</dd>
+                <dt>Avatar</dt>
+                <dd id="stage-avatar">—</dd>
                 <dt>Actualizado</dt>
                 <dd id="stage-seen">—</dd>
             </dl>
@@ -275,7 +277,8 @@
             <p class="hint">
                 El overlay recibe las cartas al instante; «leer en voz alta» arranca un turno en el
                 primer cliente (el overlay en el montaje recomendado). Los regalos de TikTok entran
-                por su propio flujo, no por aquí.
+                por su propio flujo, no por aquí. El avatar se cambia con <code>?avatar=/avatars/x.png</code>
+                en la URL del overlay o con <code>POST /api/stage {"avatar": "..."}</code>.
             </p>
         </section>
 
@@ -307,6 +310,7 @@
             var stageName = document.getElementById("stage-name");
             var stageBackground = document.getElementById("stage-background");
             var stageProps = document.getElementById("stage-props");
+            var stageAvatar = document.getElementById("stage-avatar");
             var stageSeen = document.getElementById("stage-seen");
             var drawAsker = document.getElementById("draw-asker");
             var drawQuestion = document.getElementById("draw-question");
@@ -352,11 +356,13 @@
                     stageName.textContent = "—";
                     stageBackground.textContent = "—";
                     stageProps.textContent = "—";
+                    stageAvatar.textContent = "—";
                     stageSeen.textContent = "—";
                     return;
                 }
                 stageName.textContent = text(payload.stage);
                 stageBackground.textContent = text(payload.background, "sin cambio");
+                stageAvatar.textContent = text(payload.avatar, "sin cambio");
                 var props = Array.isArray(payload.props) ? payload.props.length : 0;
                 stageProps.textContent = props + (props === 1 ? " prop" : " props");
                 if (payload !== lastStage) {
