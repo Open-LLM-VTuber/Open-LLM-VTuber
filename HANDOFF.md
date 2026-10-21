@@ -632,6 +632,57 @@ el cuello es la latencia del LLM/TTS, no la orquestación (§6.9).
    dos tests de regresión en `scripts/test_security_metrics.py` (`ProxyBroadcastTests`). Tras reiniciar,
    `smoke_test.py` vuelve a pasar (4 chunks, 307 716 B, ack=1) y el log ya no muestra ese error.
 
+### 6.13.2 Arranque en esta máquina: puerto 8080, frontend y build
+
+**Puerto 12393 bloqueado por Windows.** `netsh interface ipv4 show excludedportrange protocol=tcp`
+reserva el rango **12362–12461**, y 12393 cae dentro: Docker falla al arrancar con
+`ports are not available ... bind: Intento de acceso a un socket no permitido por sus permisos`.
+Solución aplicada: el compose publica **`8080:12393`** (el servidor sigue en 12393 dentro del contenedor):
+
+```
+http://localhost:8080/                       UI principal
+http://localhost:8080/web-tool/overlay.html  overlay para OBS
+http://localhost:8080/web-tool/operator.html HUD del operador
+```
+
+Para volver a 12393 hace falta una consola **como administrador**:
+`net stop winnat` → `docker compose up -d` → `net start winnat`; luego se puede restaurar
+`"12393:12393"`. Sin admin, 8080 es la opción estable.
+
+**La imagen no trae la UI principal.** `run_server.py` clona el submódulo `frontend` de GitHub al
+arrancar; si GitHub no responde (WAF/timeout), `/` queda vacío y el arranque se retrasa. El compose
+monta ahora **`./frontend-build:/app/frontend`**. Para poblarla:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/fetch_frontend.ps1
+docker compose up -d --force-recreate
+```
+
+El script descarga la rama `build` con `ghfast.top` / `ghproxy.net` (probados; `codeload.github.com`
+no responde en esta red) y deja `index.html` + `assets`. `frontend-build/` está en `.gitignore`.
+Para actualizar la UI en el futuro: vuelve a ejecutar el script y reinicia el contenedor.
+
+**Error de build `ghcr.io/astral-sh/uv` (`DeadlineExceeded`).** Es red, no código: `docker pull
+ghcr.io/astral-sh/uv:latest` también expira. El `dockerfile` acepta `UV_IMAGE` y el compose lo pasa
+como build arg. Mirrors verificados:
+
+```powershell
+# PowerShell
+$env:UV_IMAGE='ghcr.nju.edu.cn/astral-sh/uv:latest'
+docker compose build
+# alternativa: docker.m.daocloud.io/ghcr.io/astral-sh/uv:latest
+```
+
+```bash
+# WSL (sudo conserva la variable con -E, o pásala delante)
+export UV_IMAGE=ghcr.nju.edu.cn/astral-sh/uv:latest
+sudo -E docker compose build
+```
+
+Con los montajes actuales **no hace falta reconstruir** para actualizar el código; solo si cambian
+dependencias. Si se reconstruye, el `COPY . /app` incluirá `frontend/` (submódulo vacío) pero el
+montaje de `frontend-build` lo tapa en ejecución.
+
 ## 7. Chuleta de comandos
 
 ```powershell

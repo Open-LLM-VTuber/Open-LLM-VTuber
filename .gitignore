@@ -79,3 +79,8 @@ private/
 mcp_servers.json
 
 .vscode/
+
+# Prebuilt official web UI (downloaded by scripts/fetch_frontend.ps1).
+# It is mounted at /app/frontend so the image does not need to clone the
+# submodule from GitHub at startup.
+frontend-build/

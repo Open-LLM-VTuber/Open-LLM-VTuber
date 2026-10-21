@@ -15,8 +15,12 @@ RUN apt-get update -o Acquire::Retries=5 \
       ffmpeg git curl ca-certificates \
  && rm -rf /var/lib/apt/lists/*
 
-# Install uv
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
+# Install uv.
+# ghcr.io is blocked/timeouts on some networks; build with a mirror instead:
+#   docker compose build  (with UV_IMAGE set, see docker-compose.yml)
+#   UV_IMAGE=ghcr.nju.edu.cn/astral-sh/uv:latest docker compose build
+ARG UV_IMAGE=ghcr.io/astral-sh/uv:latest
+COPY --from=${UV_IMAGE} /uv /uvx /usr/local/bin/
 
 # Install deps (cache-friendly)
 COPY pyproject.toml uv.lock ./

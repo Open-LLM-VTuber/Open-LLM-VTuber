@@ -3,9 +3,26 @@ services:
     build:
       context: .
       dockerfile: dockerfile
+      args:
+        # ghcr.io can time out (the original build error). Override it with a
+        # mirror that works on your network:
+        #   PowerShell: $env:UV_IMAGE='ghcr.nju.edu.cn/astral-sh/uv:latest'
+        #   WSL:        export UV_IMAGE=ghcr.nju.edu.cn/astral-sh/uv:latest
+        #   or:         docker.m.daocloud.io/ghcr.io/astral-sh/uv:latest
+        UV_IMAGE: ${UV_IMAGE:-ghcr.io/astral-sh/uv:latest}
     container_name: open-llm-vtuber
     ports:
-      - "12393:12393"
+      # Windows/Hyper-V reserves dynamic ranges (here 12362-12461), so binding
+      # host port 12393 fails with WSAEACCES ("socket access permission").
+      # 8080 is outside those ranges. The app still listens on 12393 INSIDE
+      # the container, so the proxy, TikTok connector and the overlay's
+      # relative URLs keep working; only the browser uses :8080.
+      #   http://localhost:8080/
+      #   http://localhost:8080/web-tool/overlay.html
+      #   http://localhost:8080/web-tool/operator.html
+      # If you free the range (admin: `net stop winnat`, start the container,
+      # `net start winnat`) you can restore "12393:12393".
+      - "8080:12393"
     volumes:
       - ./conf:/app/conf
       - ./models:/app/models
@@ -30,6 +47,11 @@ services:
       - ./src:/app/src
       - ./scripts:/app/scripts
       - ./web_tool:/app/web_tool
+      # Official web UI (main page at "/"). The image does not ship it: the
+      # server tries `git submodule update` at startup, which hangs when
+      # GitHub is unreachable. Populate it once with
+      #   powershell -ExecutionPolicy Bypass -File scripts/fetch_frontend.ps1
+      - ./frontend-build:/app/frontend
       - ./backgrounds:/app/backgrounds
       - ./characters:/app/characters
       - ./prompts:/app/prompts
