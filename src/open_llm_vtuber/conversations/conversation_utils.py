@@ -6,6 +6,7 @@ import json
 from loguru import logger
 
 from ..message_handler import message_handler
+from ..metrics import OUTCOME_COMPLETED, turn_metrics
 from .types import WebSocketSend, BroadcastContext
 from .tts_manager import TTSTaskManager
 from ..agent.output_types import SentenceOutput, AudioOutput
@@ -14,6 +15,52 @@ from ..asr.asr_interface import ASRInterface
 from ..live2d_model import Live2dModel
 from ..tts.tts_interface import TTSInterface
 from ..utils.stream_audio import prepare_audio_payload
+
+
+# --------------------------------------------------------------------------- #
+# A22 / §5.3: turn metrics
+# --------------------------------------------------------------------------- #
+#: Payload types that carry synthesised audio ("time to first audio").
+_AUDIO_MESSAGE_TYPES = frozenset({"audio"})
+
+
+def _decode_message(payload: str) -> Dict[str, Any]:
+    """Best-effort decode of an outgoing payload (never raises)."""
+    try:
+        message = json.loads(payload)
+    except (TypeError, ValueError):
+        return {}
+    return message if isinstance(message, dict) else {}
+
+
+def instrument_websocket_send(
+    websocket_send: WebSocketSend, client_uid: str
+) -> WebSocketSend:
+    """Wrap ``websocket_send`` so the turn metrics see audio and the turn end.
+
+    Every payload of an individual turn goes through the wrapped sender, which
+    is the cheapest place to timestamp "first audio" and "chain end" without
+    touching the agent, TTS or proxy code (audit §5.3). Decoding failures are
+    swallowed on purpose: telemetry must never be able to abort a turn.
+    """
+
+    async def send(payload: str) -> None:
+        await websocket_send(payload)
+
+        if not isinstance(payload, str) or '"type"' not in payload:
+            return
+
+        message = _decode_message(payload)
+        message_type = message.get("type")
+        if message_type in _AUDIO_MESSAGE_TYPES:
+            turn_metrics.first_audio(client_uid)
+        elif (
+            message_type == "control"
+            and message.get("text") == "conversation-chain-end"
+        ):
+            turn_metrics.end_turn(client_uid, OUTCOME_COMPLETED)
+
+    return send
 
 
 # Convert class methods to standalone functions
@@ -159,35 +206,57 @@ async def process_user_input(
     return user_input
 
 
+# A18: a turn must always end, even if the overlay never confirms playback.
+# Without these timeouts a backgrounded OBS browser source leaves the turn
+# hanging forever and the TikTok connector never advances its queue.
+PLAYBACK_ACK_TIMEOUT = 180  # s; a long tarot reading fits comfortably
+SYNTH_TIMEOUT = 120  # s; if TTS stalls, don't block the turn end
+
+
 async def finalize_conversation_turn(
     tts_manager: TTSTaskManager,
     websocket_send: WebSocketSend,
     client_uid: str,
     broadcast_ctx: Optional[BroadcastContext] = None,
 ) -> None:
-    """Finalize a conversation turn"""
-    if tts_manager.task_list:
-        await asyncio.gather(*tts_manager.task_list)
-        await websocket_send(json.dumps({"type": "backend-synth-complete"}))
+    """Finalize a conversation turn, always signalling the turn end."""
+    try:
+        if tts_manager.task_list:
+            try:
+                # return_exceptions: one failed sentence must not kill the turn
+                await asyncio.wait_for(
+                    asyncio.gather(*tts_manager.task_list, return_exceptions=True),
+                    timeout=SYNTH_TIMEOUT,
+                )
+            except asyncio.TimeoutError:
+                logger.warning(
+                    f"TTS still running after {SYNTH_TIMEOUT}s; closing the turn anyway"
+                )
 
-        response = await message_handler.wait_for_response(
-            client_uid, "frontend-playback-complete"
-        )
+            await websocket_send(json.dumps({"type": "backend-synth-complete"}))
 
-        if not response:
-            logger.warning(f"No playback completion response from {client_uid}")
-            return
+            response = await message_handler.wait_for_response(
+                client_uid,
+                "frontend-playback-complete",
+                timeout=PLAYBACK_ACK_TIMEOUT,
+            )
+            if not response:
+                logger.warning(
+                    f"No playback completion from {client_uid}; closing the turn anyway"
+                )
+                # NOTE: no early return - the turn must be closed below.
 
-    await websocket_send(json.dumps({"type": "force-new-message"}))
+        await websocket_send(json.dumps({"type": "force-new-message"}))
 
-    if broadcast_ctx and broadcast_ctx.broadcast_func:
-        await broadcast_ctx.broadcast_func(
-            broadcast_ctx.group_members,
-            {"type": "force-new-message"},
-            broadcast_ctx.current_client_uid,
-        )
-
-    await send_conversation_end_signal(websocket_send, broadcast_ctx)
+        if broadcast_ctx and broadcast_ctx.broadcast_func:
+            await broadcast_ctx.broadcast_func(
+                broadcast_ctx.group_members,
+                {"type": "force-new-message"},
+                broadcast_ctx.current_client_uid,
+            )
+    finally:
+        # Last line of the turn: whatever happened, unblock proxy and connector.
+        await send_conversation_end_signal(websocket_send, broadcast_ctx)
 
 
 async def send_conversation_end_signal(
@@ -210,6 +279,20 @@ async def send_conversation_end_signal(
         )
 
     logger.info(f"😎👍✅ Conversation Chain {session_emoji} completed!")
+
+
+#: Text of the frame that tells every overlay to drop its audio queue (A20).
+INTERRUPT_SIGNAL_TEXT = "conversation-interrupted"
+
+
+def build_interrupt_signal() -> Dict[str, str]:
+    """Build the ``interrupt-signal`` frame sent when a turn is cancelled.
+
+    Kept next to the other control frames so the payload has a single source of
+    truth: ``conversation_handler`` broadcasts it and
+    ``scripts/export_overlay_fixtures.py`` exports it to the overlay fixtures.
+    """
+    return {"type": "interrupt-signal", "text": INTERRUPT_SIGNAL_TEXT}
 
 
 def cleanup_conversation(tts_manager: TTSTaskManager, session_emoji: str) -> None:

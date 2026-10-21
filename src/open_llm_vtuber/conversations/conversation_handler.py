@@ -11,7 +11,7 @@ from ..chat_history_manager import store_message
 from ..service_context import ServiceContext
 from .group_conversation import process_group_conversation
 from .single_conversation import process_single_conversation
-from .conversation_utils import EMOJI_LIST
+from .conversation_utils import EMOJI_LIST, build_interrupt_signal
 from .types import GroupConversationState
 from prompts import prompt_loader
 
@@ -33,18 +33,23 @@ async def handle_conversation_trigger(
     metadata = None
 
     if msg_type == "ai-speak-signal":
-        try:
-            # Get proactive speak prompt from config
-            prompt_name = "proactive_speak_prompt"
-            prompt_file = context.system_config.tool_prompts.get(prompt_name)
-            if prompt_file:
-                user_input = prompt_loader.load_util(prompt_file)
-            else:
-                logger.warning("Proactive speak prompt not configured, using default")
+        # A scheduled job may provide the instruction directly. Without it we
+        # keep the previous behaviour: load the configured proactive prompt.
+        user_input = (data.get("text") or "").strip()
+        if not user_input:
+            try:
+                prompt_name = "proactive_speak_prompt"
+                prompt_file = context.system_config.tool_prompts.get(prompt_name)
+                if prompt_file:
+                    user_input = prompt_loader.load_util(prompt_file)
+                else:
+                    logger.warning(
+                        "Proactive speak prompt not configured, using default"
+                    )
+                    user_input = "Please say something."
+            except Exception as e:
+                logger.error(f"Error loading proactive speak prompt: {e}")
                 user_input = "Please say something."
-        except Exception as e:
-            logger.error(f"Error loading proactive speak prompt: {e}")
-            user_input = "Please say something."
 
         # Add metadata to indicate this is a proactive speak request
         # that should be skipped in both memory and history
@@ -206,8 +211,5 @@ async def handle_group_interrupt(
 
     await broadcast_to_group(
         list(group.members),
-        {
-            "type": "interrupt-signal",
-            "text": "conversation-interrupted",
-        },
+        build_interrupt_signal(),
     )

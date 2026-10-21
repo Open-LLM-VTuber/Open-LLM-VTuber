@@ -1,34 +1,52 @@
 import os
 import json
+from typing import Optional
 from uuid import uuid4
 import numpy as np
 from datetime import datetime
-from fastapi import APIRouter, WebSocket, UploadFile, File, Response
+from fastapi import APIRouter, Request, WebSocket, UploadFile, File, Response
 from starlette.responses import JSONResponse
 from starlette.websockets import WebSocketDisconnect
 from loguru import logger
+from .metrics import turn_metrics
+from .security import enforce_ws_token, http_token_allowed
 from .service_context import ServiceContext
 from .websocket_handler import WebSocketHandler
 from .proxy_handler import ProxyHandler
+from .utils.stage import build_stage_payload
+from .utils.tarot_commands import MAX_CARDS, MAX_QUESTION
 
 
-def init_client_ws_route(default_context_cache: ServiceContext) -> APIRouter:
+def init_client_ws_route(
+    default_context_cache: ServiceContext,
+    ws_handler: WebSocketHandler | None = None,
+    token: Optional[str] = None,
+) -> APIRouter:
     """
     Create and return API routes for handling the `/client-ws` WebSocket connections.
 
     Args:
         default_context_cache: Default service context cache for new sessions.
+        ws_handler: Optional handler shared with the rest of the application
+            (the scheduler needs it to reach connected clients).
+        token: Shared handshake token (audit A22). ``None`` reads
+            ``VTUBER_WS_TOKEN`` from the environment; empty means no auth.
 
     Returns:
         APIRouter: Configured router with WebSocket endpoint.
     """
 
     router = APIRouter()
-    ws_handler = WebSocketHandler(default_context_cache)
+    ws_handler = ws_handler or WebSocketHandler(default_context_cache)
 
     @router.websocket("/client-ws")
     async def websocket_endpoint(websocket: WebSocket):
         """WebSocket endpoint for client connections"""
+        # A22: reject the handshake before accept() so an unauthenticated peer
+        # never reaches the service context.
+        if not await enforce_ws_token(websocket, token):
+            return
+
         await websocket.accept()
         client_uid = str(uuid4())
 
@@ -45,12 +63,13 @@ def init_client_ws_route(default_context_cache: ServiceContext) -> APIRouter:
     return router
 
 
-def init_proxy_route(server_url: str) -> APIRouter:
+def init_proxy_route(server_url: str, token: Optional[str] = None) -> APIRouter:
     """
     Create and return API routes for handling proxy connections.
 
     Args:
         server_url: The WebSocket URL of the actual server
+        token: Shared handshake token (audit A22); same rules as `/client-ws`.
 
     Returns:
         APIRouter: Configured router with proxy WebSocket endpoint
@@ -61,11 +80,189 @@ def init_proxy_route(server_url: str) -> APIRouter:
     @router.websocket("/proxy-ws")
     async def proxy_endpoint(websocket: WebSocket):
         """WebSocket endpoint for proxy connections"""
+        if not await enforce_ws_token(websocket, token):
+            return
+
         try:
             await proxy_handler.handle_client_connection(websocket)
         except Exception as e:
             logger.error(f"Error in proxy connection: {e}")
             raise
+
+    return router
+
+
+def init_metrics_route(token: Optional[str] = None) -> APIRouter:
+    """
+    Create and return the `/api/metrics` route (A22 / audit §5.3).
+
+    The payload is the in-memory window kept by ``metrics.turn_metrics``: turn
+    duration (p50/p95), time to first audio and proxy queue depth/wait. It is
+    read-only and never touches the conversation state, so it is safe to poll
+    during a show:
+
+        curl -s http://127.0.0.1:12393/api/metrics | jq .turn_seconds
+
+    Args:
+        token: Shared token (audit A22). Same rules as the WebSockets: when it
+            is set, the request needs ``?token=`` or a bearer header.
+
+    Returns:
+        APIRouter: Configured router with the metrics endpoint.
+    """
+    router = APIRouter()
+
+    @router.get("/api/metrics")
+    async def get_metrics(request: Request):
+        if not http_token_allowed(request, token):
+            return JSONResponse({"error": "unauthorized"}, status_code=401)
+        return JSONResponse(turn_metrics.snapshot())
+
+    return router
+
+
+def init_stage_route(
+    ws_handler: WebSocketHandler, token: Optional[str] = None
+) -> APIRouter:
+    """Create the ``/api/stage`` route (Ruta B, audit §2.4).
+
+    Lets the operator change the overlay scene without waiting for a scheduled
+    job, which is also the quickest way to test a custom overlay:
+
+        curl -X POST http://127.0.0.1:12393/api/stage \\
+             -H 'Content-Type: application/json' \\
+             -d '{"stage": "tarot_main", "background": "/bg/tarot_table.png", \\
+                  "avatar": "/avatars/astrologo.png"}'
+
+    Args:
+        ws_handler: Shared handler; it owns the ``current_stage`` cache and the
+            client sockets.
+        token: Shared token (audit A22). Same rules as ``/api/metrics``.
+
+    Returns:
+        APIRouter: ``GET`` returns the last payload, ``POST`` broadcasts a new
+        one and reports how many overlays received it.
+    """
+    router = APIRouter()
+
+    @router.get("/api/stage")
+    async def get_stage(request: Request):
+        if not http_token_allowed(request, token):
+            return JSONResponse({"error": "unauthorized"}, status_code=401)
+        return JSONResponse({"stage": ws_handler.current_stage})
+
+    @router.post("/api/stage")
+    async def set_stage(request: Request):
+        if not http_token_allowed(request, token):
+            return JSONResponse({"error": "unauthorized"}, status_code=401)
+
+        try:
+            body = await request.json()
+        except Exception:
+            return JSONResponse({"error": "invalid JSON body"}, status_code=400)
+        if not isinstance(body, dict):
+            return JSONResponse({"error": "expected a JSON object"}, status_code=400)
+
+        try:
+            payload = build_stage_payload(
+                stage=str(body.get("stage", "")),
+                background=str(body.get("background", "")),
+                avatar=body.get("avatar"),
+                props=body.get("props"),
+                transition=str(body.get("transition", "fade")),
+                duration_ms=body.get("duration_ms", 800),
+            )
+        except ValueError as e:
+            return JSONResponse({"error": str(e)}, status_code=400)
+
+        delivered = await ws_handler.broadcast_stage_update(
+            payload, str(body.get("target", "first"))
+        )
+        return JSONResponse(
+            {"status": "ok", "delivered": delivered, "payload": payload}
+        )
+
+    return router
+
+
+def init_tarot_route(
+    ws_handler: WebSocketHandler, token: Optional[str] = None
+) -> APIRouter:
+    """Create ``/api/tarot`` and ``/api/tarot/draw`` (audit §4.6).
+
+    Lets the operator draw without waiting for a cron job:
+
+        curl -X POST http://127.0.0.1:12393/api/tarot/draw \\
+             -H 'Content-Type: application/json' \\
+             -d '{"count": 3, "question": "¿Cambio de trabajo?", "speak": true}'
+
+    ``GET /api/tarot`` returns the last draw, which is what an operator HUD
+    needs to show what is already on screen.
+
+    Args:
+        ws_handler: Shared handler; it owns the overlay sockets, the stage cache
+            and ``current_draw``.
+        token: Shared token (audit A22). Same rules as ``/api/metrics``.
+
+    Returns:
+        APIRouter: ``GET`` last draw, ``POST /api/tarot/draw`` a new one.
+    """
+    router = APIRouter()
+
+    @router.get("/api/tarot")
+    async def get_tarot(request: Request):
+        if not http_token_allowed(request, token):
+            return JSONResponse({"error": "unauthorized"}, status_code=401)
+        current = ws_handler.current_draw
+        return JSONResponse({"draw": current.summary() if current else None})
+
+    @router.post("/api/tarot/draw")
+    async def draw_tarot(request: Request):
+        if not http_token_allowed(request, token):
+            return JSONResponse({"error": "unauthorized"}, status_code=401)
+
+        try:
+            body = await request.json()
+        except Exception:
+            body = {}
+        if body is None:
+            body = {}
+        if not isinstance(body, dict):
+            return JSONResponse({"error": "expected a JSON object"}, status_code=400)
+
+        count = body.get("count", 1)
+        if isinstance(count, bool) or not isinstance(count, int):
+            return JSONResponse({"error": "count must be an integer"}, status_code=400)
+        if count < 1 or count > MAX_CARDS:
+            return JSONResponse(
+                {"error": f"count must be between 1 and {MAX_CARDS}"}, status_code=400
+            )
+
+        seed = body.get("seed")
+        if seed is not None and (isinstance(seed, bool) or not isinstance(seed, int)):
+            return JSONResponse({"error": "seed must be an integer"}, status_code=400)
+
+        try:
+            result = await ws_handler.draw_tarot(
+                count=count,
+                question=str(body.get("question", ""))[:MAX_QUESTION],
+                seed=seed,
+                target_client=str(body.get("target", "first")),
+                speak=bool(body.get("speak", False)),
+                asker=str(body.get("asker", "")),
+            )
+        except ValueError as e:
+            return JSONResponse({"error": str(e)}, status_code=400)
+
+        return JSONResponse(
+            {
+                "status": "ok",
+                "delivered": result.delivered,
+                "spoken": result.spoken,
+                "draw": result.summary(),
+                "payload": result.payload,
+            }
+        )
 
     return router
 

@@ -267,22 +267,20 @@ async def handle_group_member_turn(
         group_members=group_members,
     )
 
-    if tts_manager.task_list:
-        await asyncio.gather(*tts_manager.task_list)
-        await current_ws_send(json.dumps({"type": "backend-synth-complete"}))
+    broadcast_ctx = BroadcastContext(
+        broadcast_func=broadcast_func,
+        group_members=group_members,
+        current_client_uid=current_member_uid,
+    )
 
-        broadcast_ctx = BroadcastContext(
-            broadcast_func=broadcast_func,
-            group_members=group_members,
-            current_client_uid=current_member_uid,
-        )
-
-        await finalize_conversation_turn(
-            tts_manager=tts_manager,
-            websocket_send=current_ws_send,
-            client_uid=current_member_uid,
-            broadcast_ctx=broadcast_ctx,
-        )
+    # A18/A19: finalize waits for TTS, emits backend-synth-complete once and
+    # always sends conversation-chain-end (group turns included).
+    await finalize_conversation_turn(
+        tts_manager=tts_manager,
+        websocket_send=current_ws_send,
+        client_uid=current_member_uid,
+        broadcast_ctx=broadcast_ctx,
+    )
 
     if full_response:
         ai_message = f"{context.character_config.character_name}: {full_response}"

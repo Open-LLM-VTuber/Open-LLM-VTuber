@@ -1,0 +1,93 @@
+services:
+  open-llm-vtuber:
+    build:
+      context: .
+      dockerfile: dockerfile
+      args:
+        # ghcr.io can time out (the original build error). Override it with a
+        # mirror that works on your network:
+        #   PowerShell: $env:UV_IMAGE='ghcr.nju.edu.cn/astral-sh/uv:latest'
+        #   WSL:        export UV_IMAGE=ghcr.nju.edu.cn/astral-sh/uv:latest
+        #   or:         docker.m.daocloud.io/ghcr.io/astral-sh/uv:latest
+        UV_IMAGE: ${UV_IMAGE:-ghcr.io/astral-sh/uv:latest}
+    container_name: open-llm-vtuber
+    ports:
+      # Windows/Hyper-V reserves DYNAMIC port ranges that shift after reboots
+      # (12393 fell into one, later 8080 fell into 8068-8167). Binding an
+      # excluded port fails with WSAEACCES and Docker reports
+      # "/forwards/expose returned unexpected status: 500".
+      # 9000 is outside the current ranges. The app still listens on 12393
+      # INSIDE the container, so the proxy, TikTok connector and the overlay's
+      # relative URLs keep working; only the browser uses :9000.
+      #   http://localhost:9000/
+      #   http://localhost:9000/web-tool/overlay.html
+      #   http://localhost:9000/web-tool/operator.html
+      # If Windows reserves 9000 later, change only this mapping to another
+      # free port: the UI derives its URLs from the browser location.
+      - "9000:12393"
+    volumes:
+      - ./conf:/app/conf
+      - ./models:/app/models
+      # -----------------------------------------------------------------------
+      # SOURCE AND ASSETS FROM THE HOST
+      #
+      # The image was built before the tarot/MVP branch, and `docker compose
+      # build` currently dies with BuildKit's "failed to receive status: ...
+      # no such job". Without these mounts the only way to get the branch code
+      # into the container is `docker cp`, and the copies live in the writable
+      # layer: `docker compose down`/`up -d --force-recreate` (or editing this
+      # file) throws them away and /api/tarot, /api/metrics go back to 404.
+      #
+      # With them, the container always reads the checkout: `restart`,
+      # `down`+`up -d` and recreations are safe, and code edits only need a
+      # restart. Rebuild only when dependencies change (pyproject.toml).
+      #
+      # Do NOT put characters/backgrounds/avatars inside conf/: the image
+      # entrypoint (/usr/local/bin/start-app) replaces those directories with
+      # symlinks to /app/conf/... when they exist, which would hide the mounts.
+      # -----------------------------------------------------------------------
+      - ./src:/app/src
+      - ./scripts:/app/scripts
+      - ./web_tool:/app/web_tool
+      # Official web UI (main page at "/"). The image does not ship it: the
+      # server tries `git submodule update` at startup, which hangs when
+      # GitHub is unreachable. Populate it once with
+      #   powershell -ExecutionPolicy Bypass -File scripts/fetch_frontend.ps1
+      - ./frontend-build:/app/frontend
+      - ./backgrounds:/app/backgrounds
+      - ./characters:/app/characters
+      - ./prompts:/app/prompts
+      - ./tests:/app/tests
+      - ./config_templates:/app/config_templates
+      - ./upgrade_codes:/app/upgrade_codes
+    # ---------------------------------------------------------------------------
+    # WHY THIS COMMAND: run_server.py does `read_yaml("conf.yaml")`, i.e. it reads
+    # /app/conf.yaml (CWD-relative), NOT /app/conf/conf.yaml. The image does NOT
+    # ship a /app/conf.yaml because `/conf.yaml` is excluded in .dockerignore, and
+    # the dockerfile CMD (/usr/local/bin/start-app) is the piece that creates:
+    #   /app/conf.yaml -> /app/conf/conf.yaml   (symlink)
+    # If `command:` is overridden WITHOUT recreating that symlink, then
+    # upgrade_manager.sync_user_config() finds no conf.yaml and copies
+    # config_templates/conf.default.yaml (which contains `host: 'localhost'`)
+    # into /app/conf.yaml. Uvicorn then logs
+    #   "Uvicorn running on http://localhost:12393"
+    # and binds to 127.0.0.1 INSIDE the container, so the published port 12393 is
+    # never reachable from Windows -> ERR_EMPTY_RESPONSE.
+    #
+    # Fix: run the image entrypoint (it recreates the symlink AND links
+    # models/characters/avatars/backgrounds from /app/conf) instead of invoking
+    # run_server.py directly.
+    #
+    # SECOND FIX - edge-tts TTS returns no audio:
+    # uv.lock pins edge-tts==7.2.7, and `uv add edge-tts` does NOT upgrade a
+    # version that is already locked, so the container kept running 7.2.7.
+    # Microsoft moved the Edge read-aloud DRM to "Sec-MS-GEC v2"; edge-tts only
+    # learned to send it in 7.3.0 ("feat: add Sec-MS-GEC v2 token support",
+    # PR #492). With 7.2.7 every synthesis fails with
+    #   403, message='Invalid response status'
+    # which leaves 0-byte .mp3 files in /app/cache, so the backend sends a
+    # silent payload and you get text without audio.
+    # Pinning the requirement here forces uv to actually install >= 7.3.0.
+    command: >-
+      bash -c "uv add 'edge-tts>=7.3.0' && exec /usr/local/bin/start-app"
+    restart: unless-stopped

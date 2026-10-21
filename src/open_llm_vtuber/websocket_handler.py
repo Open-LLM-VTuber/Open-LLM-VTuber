@@ -15,6 +15,13 @@ from .chat_group import (
 )
 from .message_handler import message_handler
 from .utils.stream_audio import prepare_audio_payload
+from .utils.stage import select_stage_targets
+from .utils.tarot_commands import (
+    MAX_QUESTION,
+    DrawResult,
+    build_draw_result,
+    parse_draw_command,
+)
 from .chat_history_manager import (
     create_new_history,
     get_history,
@@ -41,7 +48,7 @@ class MessageType(Enum):
     ]
     CONVERSATION = ["mic-audio-end", "text-input", "ai-speak-signal"]
     CONFIG = ["fetch-configs", "switch-config"]
-    CONTROL = ["interrupt-signal", "audio-play-start"]
+    CONTROL = ["interrupt-signal", "audio-play-start", "fetch-stage", "tarot-draw"]
     DATA = ["mic-audio-data"]
 
 
@@ -69,6 +76,11 @@ class WebSocketHandler:
         self.current_conversation_tasks: Dict[str, Optional[asyncio.Task]] = {}
         self.default_context_cache = default_context_cache
         self.received_data_buffers: Dict[str, np.ndarray] = {}
+        # Last stage-update sent to the overlay (A25): replayed on reconnect so
+        # OBS can restart the browser source without losing the scene.
+        self.current_stage: Optional[dict] = None
+        # Last on-demand tarot draw, served by GET /api/tarot.
+        self.current_draw: Optional[DrawResult] = None
 
         # Message handlers mapping
         self._message_handlers = self._init_message_handlers()
@@ -84,6 +96,7 @@ class WebSocketHandler:
             "create-new-history": self._handle_create_history,
             "delete-history": self._handle_delete_history,
             "interrupt-signal": self._handle_interrupt,
+            "tarot-draw": self._handle_tarot_draw,
             "mic-audio-data": self._handle_audio_data,
             "mic-audio-end": self._handle_conversation_trigger,
             "raw-audio-data": self._handle_raw_audio_data,
@@ -94,6 +107,7 @@ class WebSocketHandler:
             "fetch-backgrounds": self._handle_fetch_backgrounds,
             "audio-play-start": self._handle_audio_play_start,
             "request-init-config": self._handle_init_config_request,
+            "fetch-stage": self._handle_fetch_stage,
             "heartbeat": self._handle_heartbeat,
         }
 
@@ -168,6 +182,10 @@ class WebSocketHandler:
                 }
             )
         )
+
+        # Restore the last stage (background/props) when the overlay reconnects.
+        if self.current_stage:
+            await websocket.send_text(json.dumps(self.current_stage))
 
         # Send initial group status
         await self.send_group_update(websocket, client_uid)
@@ -341,6 +359,86 @@ class WebSocketHandler:
             exclude_uid=exclude_uid,
         )
 
+    async def broadcast_stage_update(
+        self, payload: dict, target_client: str = "first"
+    ) -> int:
+        """Send a ``stage-update`` payload to the overlay (Ruta B, audit §2.4).
+
+        Args:
+            payload: Message built with
+                :func:`open_llm_vtuber.utils.stage.build_stage_payload`.
+            target_client: ``"first"`` (recommended: the OBS overlay is the
+                first socket), ``"all"`` or an explicit ``client_uid``.
+
+        Returns:
+            int: Number of sockets the message reached. Failures are logged
+            and never raised: a dead overlay must not break a scheduled turn.
+        """
+        # Remember it even when nobody is connected, so the payload is
+        # replayed as soon as the overlay reconnects.
+        self.current_stage = payload
+
+        delivered = 0
+        for uid in select_stage_targets(self.client_connections, target_client):
+            websocket = self.client_connections.get(uid)
+            if websocket is None:
+                continue
+            try:
+                await websocket.send_text(json.dumps(payload))
+                delivered += 1
+            except Exception as e:
+                logger.warning(f"stage-update: could not reach {uid}: {e}")
+        return delivered
+
+    async def draw_tarot(
+        self,
+        count: int = 1,
+        question: str = "",
+        seed: Optional[int] = None,
+        target_client: str = "first",
+        speak: bool = False,
+        asker: str = "",
+    ) -> DrawResult:
+        """Draw a spread, show it on the overlay and remember it (audit §4.6).
+
+        Shared by ``POST /api/tarot/draw``, the chat commands (``!carta``) and
+        the donor flow (``tarot-draw``), so the overlay and the voice always
+        describe the same cards.
+
+        Args:
+            count: 1-3 cards.
+            question: seeker's question, added to the brief for the LLM.
+            seed: reproducible spread (``None`` = random every draw).
+            target_client: ``"first"``/``"all"``/explicit uid for the overlay.
+            speak: also start a proactive turn that reads the cards. Off by
+                default: the chat path speaks on the *commanding* client
+                instead (see ``_handle_conversation_trigger``).
+            asker: donor/viewer the reading belongs to; the brief addresses them.
+
+        Returns:
+            DrawResult: cards, payload, brief and what was actually sent.
+        """
+        result = build_draw_result(
+            count=count, question=question, seed=seed, asker=asker
+        )
+        result.delivered = await self.broadcast_stage_update(
+            result.payload, target_client
+        )
+        self.current_draw = result
+
+        if speak:
+            targets = select_stage_targets(self.client_connections, target_client)
+            if targets:
+                result.spoken = await self.trigger_proactive_speak(
+                    targets[0], result.brief
+                )
+
+        logger.info(
+            f"Tarot: {len(result.cards)} card(s) -> {result.delivered} overlay(s)"
+            f"{', spoken' if result.spoken else ''}"
+        )
+        return result
+
     async def send_group_update(self, websocket: WebSocket, client_uid: str):
         """Sends group information to a client"""
         group = self.chat_group_manager.get_client_group(client_uid)
@@ -510,10 +608,83 @@ class WebSocketHandler:
                         json.dumps({"type": "control", "text": "mic-audio-end"})
                     )
 
+    async def _run_brief_turn(
+        self, websocket: WebSocket, client_uid: str, brief: str
+    ) -> None:
+        """Speak ``brief`` as a normal turn when the proactive path refuses.
+
+        Keeps the connector unblocked: it only advances its queue on
+        ``conversation-chain-end``, which a normal turn always sends.
+        """
+        await handle_conversation_trigger(
+            msg_type="text-input",
+            data={"type": "text-input", "text": brief},
+            client_uid=client_uid,
+            context=self.client_contexts[client_uid],
+            websocket=websocket,
+            client_contexts=self.client_contexts,
+            client_connections=self.client_connections,
+            chat_group_manager=self.chat_group_manager,
+            received_data_buffers=self.received_data_buffers,
+            current_conversation_tasks=self.current_conversation_tasks,
+            broadcast_to_group=self.broadcast_to_group,
+        )
+
+    async def _handle_tarot_draw(
+        self, websocket: WebSocket, client_uid: str, data: WSMessage
+    ) -> None:
+        """Draw a spread for a donor and read it aloud.
+
+        The TikTok connector sends this frame when a donor answers the "what do
+        you need?" question that followed their gift, so the reading is
+        addressed to that person (audit §4.6).
+        """
+        count = data.get("count", 1)
+        if isinstance(count, bool) or not isinstance(count, int):
+            count = 1
+        if count < 1 or count > 3:
+            count = 1
+
+        result = await self.draw_tarot(
+            count=count,
+            question=str(data.get("question", ""))[:MAX_QUESTION],
+            asker=str(data.get("asker", "")),
+        )
+        spoken = await self.trigger_proactive_speak(client_uid, result.brief)
+        if not spoken:
+            logger.info("Tarot draw: proactive turn refused, using a text turn")
+            await self._run_brief_turn(websocket, client_uid, result.brief)
+
     async def _handle_conversation_trigger(
         self, websocket: WebSocket, client_uid: str, data: WSMessage
     ) -> None:
-        """Handle triggers that start a conversation"""
+        """Handle triggers that start a conversation.
+
+        A tarot command in the text (``!carta``, ``!tirada 3 ¿…?``) is answered
+        here: the spread is drawn and pushed to the overlay **first**, and the
+        turn becomes a proactive segment that reads those cards. The command
+        text never enters the conversation history (audit §4.6).
+        """
+        try:
+            request = parse_draw_command(data.get("text"))
+        except ValueError as e:
+            # Malformed command: fall through as a normal message so the show
+            # keeps going instead of swallowing what the viewer wrote.
+            logger.warning(f"Tarot command ignored: {e}")
+            request = None
+
+        if request is not None:
+            result = await self.draw_tarot(
+                count=request.count, question=request.question
+            )
+            spoken = await self.trigger_proactive_speak(client_uid, result.brief)
+            if spoken:
+                return
+
+            logger.info("Tarot draw: proactive turn refused, using a text turn")
+            await self._run_brief_turn(websocket, client_uid, result.brief)
+            return
+
         await handle_conversation_trigger(
             msg_type=data.get("type", ""),
             data=data,
@@ -527,6 +698,41 @@ class WebSocketHandler:
             current_conversation_tasks=self.current_conversation_tasks,
             broadcast_to_group=self.broadcast_to_group,
         )
+
+    async def trigger_proactive_speak(self, client_uid: str, text: str = "") -> bool:
+        """Start a proactive turn on an already connected client.
+
+        Used by the scheduler. Returns False when the client is gone or busy;
+        the caller decides whether to retry. Checking the running task is
+        mandatory: the scheduler writes straight into the client socket, so it
+        bypasses the serialization of the live connector.
+        """
+        websocket = self.client_connections.get(client_uid)
+        if not websocket:
+            return False
+
+        current = self.current_conversation_tasks.get(client_uid)
+        if current and not current.done():
+            logger.info("Turn in progress; scheduled segment postponed")
+            return False
+
+        group = self.chat_group_manager.get_client_group(client_uid)
+        if group and len(group.members) > 1:
+            group_task = self.current_conversation_tasks.get(group.group_id)
+            if group_task and not group_task.done():
+                logger.info("Group turn in progress; scheduled segment postponed")
+                return False
+
+        try:
+            await self._route_message(
+                websocket,
+                client_uid,
+                {"type": "ai-speak-signal", "text": text},
+            )
+        except Exception as e:
+            logger.error(f"Failed to trigger proactive speak for {client_uid}: {e}")
+            return False
+        return True
 
     async def _handle_fetch_configs(
         self, websocket: WebSocket, client_uid: str, data: WSMessage
@@ -555,6 +761,13 @@ class WebSocketHandler:
         await websocket.send_text(
             json.dumps({"type": "background-files", "files": bg_files})
         )
+
+    async def _handle_fetch_stage(
+        self, websocket: WebSocket, client_uid: str, data: WSMessage
+    ) -> None:
+        """Replay the last stage-update (overlay reload / late subscriber)."""
+        if self.current_stage:
+            await websocket.send_text(json.dumps(self.current_stage))
 
     async def _handle_audio_play_start(
         self, websocket: WebSocket, client_uid: str, data: WSMessage

@@ -1,3 +1,9 @@
+# uv as its own stage: Dockerfile cannot expand ${UV_IMAGE} inside COPY --from,
+# so a mirror is selected with a named stage and the UV_IMAGE build arg.
+#   UV_IMAGE=ghcr.nju.edu.cn/astral-sh/uv:latest docker compose build
+ARG UV_IMAGE=ghcr.io/astral-sh/uv:latest
+FROM ${UV_IMAGE} AS uv
+
 FROM python:3.10-slim
 
 ENV DEBIAN_FRONTEND=noninteractive \
@@ -15,8 +21,8 @@ RUN apt-get update -o Acquire::Retries=5 \
       ffmpeg git curl ca-certificates \
  && rm -rf /var/lib/apt/lists/*
 
-# Install uv
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
+# Install uv from the stage declared at the top (see the UV_IMAGE build arg).
+COPY --from=uv /uv /uvx /usr/local/bin/
 
 # Install deps (cache-friendly)
 COPY pyproject.toml uv.lock ./
@@ -39,8 +45,12 @@ RUN printf '%s\n' \
   '  echo "Using user-provided conf.yaml"' \
   '  ln -sf /app/conf/conf.yaml /app/conf.yaml' \
   'else' \
-  '  echo "ERROR: conf.yaml is required."' \
-  '  echo "Please mount your config dir to /app/conf"' \
+  '  echo "ERROR: /app/conf/conf.yaml not found: the container needs the config INSIDE the mount."' \
+  '  echo "  * from the repo root: docker compose up -d      (mounts ./conf:/app/conf)"' \
+  '  echo "  * plain docker run:   -v /path/to/repo/conf:/app/conf -p 12393:12393"' \
+  '  echo "  * no config yet:      cp config_templates/conf.default.yaml conf/conf.yaml"' \
+  '  echo "  * then set system_config.host: 0.0.0.0 so the published port answers"' \
+  '  echo "  * helper: powershell -File scripts/docker_up.ps1 (checks all of the above)"' \
   '  exit 1' \
   'fi' \
   '' \

@@ -25,6 +25,16 @@ system_config:
     # Additional guidance for LLM on how to use tools
     # tool_guidance_prompt: 'tool_guidance_prompt' 
 
+  # A23: container used for the TTS audio sent over the WebSocket.
+  # - 'wav' (default): lowest latency, ideal when the overlay/OBS runs on this machine.
+  # - 'mp3': ~10x less traffic; use it when the overlay runs on another machine or
+  #   through a tunnel. Requires ffmpeg with libmp3lame (the project already assumes ffmpeg).
+  # Clients receive the format in the payload ('audio_format'); WebAudio-based players
+  # (decodeAudioData) detect it on their own.
+  audio_export:
+    format: 'wav' # 'wav' or 'mp3'
+    bitrate: '64k' # only used when format is 'mp3'
+
 # configuration for the default character
 character_config:
   conf_name: 'mao_pro' # The name of character configuration file.
@@ -64,6 +74,10 @@ character_config:
         faster_first_response: True
         # Method for segmenting sentences: 'regex' or 'pysbd'
         segment_method: 'pysbd'
+        # Turns of history sent to the LLM (0 = unlimited). The full history
+        # is still kept for the UI and the chat history files.
+        max_history_turns: 12
+
         # Use MCP (Model Context Protocol) Plus to let the LLM have the ability to use tools
         # 'Plus' means that it has the ability to call tools by using OpenAI API.
         use_mcpp: True
@@ -354,6 +368,12 @@ character_config:
       batch_size: '1'
       media_type: 'wav'
       streaming_mode: 'false'
+      # A24: resilience of the GPT-SoVITS HTTP API. One GPU cannot answer
+      # several sentences at once, so requests are capped and retried.
+      request_timeout: 20.0 # seconds per attempt
+      max_retries: 2 # retries after the first attempt (timeout/5xx/non-audio)
+      retry_backoff: 0.5 # seconds before the first retry; doubles each time
+      max_concurrency: 2 # simultaneous requests per engine instance
 
     fish_api_tts:
       # The API key for the Fish TTS API.
@@ -501,3 +521,61 @@ live_config:
     room_ids: [1991478060]
     # SESSDATA cookie value (optional, for authenticated requests)
     sessdata: ""
+  tiktok_live:
+    # Enable the TikTok Live connector (run scripts/run_tiktok_live.py)
+    enabled: false
+    # TikTok username of the account that is live (without @)
+    unique_id: ""
+    # Leave empty to use ws://127.0.0.1:{system_config.port}/proxy-ws
+    proxy_url: ""
+    # Maximum number of pending events (gifts are dropped last)
+    max_queue: 5
+    # Minimum seconds between two replies
+    cooldown_seconds: 6
+    # Ignore gifts cheaper than this many coins
+    min_gift_coins: 1
+    # A gift asks the donor what they need and reads the cards for them
+    gift_reading: true
+    # Thank viewers for gifts / greet new followers
+    reply_to_gifts: true
+    reply_to_follows: true
+
+# Scripted broadcast (opening, breaks, closing). Runs inside the server: each
+# job sends a proactive turn to the first connected client (the OBS overlay).
+scheduler_config:
+  enabled: false
+  # IANA timezone used by the cron expressions
+  timezone: 'Europe/Madrid'
+  # 'first' = first connected client (OBS overlay); or an explicit client_uid
+  target_client: 'first'
+  # OBS Studio control (optional). Enable "WebSocket server" in OBS first:
+  # Tools -> WebSocket Server Settings. Requires OBS 28 or newer.
+  obs:
+    enabled: false
+    host: '127.0.0.1'
+    port: 4455
+    password: ''
+    timeout: 3.0                 # seconds for connect + each request
+    switch_scenes: true          # let jobs change the program scene
+    start_stream: false          # call StartStream when the scheduler starts
+    stop_stream_on_shutdown: false
+  jobs:
+    - name: 'pre_show'
+      cron: '50 19 * * *'          # every day at 19:50
+      text: 'Quedan diez minutos para empezar. Saluda a quien ya esté en el chat y pide que se queden.'
+      scene: 'starting_soon'       # OBS scene (needs obs.enabled)
+    - name: 'card_of_the_day'
+      cron: '0 20 * * *'
+      text: 'Abre el directo, presenta la carta del día y pide preguntas.'
+      scene: 'tarot_main'
+      background: '/bg/tarot_table.png'   # overlay stage-update (Ruta B)
+      draw: 1                     # tarot draw: 1-3 cards (0 = no draw)
+      # draw_seed: 2024           # uncomment to replay the same spread every day
+      question: '¿Qué energía trae el día?'   # optional, added to the brief
+    - name: 'break'
+      interval_minutes: 45
+      text: 'Haz una pausa breve, recuerda que sigues leyendo el tarot y pide que compartan el directo.'
+    - name: 'closing'
+      cron: '0 23 * * *'
+      text: 'Despídete, agradece a quienes han participado y anuncia cuándo será la próxima lectura.'
+      scene: 'ending'

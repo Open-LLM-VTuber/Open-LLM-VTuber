@@ -26,6 +26,8 @@ class ProxyHandler:
         self.server_url = server_url
         self.server_ws: Optional[aiohttp.ClientWebSocketResponse] = None
         self.clients: Dict[str, WebSocket] = {}
+        # Clients that only need control messages (e.g. the TikTok connector).
+        self.silent_clients: set[str] = set()
         self.connected = False
         self.server_task: Optional[asyncio.Task] = None
         self.lock = asyncio.Lock()
@@ -125,6 +127,10 @@ class ProxyHandler:
                 if message.get("type") == "text-input":
                     # Queue the message with the sender's ID
                     self.message_queue.queue_message(message, client_id)
+                # Connector opt-in: no audio/volumes in its broadcast
+                elif message.get("type") == "connector-hello":
+                    self.silent_clients.add(client_id)
+                    logger.info(f"Client {client_id} marked as connector (no audio)")
                 # Handle interrupt signals
                 elif message.get("type") == "interrupt-signal":
                     logger.info(
@@ -152,6 +158,7 @@ class ProxyHandler:
             client_id: The ID of the disconnected client
         """
         self.clients.pop(client_id, None)
+        self.silent_clients.discard(client_id)
         logger.info(
             f"Client {client_id} removed. Remaining clients: {len(self.clients)}"
         )
@@ -263,24 +270,34 @@ class ProxyHandler:
 
         disconnected_clients = []
 
-        # Log message, but handle audio data specially to avoid huge logs
-        log_msg = (
-            message.copy()
-            if "audio" not in message
-            else {
+        # Log message, but handle audio data specially to avoid huge logs.
+        # ``audio`` may legitimately be ``None`` (silent payload, audit A21);
+        # calling len() on it used to raise and drop the whole frame.
+        if "audio" in message:
+            audio = message.get("audio")
+            audio_size = len(audio) if isinstance(audio, (str, bytes, bytearray)) else 0
+            log_msg = {
                 **{k: v for k, v in message.items() if k != "audio"},
-                "audio": f"[Audio data, {len(message.get('audio', ''))} bytes truncated]",
+                "audio": f"[Audio data, {audio_size} bytes truncated]",
             }
-        )
+        else:
+            log_msg = message.copy()
 
-        if "volumes" in log_msg and len(log_msg.get("volumes", [])) > 10:
-            log_msg["volumes"] = f"[{len(message.get('volumes', []))} volume values]"
+        volumes = log_msg.get("volumes")
+        if isinstance(volumes, (list, tuple)) and len(volumes) > 10:
+            log_msg["volumes"] = f"[{len(volumes)} volume values]"
 
         logger.debug(f"Broadcasting to clients (excluding {exclude_client}): {log_msg}")
 
         for client_id, websocket in self.clients.items():
             # Skip the excluded client
             if exclude_client and client_id == exclude_client:
+                continue
+
+            # Connectors do not need audio or volume data (~1 MB per turn)
+            if client_id in self.silent_clients and (
+                "audio" in message or "volumes" in message
+            ):
                 continue
 
             try:

@@ -1,0 +1,39 @@
+# Caddy in front of the app container (docker-compose.prod.yml).
+#
+# Environment, injected by Compose from .env:
+#   DOMAIN      public host name; its A record must point to the VM static IP
+#   ACME_EMAIL  Let's Encrypt account email
+#
+# Caddy obtains the certificate automatically on the first HTTPS request.
+# Ports 80 and 443 must be open in the GCP firewall; nothing else is exposed.
+# Validate after editing:
+#   docker compose -f docker-compose.prod.yml exec caddy caddy validate \
+#       --config /etc/caddy/Caddyfile --adapter caddyfile
+
+{
+	email {$ACME_EMAIL}
+	# While testing DNS, uncomment to avoid Let's Encrypt rate limits:
+	# acme_ca https://acme-staging-v02.api.letsencrypt.org/directory
+}
+
+{$DOMAIN} {
+	encode zstd gzip
+
+	# Single upstream: the FastAPI app. Caddy upgrades /client-ws, /proxy-ws and
+	# /tts-ws automatically. flush_interval -1 disables response buffering, so
+	# audio frames are forwarded as they are produced.
+	reverse_proxy open-llm-vtuber:12393 {
+		flush_interval -1
+	}
+
+	# Access log: docker compose -f docker-compose.prod.yml logs -f caddy
+	log {
+		output stdout
+		format console
+	}
+
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		-Server
+	}
+}

@@ -1,5 +1,6 @@
 from typing import Union, List, Dict, Any, Optional
 import asyncio
+import contextlib
 import json
 from loguru import logger
 import numpy as np
@@ -10,12 +11,15 @@ from .conversation_utils import (
     send_conversation_start_signals,
     process_user_input,
     finalize_conversation_turn,
+    send_conversation_end_signal,
     cleanup_conversation,
+    instrument_websocket_send,
     EMOJI_LIST,
 )
 from .types import WebSocketSend
 from .tts_manager import TTSTaskManager
 from ..chat_history_manager import store_message
+from ..metrics import OUTCOME_FAILED, OUTCOME_INTERRUPTED, turn_metrics
 from ..service_context import ServiceContext
 
 # Import necessary types from agent outputs
@@ -50,6 +54,10 @@ async def process_single_conversation(
     full_response = ""  # Initialize full_response here
 
     try:
+        # A22/§5.3: time the turn and observe outgoing audio/chain-end payloads.
+        turn_metrics.begin_turn(client_uid)
+        websocket_send = instrument_websocket_send(websocket_send, client_uid)
+
         # Send initial signals
         await send_conversation_start_signals(websocket_send)
         logger.info(f"New Conversation Chain {session_emoji} started!")
@@ -137,11 +145,8 @@ async def process_single_conversation(
             # full_response will contain partial response before error
         # --- End processing agent response ---
 
-        # Wait for any pending TTS tasks
-        if tts_manager.task_list:
-            await asyncio.gather(*tts_manager.task_list)
-            await websocket_send(json.dumps({"type": "backend-synth-complete"}))
-
+        # Wait for pending TTS tasks and close the turn (A18/A19: finalize
+        # emits backend-synth-complete once and always sends the end signal).
         await finalize_conversation_turn(
             tts_manager=tts_manager,
             websocket_send=websocket_send,
@@ -163,12 +168,22 @@ async def process_single_conversation(
 
     except asyncio.CancelledError:
         logger.info(f"🤡👍 Conversation {session_emoji} cancelled because interrupted.")
+        # Close the metrics turn as interrupted *before* the end signal goes out:
+        # the wrapper would otherwise report it as completed.
+        turn_metrics.end_turn(client_uid, OUTCOME_INTERRUPTED)
+        with contextlib.suppress(Exception):
+            # Unblock the proxy/connector: interrupts skip finalize_conversation_turn.
+            await send_conversation_end_signal(websocket_send, None)
         raise
     except Exception as e:
         logger.error(f"Error in conversation chain: {e}")
+        turn_metrics.end_turn(client_uid, OUTCOME_FAILED)
         await websocket_send(
             json.dumps({"type": "error", "message": f"Conversation error: {str(e)}"})
         )
         raise
     finally:
+        # Safety net: a turn must never stay active (same invariant as A18).
+        # No-op when the chain end or an exception path already closed it.
+        turn_metrics.end_turn(client_uid, OUTCOME_FAILED)
         cleanup_conversation(tts_manager, session_emoji)

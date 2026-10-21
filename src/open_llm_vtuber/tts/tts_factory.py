@@ -87,6 +87,11 @@ class TTSFactory:
                 batch_size=kwargs.get("batch_size"),
                 media_type=kwargs.get("media_type"),
                 streaming_mode=kwargs.get("streaming_mode"),
+                # A24: retry/concurrency knobs (None -> engine defaults).
+                request_timeout=kwargs.get("request_timeout"),
+                max_retries=kwargs.get("max_retries"),
+                retry_backoff=kwargs.get("retry_backoff"),
+                max_concurrency=kwargs.get("max_concurrency"),
             )
         elif engine_type == "siliconflow_tts":
             from .siliconflow_tts import SiliconFlowTTS

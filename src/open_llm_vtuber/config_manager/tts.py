@@ -288,6 +288,12 @@ class GPTSoVITSConfig(I18nMixin):
     batch_size: str = Field(..., alias="batch_size")
     media_type: str = Field(..., alias="media_type")
     streaming_mode: str = Field(..., alias="streaming_mode")
+    # A24: keep one GPU (or CPU) from being flooded by parallel sentences and
+    # give a transient failure a second chance before the sentence goes silent.
+    request_timeout: float = Field(20.0, alias="request_timeout", gt=0)
+    max_retries: int = Field(2, alias="max_retries", ge=0, le=5)
+    retry_backoff: float = Field(0.5, alias="retry_backoff", ge=0, le=10)
+    max_concurrency: int = Field(2, alias="max_concurrency", ge=1, le=8)
 
     DESCRIPTIONS: ClassVar[Dict[str, Description]] = {
         "api_url": Description(
@@ -305,6 +311,22 @@ class GPTSoVITSConfig(I18nMixin):
         "batch_size": Description(en="Batch size for processing", zh="处理批次大小"),
         "media_type": Description(en="Output media type", zh="输出媒体类型"),
         "streaming_mode": Description(en="Enable streaming mode", zh="启用流式模式"),
+        "request_timeout": Description(
+            en="Seconds to wait for each GPT-SoVITS request",
+            zh="每次请求 GPT-SoVITS 的超时时间（秒）",
+        ),
+        "max_retries": Description(
+            en="Retries after a timeout, 5xx or non-audio response (0 disables)",
+            zh="超时、5xx 或返回非音频时的重试次数（0 表示禁用）",
+        ),
+        "retry_backoff": Description(
+            en="Seconds before the first retry; doubles on each retry",
+            zh="首次重试前的等待秒数，之后每次翻倍",
+        ),
+        "max_concurrency": Description(
+            en="Maximum simultaneous requests per engine (keep it low on one GPU)",
+            zh="每个引擎实例的最大并发请求数（单 GPU 时保持较低）",
+        ),
     }
 
 

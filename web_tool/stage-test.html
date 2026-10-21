@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stage overlay (test)</title>
+    <!--
+        Minimal Ruta B overlay: it only understands `stage-update` (audit §2.4),
+        so the contract can be checked without burning a real OBS scene.
+
+        Usage:
+          http://localhost:12393/web-tool/stage-test.html
+          http://localhost:12393/web-tool/stage-test.html?token=...   (A22 token)
+          .../stage-test.html?ws=ws://127.0.0.1:12393/client-ws       (override)
+
+        Drive it from the operator box:
+          curl -X POST http://127.0.0.1:12393/api/stage \
+               -H "Content-Type: application/json" \
+               -d '{"stage":"tarot_main","background":"/bg/tarot_table.png","props":[{"id":"card_1","src":"/bg/cards/death.png","x":0.7,"y":0.5,"rot":-8}]}'
+
+        Press "h" to hide/show the HUD. There is no audio handling here on
+        purpose: the real overlay still has to answer `frontend-playback-complete`
+        (audit A18) or the turn will hang.
+    -->
+    <style>
+        html,
+        body {
+            margin: 0;
+            height: 100%;
+            overflow: hidden;
+            background: transparent;
+            font-family: system-ui, sans-serif;
+        }
+
+        .stage {
+            position: fixed;
+            inset: 0;
+            overflow: hidden;
+        }
+
+        .layer {
+            position: absolute;
+            inset: 0;
+            background-position: center;
+            background-size: cover;
+            background-repeat: no-repeat;
+            opacity: 0;
+            will-change: opacity;
+        }
+
+        .layer.is-front {
+            opacity: 1;
+        }
+
+        .props {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+        }
+
+        .props img,
+        .props .card {
+            position: absolute;
+            transform-origin: center;
+            will-change: transform;
+        }
+
+        .props img {
+            max-width: 40vw;
+            max-height: 60vh;
+        }
+
+        /* Text prop (tarot cards without art): cheap on purpose, this page is a
+           debugging harness, the real look lives in overlay.html. */
+        .props .card {
+            min-width: 11vw;
+            max-width: 24vw;
+            padding: 10px 12px;
+            border-radius: 10px;
+            background: rgba(20, 12, 32, 0.9);
+            border: 1px solid rgba(255, 212, 121, 0.6);
+            text-align: center;
+        }
+
+        .props .card .card-label {
+            display: block;
+            font-size: 22px;
+            font-weight: 600;
+            color: #ffd479;
+        }
+
+        .props .card .card-sublabel {
+            display: block;
+            margin-top: 4px;
+            font-size: 14px;
+            color: #e8e2f5;
+        }
+
+        .hud {
+            position: fixed;
+            top: 12px;
+            left: 12px;
+            max-width: min(560px, 90vw);
+            padding: 10px 14px;
+            border-radius: 8px;
+            background: rgba(0, 0, 0, 0.72);
+            color: #f5f5f5;
+            font-size: 12px;
+            line-height: 1.45;
+            white-space: pre-wrap;
+            word-break: break-word;
+            z-index: 10;
+        }
+
+        .hud[hidden] {
+            display: none;
+        }
+
+        .hud b {
+            color: #ffd479;
+        }
+
+        .status-ok {
+            color: #7ee787;
+        }
+
+        .status-off {
+            color: #ff7b72;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="stage">
+        <div class="layer is-front" id="layer-a"></div>
+        <div class="layer" id="layer-b"></div>
+        <div class="props" id="props"></div>
+    </div>
+
+    <div class="hud" id="hud">
+        <div><b>stage</b>: <span id="stage-name">—</span></div>
+        <div><b>ws</b>: <span id="ws-status" class="status-off">connecting…</span></div>
+        <div><b>last</b>: <span id="last-payload">—</span></div>
+        <div>POST /api/stage · press “h” to hide</div>
+    </div>
+
+    <script>
+        (function () {
+            "use strict";
+
+            var params = new URLSearchParams(window.location.search);
+            var token = params.get("token") || "";
+            var explicitWs = params.get("ws") || "";
+            var wsUrl = explicitWs ||
+                ((window.location.protocol === "https:" ? "wss:" : "ws:") +
+                    "//" + window.location.host + "/client-ws" +
+                    (token ? "?token=" + encodeURIComponent(token) : ""));
+
+            var layers = [
+                document.getElementById("layer-a"),
+                document.getElementById("layer-b")
+            ];
+            var propsBox = document.getElementById("props");
+            var hud = document.getElementById("hud");
+            var stageName = document.getElementById("stage-name");
+            var wsStatus = document.getElementById("ws-status");
+            var lastPayload = document.getElementById("last-payload");
+
+            var front = 0;
+            var currentBackground = "";
+            var socket = null;
+            var reconnectTimer = null;
+
+            function setStatus(text, ok) {
+                wsStatus.textContent = text;
+                wsStatus.className = ok ? "status-ok" : "status-off";
+            }
+
+            // Crossfade between two layers so a slow image never flashes white.
+            function setBackground(url, transition, durationMs) {
+                if (typeof url !== "string" || !url || url === currentBackground) {
+                    return;
+                }
+                var back = layers[1 - front];
+                var probe = new Image();
+                probe.onload = function () {
+                    back.style.backgroundImage = 'url("' + url.replace(/"/g, "%22") + '")';
+                    back.style.transition = (transition === "none")
+                        ? "none"
+                        : "opacity " + durationMs + "ms ease-in-out";
+                    requestAnimationFrame(function () {
+                        back.style.opacity = "1";
+                        layers[front].style.opacity = "0";
+                        front = 1 - front;
+                        currentBackground = url;
+                    });
+                };
+                probe.onerror = function () {
+                    lastPayload.textContent = "background failed to load: " + url;
+                };
+                probe.src = url;
+            }
+
+            // Only replace the props when the payload carries them: a scheduler
+            // job sends just `background`, so the previous cards must stay put.
+            // A prop is an image (`src`) or a text card (`label`/`sublabel`).
+            function setProps(props) {
+                propsBox.textContent = "";
+                props.forEach(function (prop) {
+                    if (!prop) {
+                        return;
+                    }
+                    var isImage = typeof prop.src === "string" && prop.src;
+                    var hasLabel = typeof prop.label === "string" && prop.label;
+                    if (!isImage && !hasLabel) {
+                        return;
+                    }
+
+                    var node;
+                    if (isImage) {
+                        node = document.createElement("img");
+                        node.src = prop.src;
+                        node.alt = prop.label || prop.id || "";
+                    } else {
+                        node = document.createElement("div");
+                        node.className = "card";
+                        var title = document.createElement("span");
+                        title.className = "card-label";
+                        title.textContent = prop.label;
+                        node.appendChild(title);
+                        if (typeof prop.sublabel === "string" && prop.sublabel) {
+                            var sub = document.createElement("span");
+                            sub.className = "card-sublabel";
+                            sub.textContent = prop.sublabel;
+                            node.appendChild(sub);
+                        }
+                    }
+
+                    if (prop.id) {
+                        node.dataset.id = prop.id;
+                    }
+                    var x = (typeof prop.x === "number") ? prop.x : 0.5;
+                    var y = (typeof prop.y === "number") ? prop.y : 0.5;
+                    var rot = (typeof prop.rot === "number") ? prop.rot : 0;
+                    var scale = (typeof prop.scale === "number") ? prop.scale : 1;
+                    if (typeof prop.opacity === "number") {
+                        node.style.opacity = String(prop.opacity);
+                    }
+                    node.style.left = (x * 100) + "%";
+                    node.style.top = (y * 100) + "%";
+                    node.style.transform =
+                        "translate(-50%, -50%) rotate(" + rot + "deg) scale(" + scale + ")";
+                    propsBox.appendChild(node);
+                });
+            }
+
+            function apply(message) {
+                if (typeof message.stage === "string" && message.stage) {
+                    stageName.textContent = message.stage;
+                }
+                if (typeof message.background === "string" && message.background) {
+                    setBackground(message.background, message.transition, message.duration_ms);
+                }
+                if (Array.isArray(message.props)) {
+                    setProps(message.props);
+                }
+                lastPayload.textContent = JSON.stringify(message);
+            }
+
+            function connect() {
+                setStatus("connecting…", false);
+                socket = new WebSocket(wsUrl);
+
+                socket.onopen = function () {
+                    setStatus("connected", true);
+                    // Ask for the cached payload: covers reloads and late joins.
+                    socket.send(JSON.stringify({ type: "fetch-stage" }));
+                };
+
+                socket.onmessage = function (event) {
+                    var message;
+                    try {
+                        message = JSON.parse(event.data);
+                    } catch (error) {
+                        return;
+                    }
+                    if (message && message.type === "stage-update") {
+                        apply(message);
+                    }
+                };
+
+                socket.onclose = function () {
+                    setStatus("disconnected, retrying…", false);
+                    if (reconnectTimer === null) {
+                        reconnectTimer = window.setTimeout(function () {
+                            reconnectTimer = null;
+                            connect();
+                        }, 2000);
+                    }
+                };
+
+                socket.onerror = function () {
+                    setStatus("error", false);
+                };
+            }
+
+            window.addEventListener("keydown", function (event) {
+                if (event.key === "h" || event.key === "H") {
+                    hud.hidden = !hud.hidden;
+                }
+            });
+
+            connect();
+        }());
+    </script>
+</body>
+
+</html>

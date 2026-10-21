@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 768" width="512" height="768" role="img" aria-label="La Sacerdotisa">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#241028" />
+      <stop offset="1" stop-color="#3d1b3a" />
+    </linearGradient>
+  </defs>
+  <rect width="512" height="768" rx="28" fill="url(#bg)" />
+  <rect x="18" y="18" width="476" height="732" rx="20" fill="none" stroke="#ff9ec4" stroke-width="3" opacity="0.85" />
+  <rect x="30" y="30" width="452" height="708" rx="14" fill="none" stroke="#ff9ec4" stroke-width="1" opacity="0.45" />
+  <text x="256.0" y="96" text-anchor="middle" font-family="Georgia, serif" font-size="42" fill="#ff9ec4" letter-spacing="4">II</text>
+  <line x1="150" y1="120" x2="362" y2="120" stroke="#ff9ec4" stroke-width="1" opacity="0.5" />
+  <circle cx="256.0" cy="115.0" r="5" fill="#ff9ec4" opacity="0.35" /><circle cx="331.0" cy="135.1" r="7" fill="#ff9ec4" opacity="0.47" /><circle cx="385.9" cy="190.0" r="9" fill="#ff9ec4" opacity="0.59" /><circle cx="406.0" cy="265.0" r="5" fill="#ff9ec4" opacity="0.71" /><circle cx="385.9" cy="340.0" r="7" fill="#ff9ec4" opacity="0.35" /><circle cx="331.0" cy="394.9" r="9" fill="#ff9ec4" opacity="0.47" /><circle cx="256.0" cy="415.0" r="5" fill="#ff9ec4" opacity="0.59" /><circle cx="181.0" cy="394.9" r="7" fill="#ff9ec4" opacity="0.71" /><circle cx="126.1" cy="340.0" r="9" fill="#ff9ec4" opacity="0.35" /><circle cx="106.0" cy="265.0" r="5" fill="#ff9ec4" opacity="0.47" /><circle cx="126.1" cy="190.0" r="7" fill="#ff9ec4" opacity="0.59" /><circle cx="181.0" cy="135.1" r="9" fill="#ff9ec4" opacity="0.71" />
+  <polygon points="256.0,173.0 285.7,224.1 343.5,236.6 304.1,280.6 310.1,339.4 256.0,315.6 201.9,339.4 207.9,280.6 168.5,236.6 226.3,224.1" fill="none" stroke="#ff9ec4" stroke-width="2.5" opacity="0.9" />
+  <circle cx="256.0" cy="265" r="10" fill="#ff9ec4" opacity="0.9" />
+  <text x="256.0" y="470" text-anchor="middle" font-family="Georgia, serif" font-size="46" fill="#fdf6e3"><tspan x="256.0" dy="0">La Sacerdotisa</tspan></text>
+  <line x1="120" y1="612" x2="392" y2="612" stroke="#ff9ec4" stroke-width="1" opacity="0.4" />
+  <text x="256.0" y="660" text-anchor="middle" font-family="system-ui, sans-serif" font-size="18" fill="#ff9ec4" opacity="0.9">intuición · secreto · calma</text>
+  <text x="256.0" y="734" text-anchor="middle" font-family="system-ui, sans-serif" font-size="14" fill="#fdf6e3" opacity="0.35">placeholder · major_02</text>
+</svg>

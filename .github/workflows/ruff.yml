@@ -6,3 +6,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/ruff-action@v3
+        with:
+          # Keep CI in sync with .pre-commit-config.yaml. The default ("latest")
+          # reports ~900 violations the codebase predates (BLE001, I001, UP006,
+          # ...), so the check fails on main too and cannot gate anything.
+          version: "0.9.6"

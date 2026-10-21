@@ -27,6 +27,15 @@ system_config:
     # 额外指导 LLM 如何使用工具的提示词
     # tool_guidance_prompt: 'tool_guidance_prompt' 
 
+  # A23：通过 WebSocket 发送的 TTS 音频格式。
+  # - 'wav'（默认）：延迟最低，适合 overlay/OBS 与服务器在同一台机器上。
+  # - 'mp3'：流量约减少 10 倍；overlay 在另一台机器或通过隧道访问时使用。
+  #   需要带 libmp3lame 的 ffmpeg（本项目本就依赖 ffmpeg）。
+  # 客户端会收到 payload 中的 'audio_format'；基于 WebAudio（decodeAudioData）的播放器可自行识别。
+  audio_export:
+    format: 'wav' # 'wav' 或 'mp3'
+    bitrate: '64k' # 仅当 format 为 'mp3' 时生效
+
 # 默认角色的配置
 character_config:
   conf_name: 'mao_pro' # 角色配置文件的名称
@@ -64,6 +73,10 @@ character_config:
         faster_first_response: True
         # 句子分割方法：'regex' 或 'pysbd'
         segment_method: 'pysbd'
+        # 发送给 LLM 的历史轮数（0 表示不限制）。完整历史仍会保留，
+        # 用于界面显示和聊天记录文件。
+        max_history_turns: 12
+
         # 是否使用 MCP（Model Context Protocol） Plus 以使 LLM 获得使用工具的能力（默认：False）
         # 'Plus' 意味着它包含了通过 OpenAI API 调用工具的能力。
         use_mcpp: False
@@ -362,6 +375,12 @@ character_config:
       batch_size: '1' # 批处理大小
       media_type: 'wav' # 媒体类型
       streaming_mode: 'false' # 流模式
+      # A24：GPT-SoVITS HTTP API 的容错设置。单张 GPU 无法同时处理多个句子，
+      # 因此限制并发并在失败时重试。
+      request_timeout: 20.0 # 每次请求的超时时间（秒）
+      max_retries: 2 # 首次失败后的重试次数（超时/5xx/非音频）
+      retry_backoff: 0.5 # 首次重试前的等待秒数，之后每次翻倍
+      max_concurrency: 2 # 每个引擎实例的最大并发请求数
 
     fish_api_tts:
       # Fish TTS API 的 API 密钥。
@@ -497,3 +516,61 @@ live_config:
     room_ids: [1991478060]
     # SESSDATA cookie值（可选，用于认证请求，可以查看发送弹幕用户名）
     sessdata: ""
+  tiktok_live:
+    # 启用TikTok直播连接器（运行 scripts/run_tiktok_live.py）
+    enabled: false
+    # 正在直播的TikTok账号用户名（不含@）
+    unique_id: ""
+    # 留空则使用 ws://127.0.0.1:{system_config.port}/proxy-ws
+    proxy_url: ""
+    # 待处理事件的最大数量（礼物最后才丢弃）
+    max_queue: 5
+    # 两次回复之间的最短秒数
+    cooldown_seconds: 6
+    # 忽略低于该币值的礼物
+    min_gift_coins: 1
+    # 礼物后询问需求，并为送礼者抽牌解读
+    gift_reading: true
+    # 感谢礼物 / 向新关注者打招呼
+    reply_to_gifts: true
+    reply_to_follows: true
+
+# 定时播出（开场、休息、收尾）。在服务端运行：每个任务向第一个已连接的客户端
+#（OBS 的 overlay）发送一次主动发言。
+scheduler_config:
+  enabled: false
+  # cron 表达式使用的 IANA 时区
+  timezone: 'Europe/Madrid'
+  # 'first' = 第一个已连接的客户端（OBS overlay）；也可以填具体的 client_uid
+  target_client: 'first'
+  # OBS Studio 控制（可选）。先在 OBS 中启用 WebSocket 服务器：
+  # 工具 -> WebSocket 服务器设置。需要 OBS 28 或更新版本。
+  obs:
+    enabled: false
+    host: '127.0.0.1'
+    port: 4455
+    password: ''
+    timeout: 3.0                 # 连接与每个请求的超时（秒）
+    switch_scenes: true          # 允许任务切换当前场景
+    start_stream: false          # 调度器启动时调用 StartStream
+    stop_stream_on_shutdown: false
+  jobs:
+    - name: 'pre_show'
+      cron: '50 19 * * *'          # 每天 19:50
+      text: 'Quedan diez minutos para empezar. Saluda a quien ya esté en el chat y pide que se queden.'
+      scene: 'starting_soon'       # OBS 场景（需要 obs.enabled）
+    - name: 'card_of_the_day'
+      cron: '0 20 * * *'
+      text: 'Abre el directo, presenta la carta del día y pide preguntas.'
+      scene: 'tarot_main'
+      background: '/bg/tarot_table.png'   # overlay 的 stage-update（Ruta B）
+      draw: 1                     # 抽牌数量：1-3 张（0 表示不抽）
+      # draw_seed: 2024           # 取消注释可固定同一组牌
+      question: '¿Qué energía trae el día?'   # 可选，会加入塔罗提示
+    - name: 'break'
+      interval_minutes: 45
+      text: 'Haz una pausa breve, recuerda que sigues leyendo el tarot y pide que compartan el directo.'
+    - name: 'closing'
+      cron: '0 23 * * *'
+      text: 'Despídete, agradece a quienes han participado y anuncia cuándo será la próxima lectura.'
+      scene: 'ending'

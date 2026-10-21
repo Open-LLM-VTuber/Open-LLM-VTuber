@@ -1,0 +1,98 @@
+{
+  "schema": 1,
+  "generated_by": "scripts/export_overlay_fixtures.py",
+  "contract": "AUDITORIA-MVP-TAROT.md §1.3 (server -> client) and §2.4 (stage-update)",
+  "notes": "each frame is the exact json.dumps() string passed to websocket_send",
+  "scenarios": [
+    {
+      "name": "turn_wav_two_chunks",
+      "note": "complete WAV turn: chain-start, 2 chunks and synth-complete before the ack; force-new-message and chain-end after it",
+      "frames": [
+        "{\"type\": \"control\", \"text\": \"conversation-chain-start\"}",
+        "{\"type\": \"full-text\", \"text\": \"Thinking...\"}",
+        "{\"type\": \"audio\", \"audio\": \"UklGRiQAAABXQVZFZm10IBAAAAA=\", \"audio_format\": \"wav\", \"volumes\": [0.4, 1.0], \"slice_length\": 20, \"display_text\": {\"text\": \"La carta de hoy es La Torre.\", \"name\": \"Tarotista\", \"avatar\": null}, \"actions\": {\"expressions\": [\"neutral\"]}, \"forwarded\": false}",
+        "{\"type\": \"audio\", \"audio\": \"UklGRiQAAABXQVZFZm10IBAAAAA=\", \"audio_format\": \"wav\", \"volumes\": [0.4, 1.0], \"slice_length\": 20, \"display_text\": {\"text\": \"D\\u00e9jame ver qu\\u00e9 te dice el tarot.\", \"name\": \"Tarotista\", \"avatar\": null}, \"actions\": {\"expressions\": [\"neutral\"]}, \"forwarded\": false}",
+        "{\"type\": \"backend-synth-complete\"}"
+      ],
+      "after_ack": [
+        "{\"type\": \"force-new-message\"}",
+        "{\"type\": \"control\", \"text\": \"conversation-chain-end\"}"
+      ]
+    },
+    {
+      "name": "turn_mp3_two_chunks",
+      "note": "same turn with system_config.audio_export = 'mp3' (A23)",
+      "frames": [
+        "{\"type\": \"control\", \"text\": \"conversation-chain-start\"}",
+        "{\"type\": \"full-text\", \"text\": \"Thinking...\"}",
+        "{\"type\": \"audio\", \"audio\": \"SUQzBAAAAAAAAAAAAAAAAAAA\", \"audio_format\": \"mp3\", \"volumes\": [0.4, 1.0], \"slice_length\": 20, \"display_text\": {\"text\": \"Primera frase en mp3.\", \"name\": \"Tarotista\", \"avatar\": null}, \"actions\": {\"expressions\": [\"neutral\"]}, \"forwarded\": false}",
+        "{\"type\": \"audio\", \"audio\": \"SUQzBAAAAAAAAAAAAAAAAAAA\", \"audio_format\": \"mp3\", \"volumes\": [0.4, 1.0], \"slice_length\": 20, \"display_text\": {\"text\": \"Segunda frase en mp3.\", \"name\": \"Tarotista\", \"avatar\": null}, \"actions\": {\"expressions\": [\"neutral\"]}, \"forwarded\": false}",
+        "{\"type\": \"backend-synth-complete\"}"
+      ],
+      "after_ack": [
+        "{\"type\": \"force-new-message\"}",
+        "{\"type\": \"control\", \"text\": \"conversation-chain-end\"}"
+      ]
+    },
+    {
+      "name": "turn_silent_and_forwarded",
+      "note": "chunks with audio=null and forwarded=true must not block the ack (A21)",
+      "frames": [
+        "{\"type\": \"control\", \"text\": \"conversation-chain-start\"}",
+        "{\"type\": \"full-text\", \"text\": \"Thinking...\"}",
+        "{\"type\": \"audio\", \"audio\": null, \"audio_format\": \"wav\", \"volumes\": [], \"slice_length\": 20, \"display_text\": {\"text\": \"Silencio para este cliente.\", \"name\": \"Tarotista\", \"avatar\": null}, \"actions\": {\"expressions\": [\"neutral\"]}, \"forwarded\": false}",
+        "{\"type\": \"audio\", \"audio\": null, \"audio_format\": \"wav\", \"volumes\": [], \"slice_length\": 20, \"display_text\": {\"text\": \"Aviso de otro cliente del grupo.\", \"name\": \"Tarotista\", \"avatar\": null}, \"actions\": {\"expressions\": [\"neutral\"]}, \"forwarded\": true}",
+        "{\"type\": \"backend-synth-complete\"}"
+      ],
+      "after_ack": [
+        "{\"type\": \"force-new-message\"}",
+        "{\"type\": \"control\", \"text\": \"conversation-chain-end\"}"
+      ]
+    },
+    {
+      "name": "interrupt_after_chunk",
+      "note": "interrupt-signal drops the queue without acking (A20)",
+      "frames": [
+        "{\"type\": \"control\", \"text\": \"conversation-chain-start\"}",
+        "{\"type\": \"full-text\", \"text\": \"Thinking...\"}",
+        "{\"type\": \"audio\", \"audio\": \"UklGRiQAAABXQVZFZm10IBAAAAA=\", \"audio_format\": \"wav\", \"volumes\": [0.4, 1.0], \"slice_length\": 20, \"display_text\": {\"text\": \"Espera, esta frase se va a cortar.\", \"name\": \"Tarotista\", \"avatar\": null}, \"actions\": {\"expressions\": [\"neutral\"]}, \"forwarded\": false}",
+        "{\"type\": \"interrupt-signal\", \"text\": \"conversation-interrupted\"}"
+      ]
+    },
+    {
+      "name": "stage_background_only",
+      "note": "a scheduler job that only changes the background keeps the props",
+      "frames": [
+        "{\"type\": \"stage-update\", \"stage\": \"tarot_main\", \"background\": \"/bg/tarot_table.png\", \"transition\": \"fade\", \"duration_ms\": 800}"
+      ]
+    },
+    {
+      "name": "stage_with_props",
+      "note": "props without src are dropped, x is clamped to 0..1 by the backend",
+      "frames": [
+        "{\"type\": \"stage-update\", \"stage\": \"tarot_main\", \"background\": \"/bg/tarot_table.png\", \"props\": [{\"id\": \"card_1\", \"src\": \"/bg/cards/tower.png\", \"x\": 0.7, \"y\": 0.5, \"rot\": -8.0, \"scale\": 1.1, \"opacity\": 0.95}, {\"id\": \"card_2\", \"src\": \"/bg/cards/sun.png\", \"x\": 1.0, \"y\": 0.0}], \"transition\": \"fade\", \"duration_ms\": 800}"
+      ]
+    },
+    {
+      "name": "stage_transition_none",
+      "note": "transition='none' and duration_ms=0 survive the sanitiser",
+      "frames": [
+        "{\"type\": \"stage-update\", \"stage\": \"quiet\", \"background\": \"/bg/curtain.png\", \"transition\": \"none\", \"duration_ms\": 0}"
+      ]
+    },
+    {
+      "name": "tarot_draw_three_cards",
+      "note": "SchedulerService._prepare_stage with a three-card spread: the overlay gets 'src' props served from /bg/cards",
+      "frames": [
+        "{\"type\": \"stage-update\", \"stage\": \"card_of_the_day\", \"props\": [{\"id\": \"card_1\", \"src\": \"/bg/cards/major_03.jpg\", \"x\": 0.28, \"y\": 0.68, \"rot\": 0.0, \"scale\": 0.55}, {\"id\": \"card_2\", \"src\": \"/bg/cards/major_10.jpg\", \"x\": 0.5, \"y\": 0.68, \"rot\": 0.0, \"scale\": 0.55}, {\"id\": \"card_3\", \"src\": \"/bg/cards/major_16.jpg\", \"x\": 0.72, \"y\": 0.68, \"rot\": 0.0, \"scale\": 0.55}], \"transition\": \"fade\", \"duration_ms\": 800}"
+      ]
+    },
+    {
+      "name": "tarot_draw_text_fallback",
+      "note": "same spread with art_prefix=None: the overlay draws label cards",
+      "frames": [
+        "{\"type\": \"stage-update\", \"stage\": \"card_of_the_day\", \"props\": [{\"id\": \"card_1\", \"label\": \"La Emperatriz\", \"sublabel\": \"abundancia \\u00b7 cuidado \\u00b7 creatividad\", \"x\": 0.28, \"y\": 0.68}, {\"id\": \"card_2\", \"label\": \"La Rueda de la Fortuna\", \"sublabel\": \"cambio \\u00b7 ciclo \\u00b7 oportunidad\", \"x\": 0.5, \"y\": 0.68}, {\"id\": \"card_3\", \"label\": \"La Torre\", \"sublabel\": \"ruptura \\u00b7 verdad \\u00b7 derrumbe\", \"x\": 0.72, \"y\": 0.68}], \"transition\": \"fade\", \"duration_ms\": 800}"
+      ]
+    }
+  ]
+}

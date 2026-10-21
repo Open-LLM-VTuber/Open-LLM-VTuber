@@ -10,12 +10,30 @@ import os
 import shutil
 
 from fastapi import FastAPI
+from loguru import logger
 from starlette.middleware.cors import CORSMiddleware
 from starlette.responses import Response
 from starlette.staticfiles import StaticFiles as StarletteStaticFiles
 
-from .routes import init_client_ws_route, init_webtool_routes, init_proxy_route
+from .routes import (
+    init_client_ws_route,
+    init_metrics_route,
+    init_stage_route,
+    init_tarot_route,
+    init_webtool_routes,
+    init_proxy_route,
+)
+from .scheduler.service import SchedulerService
+from .security import (
+    build_cors_settings,
+    get_ws_token,
+    static_cors_headers,
+    with_token,
+)
 from .service_context import ServiceContext
+from .utils.stream_audio import configure_audio_export
+from .websocket_handler import WebSocketHandler
+from .config_manager.scheduler import SchedulerConfig
 from .config_manager.utils import Config
 
 
@@ -24,15 +42,22 @@ class CORSStaticFiles(StarletteStaticFiles):
     """
     Static files handler that adds CORS headers to all responses.
     Needed because Starlette StaticFiles might bypass standard middleware.
+
+    The origins are injected by ``WebSocketServer`` (``cors_origins`` /
+    ``cors_origin_regex``) so an allowed origin is echoed back instead of a
+    blanket ``*`` (audit A22).
     """
+
+    cors_origins = []
+    cors_origin_regex = None
 
     async def get_response(self, path: str, scope):
         response = await super().get_response(path, scope)
 
-        # Add CORS headers to all responses
-        response.headers["Access-Control-Allow-Origin"] = "*"
-        response.headers["Access-Control-Allow-Methods"] = "GET, OPTIONS"
-        response.headers["Access-Control-Allow-Headers"] = "*"
+        for header, value in static_cors_headers(
+            scope, self.cors_origins, self.cors_origin_regex
+        ).items():
+            response.headers[header] = value
 
         if path.endswith(".js"):
             response.headers["Content-Type"] = "application/javascript"
@@ -79,34 +104,84 @@ class WebSocketServer:
         )  # Use provided context or initialize a new empty one waiting to be loaded
         # It will be populated during the initialize method call
 
-        # Add global CORS middleware
-        self.app.add_middleware(
-            CORSMiddleware,
-            allow_origins=["*"],
-            allow_credentials=True,
-            allow_methods=["*"],
-            allow_headers=["*"],
-        )
+        # Add global CORS middleware. A22: an explicit allow-list (loopback +
+        # configured host + VTUBER_CORS_ORIGINS) instead of "*" combined with
+        # allow_credentials=True, which browsers reject as invalid.
+        host = getattr(config.system_config, "host", "127.0.0.1")
+        port = getattr(config.system_config, "port", 12393)
+        self.cors_settings = build_cors_settings(host, port)
+        self.app.add_middleware(CORSMiddleware, **self.cors_settings)
+        CORSStaticFiles.cors_origins = list(self.cors_settings["allow_origins"])
+        CORSStaticFiles.cors_origin_regex = self.cors_settings["allow_origin_regex"]
+
+        # A22: shared handshake token. Empty (the default) keeps the local show
+        # behaviour; when set, every WS handshake and /api/metrics must present
+        # ?token=... (or Authorization: Bearer ...).
+        self.ws_token = get_ws_token()
+        if self.ws_token:
+            logger.info(
+                "WebSocket token auth enabled (VTUBER_WS_TOKEN is set); "
+                "clients must append ?token=... to /client-ws and /proxy-ws"
+            )
 
         # Include routes, passing the context instance
-        # The context will be populated during the initialize step
+        # The context will be populated during the initialize step.
+        # The handler is created here so the scheduler can reuse it.
+        self.ws_handler = WebSocketHandler(self.default_context_cache)
         self.app.include_router(
-            init_client_ws_route(default_context_cache=self.default_context_cache),
+            init_client_ws_route(
+                default_context_cache=self.default_context_cache,
+                ws_handler=self.ws_handler,
+                token=self.ws_token,
+            ),
         )
         self.app.include_router(
             init_webtool_routes(default_context_cache=self.default_context_cache),
         )
+        # Turn/queue metrics (audit §5.3). Read-only JSON, no heavy imports.
+        self.app.include_router(init_metrics_route(token=self.ws_token))
+        # Stage control for the Ruta B overlay (audit §2.4). The handler caches
+        # the last payload so a reconnecting overlay restores its scene.
+        self.app.include_router(init_stage_route(self.ws_handler, token=self.ws_token))
+        # On-demand tarot draws (audit §4.6): the cards go to the same overlay
+        # and the last draw is readable for an operator HUD.
+        self.app.include_router(init_tarot_route(self.ws_handler, token=self.ws_token))
 
         # Initialize and include proxy routes if proxy is enabled
         system_config = config.system_config
-        if hasattr(system_config, "enable_proxy") and system_config.enable_proxy:
-            # Construct the server URL for the proxy
-            host = system_config.host
-            port = system_config.port
-            server_url = f"ws://{host}:{port}/client-ws"
-            self.app.include_router(
-                init_proxy_route(server_url=server_url),
+
+        # A23: container used for every TTS payload. WAV by default (LAN); switch
+        # to MP3 when the overlay runs on another machine or through a tunnel.
+        audio_export = getattr(system_config, "audio_export", None)
+        try:
+            audio_format = configure_audio_export(
+                getattr(audio_export, "audio_format", "wav"),
+                getattr(audio_export, "bitrate", "64k"),
             )
+        except ValueError as e:
+            logger.warning(f"Invalid system_config.audio_export ({e}); using wav")
+            audio_format = configure_audio_export("wav")
+        if audio_format != "wav":
+            logger.info(
+                f"Audio export format: {audio_format} "
+                f"({getattr(audio_export, 'bitrate', '64k')})"
+            )
+
+        if hasattr(system_config, "enable_proxy") and system_config.enable_proxy:
+            # Construct the server URL for the proxy. The proxy connects to its
+            # own /client-ws, so it has to carry the token when auth is on.
+            server_url = with_token(f"ws://{host}:{port}/client-ws", self.ws_token)
+            self.app.include_router(
+                init_proxy_route(server_url=server_url, token=self.ws_token),
+            )
+
+        # Scripted segments (start, breaks, closing). Disabled by default.
+        scheduler_config = (
+            getattr(config, "scheduler_config", None) or SchedulerConfig()
+        )
+        self.scheduler = SchedulerService(self.ws_handler, scheduler_config)
+        self.app.add_event_handler("startup", self.scheduler.start)
+        self.app.add_event_handler("shutdown", self.scheduler.shutdown)
 
         # Mount cache directory first (to ensure audio file access)
         if not os.path.exists("cache"):
