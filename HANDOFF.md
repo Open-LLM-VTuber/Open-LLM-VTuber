@@ -721,7 +721,10 @@ powershell -ExecutionPolicy Bypass -File scripts/patch_frontend.ps1
 - `DEFAULT_WS_URL` → `(https ? wss : ws) + "//" + location.host + "/client-ws"`
 - `DEFAULT_BASE_URL` → `location.origin`
 - `parseModelUrl` → `new URL(i, location.origin)`
+- `set-model-and-conf` → `model_info.url = new URL(url, location.origin).href`
 - Añade en `index.html` una migración que borra `wsUrl`/`baseUrl`/`modelInfo` guardados con 12393.
+
+El script es **idempotente**: si el bundle ya tiene el patrón nuevo lo dice (`already patched`) y no falla.
 
 `scripts/fetch_frontend.ps1` ya descarga el commit pineado por mirror y llama al parche
 automáticamente. Verificado desde el host: `ws://127.0.0.1:8080/client-ws` devuelve

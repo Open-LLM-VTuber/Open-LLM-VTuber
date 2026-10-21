@@ -57,6 +57,12 @@ $replacements = @(
         Old  = 'function parseModelUrl(i){try{const o=new URL(i),'
         New  = 'function parseModelUrl(i){try{const o=new URL(i,location.origin),'
         Required = $true
+    },
+    @{
+        Name = "absolute model URL from the message"
+        Old  = 'const Vt=_e+Gt.model_info.url;Gt.model_info.url=Vt'
+        New  = 'Gt.model_info.url=new URL(Gt.model_info.url,location.origin).href'
+        Required = $true
     }
 )
 
