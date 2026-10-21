@@ -12,17 +12,19 @@ services:
         UV_IMAGE: ${UV_IMAGE:-ghcr.io/astral-sh/uv:latest}
     container_name: open-llm-vtuber
     ports:
-      # Windows/Hyper-V reserves dynamic ranges (here 12362-12461), so binding
-      # host port 12393 fails with WSAEACCES ("socket access permission").
-      # 8080 is outside those ranges. The app still listens on 12393 INSIDE
-      # the container, so the proxy, TikTok connector and the overlay's
-      # relative URLs keep working; only the browser uses :8080.
-      #   http://localhost:8080/
-      #   http://localhost:8080/web-tool/overlay.html
-      #   http://localhost:8080/web-tool/operator.html
-      # If you free the range (admin: `net stop winnat`, start the container,
-      # `net start winnat`) you can restore "12393:12393".
-      - "8080:12393"
+      # Windows/Hyper-V reserves DYNAMIC port ranges that shift after reboots
+      # (12393 fell into one, later 8080 fell into 8068-8167). Binding an
+      # excluded port fails with WSAEACCES and Docker reports
+      # "/forwards/expose returned unexpected status: 500".
+      # 9000 is outside the current ranges. The app still listens on 12393
+      # INSIDE the container, so the proxy, TikTok connector and the overlay's
+      # relative URLs keep working; only the browser uses :9000.
+      #   http://localhost:9000/
+      #   http://localhost:9000/web-tool/overlay.html
+      #   http://localhost:9000/web-tool/operator.html
+      # If Windows reserves 9000 later, change only this mapping to another
+      # free port: the UI derives its URLs from the browser location.
+      - "9000:12393"
     volumes:
       - ./conf:/app/conf
       - ./models:/app/models

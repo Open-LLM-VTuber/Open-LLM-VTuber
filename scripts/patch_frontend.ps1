@@ -102,6 +102,34 @@ if (-not $index.Contains('data-server-url-migration')) {
     Write-Host "patched: old 12393 settings in localStorage are discarded"
 }
 
+# Drop any saved server URL that points to a different host/port than the page
+# (the host port can change when Windows reserves another range).
+if (-not $index.Contains('data-server-url-migration-v2')) {
+    $snippet2 = @"
+    <script data-server-url-migration-v2>
+      // Keep only server settings that match the page origin.
+      try {
+        ["wsUrl", "baseUrl"].forEach(function (key) {
+          var raw = localStorage.getItem(key);
+          if (!raw) return;
+          try {
+            var value = JSON.parse(raw);
+            var url = new URL(value, location.origin);
+            if (url.host !== location.host) localStorage.removeItem(key);
+          } catch (error) {
+            localStorage.removeItem(key);
+          }
+        });
+        var info = localStorage.getItem("modelInfo");
+        if (info && info.indexOf(location.host) === -1) localStorage.removeItem("modelInfo");
+      } catch (error) {}
+    </script>
+"@
+    $index = $index.Replace("</head>", "$snippet2</head>")
+    [System.IO.File]::WriteAllText($indexPath, $index, (New-Object System.Text.UTF8Encoding($false)))
+    Write-Host "patched: saved server URLs for other ports are discarded"
+}
+
 # Default background (optional). The official UI stores the selection in
 # localStorage["backgroundUrl"]; this only changes the fallback used when there
 # is no selection yet, and migrates the old ceiling image.

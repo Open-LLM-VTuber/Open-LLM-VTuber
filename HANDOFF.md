@@ -632,22 +632,25 @@ el cuello es la latencia del LLM/TTS, no la orquestación (§6.9).
    dos tests de regresión en `scripts/test_security_metrics.py` (`ProxyBroadcastTests`). Tras reiniciar,
    `smoke_test.py` vuelve a pasar (4 chunks, 307 716 B, ack=1) y el log ya no muestra ese error.
 
-### 6.13.2 Arranque en esta máquina: puerto 8080, frontend y build
+### 6.13.2 Arranque en esta máquina: puerto 9000, frontend y build
 
 **Puerto 12393 bloqueado por Windows.** `netsh interface ipv4 show excludedportrange protocol=tcp`
 reserva el rango **12362–12461**, y 12393 cae dentro: Docker falla al arrancar con
 `ports are not available ... bind: Intento de acceso a un socket no permitido por sus permisos`.
-Solución aplicada: el compose publica **`8080:12393`** (el servidor sigue en 12393 dentro del contenedor):
+Los rangos **cambian tras reiniciar Windows**: después 12393, el 8080 cayó dentro de **8068–8167**
+y Docker respondió `/forwards/expose returned unexpected status: 500`. Solución aplicada: el compose
+publica **`9000:12393`** (9000 está fuera de los rangos actuales; el servidor sigue en 12393 dentro
+del contenedor):
 
 ```
-http://localhost:8080/                       UI principal
-http://localhost:8080/web-tool/overlay.html  overlay para OBS
-http://localhost:8080/web-tool/operator.html HUD del operador
+http://localhost:9000/                       UI principal
+http://localhost:9000/web-tool/overlay.html  overlay para OBS
+http://localhost:9000/web-tool/operator.html HUD del operador
 ```
 
-Para volver a 12393 hace falta una consola **como administrador**:
-`net stop winnat` → `docker compose up -d` → `net start winnat`; luego se puede restaurar
-`"12393:12393"`. Sin admin, 8080 es la opción estable.
+El frontend deriva `wsUrl`/`baseUrl` de `location`, así que si Windows reserva 9000 más adelante
+basta cambiar el mapeo del compose a otro puerto libre (`netsh interface ipv4 show excludedportrange
+protocol=tcp`) y recargar. Los valores viejos de `localStorage` se descartan al cargar.
 
 **La imagen no trae la UI principal.** `run_server.py` clona el submódulo `frontend` de GitHub al
 arrancar; si GitHub no responde (WAF/timeout), `/` queda vacío y el arranque se retrasa. El compose
@@ -705,7 +708,7 @@ DEFAULT_WS_URL   = "ws://127.0.0.1:12393/client-ws"
 DEFAULT_BASE_URL = "http://127.0.0.1:12393"
 ```
 
-y `parseModelUrl()` hacía `new URL(model_url)` sin base. Al publicar el host en **8080**, la UI
+y `parseModelUrl()` hacía `new URL(model_url)` sin base. Al publicar el host en **8080/9000**, la UI
 seguía intentando el 12393 (donde ya no escucha nadie), nunca recibía `set-model-and-conf`, y el
 loader pedía `/undefined/undefined.model3.json`. Además guarda `wsUrl`, `baseUrl` y `modelInfo` en
 `localStorage`, así que un valor viejo de 12393 seguía mandando.
@@ -727,7 +730,7 @@ powershell -ExecutionPolicy Bypass -File scripts/patch_frontend.ps1
 El script es **idempotente**: si el bundle ya tiene el patrón nuevo lo dice (`already patched`) y no falla.
 
 `scripts/fetch_frontend.ps1` ya descarga el commit pineado por mirror y llama al parche
-automáticamente. Verificado desde el host: `ws://127.0.0.1:8080/client-ws` devuelve
+automáticamente. Verificado desde el host: `ws://127.0.0.1:9000/client-ws` devuelve
 `conf_name=mao_pro` y la URL del modelo.
 
 **Fondos:** `/bg` sirve **`backgrounds/`**, no una carpeta `bg/` en la raíz. Para el fondo del show:
