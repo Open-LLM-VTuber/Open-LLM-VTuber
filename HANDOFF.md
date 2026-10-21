@@ -683,6 +683,63 @@ Con los montajes actuales **no hace falta reconstruir** para actualizar el códi
 dependencias. Si se reconstruye, el `COPY . /app` incluirá `frontend/` (submódulo vacío) pero el
 montaje de `frontend-build` lo tapa en ejecución.
 
+### 6.13.3 UI principal: `undefined/undefined.model3.json`, puerto y fondo
+
+**El `conf.yaml` no era el problema.** Se validó con pydantic:
+
+```
+conf_name='mao_pro' conf_uid='mao_pro_001' live2d_model_name='mao_pro'
+```
+
+El backend también envía bien el modelo por `/client-ws`:
+
+```
+conf_name: mao_pro
+model_info.url: /live2d-models/mao_pro/runtime/mao_pro.model3.json
+```
+
+La causa real estaba en el **bundle del frontend**: trae hardcodeado
+
+```js
+DEFAULT_WS_URL   = "ws://127.0.0.1:12393/client-ws"
+DEFAULT_BASE_URL = "http://127.0.0.1:12393"
+```
+
+y `parseModelUrl()` hacía `new URL(model_url)` sin base. Al publicar el host en **8080**, la UI
+seguía intentando el 12393 (donde ya no escucha nadie), nunca recibía `set-model-and-conf`, y el
+loader pedía `/undefined/undefined.model3.json`. Además guarda `wsUrl`, `baseUrl` y `modelInfo` en
+`localStorage`, así que un valor viejo de 12393 seguía mandando.
+
+**Solución aplicada** (script repetible, sobre el build **pineado** `06a659b` del submódulo):
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/patch_frontend.ps1
+```
+
+`scripts/patch_frontend.ps1` cambia en el bundle:
+
+- `DEFAULT_WS_URL` → `(https ? wss : ws) + "//" + location.host + "/client-ws"`
+- `DEFAULT_BASE_URL` → `location.origin`
+- `parseModelUrl` → `new URL(i, location.origin)`
+- Añade en `index.html` una migración que borra `wsUrl`/`baseUrl`/`modelInfo` guardados con 12393.
+
+`scripts/fetch_frontend.ps1` ya descarga el commit pineado por mirror y llama al parche
+automáticamente. Verificado desde el host: `ws://127.0.0.1:8080/client-ws` devuelve
+`conf_name=mao_pro` y la URL del modelo.
+
+**Fondos:** `/bg` sirve **`backgrounds/`**, no una carpeta `bg/` en la raíz. Para el fondo del show:
+
+```powershell
+Copy-Item "C:\ruta\a\fondo_egipcio.jpg" backgrounds\fondo_egipcio.jpg
+powershell -ExecutionPolicy Bypass -File scripts/patch_frontend.ps1 -BackgroundImage fondo_egipcio.jpg
+```
+
+El parche cambia el fondo por defecto y migra `localStorage["backgroundUrl"]`; también se puede
+elegir en el selector de fondos de la UI (queda guardado en ese navegador/OBS).
+**En esta máquina `fondo_egipcio.jpg` no existía** al escribir esto: ni `bg/`, ni `backgrounds/`,
+ni en el perfil del usuario. Sin ese archivo el fondo por defecto sigue siendo
+`ceiling-window-room-night.jpeg`.
+
 ## 7. Chuleta de comandos
 
 ```powershell
