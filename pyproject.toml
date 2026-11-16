@@ -45,7 +45,7 @@ dependencies = [
 [project.optional-dependencies]
 bilibili = [
     "aiohttp>=3.10.0",
-    "Brotli~=1.1.0",
+    "Brotli~=1.2.1",
     "yarl>=1.12.0,<2.0"
 ]
 
