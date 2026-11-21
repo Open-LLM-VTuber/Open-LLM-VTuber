@@ -1,8 +1,17 @@
 import base64
+import re
 from pydub import AudioSegment
 from pydub.utils import make_chunks
 from ..agent.output_types import Actions
 from ..agent.output_types import DisplayText
+
+
+# Match complete insults and common expletives rather than individual characters.
+_SUBTITLE_PROFANITY = re.compile(
+    r"操你妈|草你妈|艹你妈|日你妈|去你妈(?:的)?|他妈的?|你妈的|"
+    r"妈的|傻逼|傻屄|傻比|傻[SＳ][BＢ]|臭婊子|狗杂种|狗日的",
+    re.IGNORECASE,
+)
 
 
 def _get_volume_by_chunks(audio: AudioSegment, chunk_length_ms: int) -> list:
@@ -46,6 +55,11 @@ def prepare_audio_payload(
     """
     if isinstance(display_text, DisplayText):
         display_text = display_text.to_dict()
+    if isinstance(display_text, dict) and isinstance(display_text.get("text"), str):
+        display_text = {
+            **display_text,
+            "text": _SUBTITLE_PROFANITY.sub("***", display_text["text"]),
+        }
 
     if not audio_path:
         # Return payload for silent display

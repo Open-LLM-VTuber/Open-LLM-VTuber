@@ -1,5 +1,6 @@
 # System Settings: Setting related to the initialization of the server
 system_config:
+  default_language: 'en' # zh or en
   conf_version: 'v1.2.1'
   host: 'localhost' # use 0.0.0.0 if you want other devices to access this page
   port: 12393
@@ -51,7 +52,8 @@ character_config:
 
     agent_settings:
       basic_memory_agent:
-        # The Basic AI Agent. Nothing fancy.
+        max_tool_rounds: 8 # LangGraph tool execution limit per conversation turn
+        # LangChain models with LangGraph conversation and tool orchestration.
         # choose one of the llm provider from the llm_config
         # and set the required parameters in the corresponding field
         # examples: 

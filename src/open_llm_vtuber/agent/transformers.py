@@ -74,6 +74,8 @@ def actions_extractor(live2d_model: Live2dModel):
             Union[Tuple[SentenceWithTags, Actions], Dict[str, Any]]
         ]:  # Yield type hint
             stream = func(*args, **kwargs)
+            motion_count = 0
+            previous_motion = False
             async for item in stream:
                 if isinstance(item, SentenceWithTags):
                     sentence = item
@@ -83,6 +85,13 @@ def actions_extractor(live2d_model: Live2dModel):
                         tag.state in [TagState.START, TagState.END]
                         for tag in sentence.tags
                     ):
+                        sentence.text, motions = live2d_model.action_agent.extract(
+                            sentence.text
+                        )
+                        if motions and motion_count < 2 and not previous_motion:
+                            actions.motions = motions
+                            motion_count += 1
+                        previous_motion = bool(actions.motions)
                         expressions = live2d_model.extract_emotion(sentence.text)
                         if expressions:
                             actions.expressions = expressions

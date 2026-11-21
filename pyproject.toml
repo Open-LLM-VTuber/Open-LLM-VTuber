@@ -5,10 +5,11 @@ description = "Talk to any LLM with hands-free voice interaction, voice interrup
 readme = "README.md"
 requires-python = ">=3.10,<3.13"
 dependencies = [
+    "pypdf>=5.0.0",
     "anthropic>=0.40.0",
     "azure-cognitiveservices-speech>=1.41.1",
     "chardet>=5.2.0",
-    "cartesia>=2.0.0", 
+    "cartesia>=2.0.0",
     "edge-tts>=7.0.0",
     "elevenlabs>=1.0.0",
     "fastapi[standard]>=0.115.8",
@@ -40,12 +41,26 @@ dependencies = [
     "websocket-client>=1.8.0",
     "letta-client>=0.1.100",
     "duckduckgo-mcp-server>=0.1.1",
+    "psycopg[binary,pool]>=3.2,<4",
+    "redis>=5,<7",
+    "langchain-core>=1.0,<2",
+    "langchain-openai>=1.0,<2",
+    "langchain-anthropic>=1.0,<2",
+    "langgraph>=1.0,<2",
+    "piper-tts>=1.8.0",
 ]
 
 [project.optional-dependencies]
+control = [
+    "playwright>=1.49,<2",
+    "pillow>=10,<13",
+    "pyobjc-framework-Quartz>=10; sys_platform == 'darwin'",
+]
+
 bilibili = [
     "aiohttp>=3.10.0",
-    "Brotli~=1.1.0",
+    "Brotli>=1.2.0,<2",
+    "pure-protobuf~=3.1.2",
     "yarl>=1.12.0,<2.0"
 ]
 

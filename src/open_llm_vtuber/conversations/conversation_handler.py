@@ -1,11 +1,13 @@
 import asyncio
 import json
+import time
 from typing import Dict, Optional, Callable
 
 import numpy as np
 from fastapi import WebSocket
 from loguru import logger
 
+from ..proactive import activity_hint
 from ..chat_group import ChatGroupManager
 from ..chat_history_manager import store_message
 from ..service_context import ServiceContext
@@ -33,18 +35,32 @@ async def handle_conversation_trigger(
     metadata = None
 
     if msg_type == "ai-speak-signal":
-        try:
-            # Get proactive speak prompt from config
-            prompt_name = "proactive_speak_prompt"
-            prompt_file = context.system_config.tool_prompts.get(prompt_name)
-            if prompt_file:
-                user_input = prompt_loader.load_util(prompt_file)
-            else:
-                logger.warning("Proactive speak prompt not configured, using default")
-                user_input = "Please say something."
-        except Exception as e:
-            logger.error(f"Error loading proactive speak prompt: {e}")
-            user_input = "Please say something."
+        # Ignore duplicate idle signals while a turn is running or cooling down.
+        group = chat_group_manager.get_client_group(client_uid)
+        task_key = group.group_id if group and len(group.members) > 1 else client_uid
+        active = current_conversation_tasks.get(task_key)
+        now = time.monotonic()
+        if active and not active.done():
+            return
+        if now - getattr(context, "_last_proactive_at", float("-inf")) < 30:
+            return
+        context._last_proactive_at = now
+        language = data.get("language")
+        if language not in ("zh", "en"):
+            language = context.system_config.default_language
+        hint = (
+            "请使用简体中文，根据当前对话自然地主动说一两句。"
+            if language == "zh"
+            else "Speak in English. Naturally say a sentence or two suited to the current conversation."
+        )
+        hint += "\n" + activity_hint(context)
+        prompt_file = context.system_config.tool_prompts.get("proactive_speak_prompt") or "proactive_speak_prompt"
+        user_input = hint
+        if prompt_file:
+            try:
+                user_input = f"{prompt_loader.load_util(prompt_file)}\n{hint}"
+            except (OSError, UnicodeError) as e:
+                logger.warning(f"Error loading proactive speak prompt: {e}")
 
         # Add metadata to indicate this is a proactive speak request
         # that should be skipped in both memory and history
@@ -58,7 +74,9 @@ async def handle_conversation_trigger(
             json.dumps(
                 {
                     "type": "full-text",
-                    "text": "AI wants to speak something...",
+                    "text": "角色准备发言…"
+                    if language == "zh"
+                    else "The character is about to speak…",
                 }
             )
         )

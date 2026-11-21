@@ -17,7 +17,7 @@ You have access to the following MCP Servers and their tools:
 
 ### JSON Response Format:
 {
-    "mcp_server": "<mcp_server_name>"
+    "mcp_server": "<mcp_server_name>",
     "tool": "<tool_name>",
     "arguments": {
         "<argument1_name>": <value>,

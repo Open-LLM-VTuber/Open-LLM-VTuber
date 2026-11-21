@@ -110,47 +110,16 @@ class MCPClient:
         logger.info(f"MCPC: Calling tool '{tool_name}' on server '{server_name}'...")
         response = await session.call_tool(tool_name, tool_args)
 
-        if response.isError:
-            error_text = (
-                response.content[0].text
-                if response.content and hasattr(response.content[0], "text")
-                else "Unknown server error"
-            )
-            logger.error(f"MCPC: Error calling tool '{tool_name}': {error_text}")
-            # Return error information within the standard structure
-            return {
-                "metadata": getattr(response, "metadata", {}),
-                "content_items": [{"type": "error", "text": error_text}],
-            }
-
-        content_items = []
-        if response.content:
-            for item in response.content:
-                item_dict = {"type": getattr(item, "type", "text")}
-                # Extract available attributes from content item
-                for attr in [
-                    "text",
-                    "data",
-                    "mimeType",
-                    "url",
-                    "altText",
-                ]:  # Added url and altText
-                    if (
-                        hasattr(item, attr) and getattr(item, attr) is not None
-                    ):  # Check for None
-                        item_dict[attr] = getattr(item, attr)
-                content_items.append(item_dict)
-        else:
-            logger.warning(
-                f"MCPC: Tool '{tool_name}' returned no content. Returning empty content_items."
-            )
-            content_items.append(
-                {"type": "text", "text": ""}
-            )  # Ensure content_items is not empty
-
+        # Preserve MCP content blocks, including resource links and embedded resources.
+        content_items = [
+            item.model_dump(mode="json", by_alias=True, exclude_none=True)
+            for item in response.content
+        ]
         result = {
-            "metadata": getattr(response, "metadata", {}),
+            "metadata": getattr(response, "meta", None) or {},
             "content_items": content_items,
+            "is_error": bool(response.isError),
+            "structured_content": getattr(response, "structuredContent", None),
         }
         return result
 

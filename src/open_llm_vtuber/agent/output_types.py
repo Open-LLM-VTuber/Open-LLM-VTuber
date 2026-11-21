@@ -8,6 +8,7 @@ class Actions:
     """Represents actions that can be performed alongside text output"""
 
     expressions: Optional[List[str] | List[int]] = None
+    motions: Optional[List[dict]] = None
     pictures: Optional[List[str]] = None
     sounds: Optional[List[str]] = None
 

@@ -76,3 +76,28 @@ private/
 mcp_servers.json
 
 .vscode/
+# Private local books
+/media/books/*
+!/media/books/README.md
+
+# Local media library
+/media/music/*
+!/media/music/.gitkeep
+/media/videos/*
+!/media/videos/.gitkeep
+
+infra/.env
+memory/
+live_memory/
+live_history/
+
+# Local extension configuration and imported images
+/config/extensions.json
+/media/images/*
+
+# Computer/browser permissions and private browser sessions
+/config/control.json
+/config/browser-profile/
+
+# Locally cloned third-party development dependency
+/blivedm/

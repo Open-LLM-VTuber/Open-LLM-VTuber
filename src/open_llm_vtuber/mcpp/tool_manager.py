@@ -25,6 +25,39 @@ class ToolManager:
             formatted_tools_claude or []
         )
 
+        from .. import bookshelf, stage_tool, memory_store
+
+        for name, tool in (("local_bookshelf", bookshelf), ("local_stage", stage_tool), ("local_memory", memory_store)):
+            description, schema = tool.DESCRIPTION, tool.SCHEMA
+            self.tools[name] = FormattedTool(
+                input_schema=schema, related_server="local", description=description
+            )
+            self._formatted_tools_openai.append(
+                {
+                    "type": "function",
+                    "function": {
+                        "name": name,
+                        "description": description,
+                        "parameters": schema,
+                    },
+                }
+            )
+            self._formatted_tools_claude.append(
+                {
+                    "name": name,
+                    "description": description,
+                    "input_schema": schema,
+                }
+            )
+
+        from ..computer_use.tools import DEFINITIONS
+        for name, (_, model, description) in DEFINITIONS.items():
+            schema = model.model_json_schema()
+            self.tools[name] = FormattedTool(input_schema=schema, related_server="local", description=description)
+            self._formatted_tools_openai.append({"type": "function", "function": {
+                "name": name, "description": description, "parameters": schema}})
+            self._formatted_tools_claude.append({"name": name, "description": description, "input_schema": schema})
+
         logger.info(
             f"ToolManager initialized with {len(self._formatted_tools_openai)} OpenAI tools and {len(self._formatted_tools_claude)} Claude tools."
         )

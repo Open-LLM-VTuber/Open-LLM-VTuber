@@ -18,19 +18,14 @@ class ServerRegistry:
 
     def __init__(self, config_path: str | Path = DEFAULT_CONFIG_PATH) -> None:
         """Initialize the MCP Server Manager."""
-        try:
+        config_path = Path(config_path)
+        if config_path.exists():
             config_path = validate_file(config_path, ".json")
-        except ValueError:
-            logger.error(
-                f"MCPSR: File '{config_path}' does not exist, or is not a json file."
-            )
-            raise ValueError(
-                f"MCPSR: File '{config_path}' does not exist, or is not a json file."
-            )
-
-        self.config: Dict[str, Union[str, dict]] = json.loads(
-            config_path.read_text(encoding="utf-8")
-        )
+            self.config = json.loads(config_path.read_text(encoding="utf-8"))
+        elif str(config_path) == DEFAULT_CONFIG_PATH:
+            self.config = {"mcp_servers": {}}
+        else:
+            raise ValueError(f"MCP config does not exist: {config_path}")
 
         self.servers: Dict[str, MCPServer] = {}
 
@@ -47,7 +42,11 @@ class ServerRegistry:
 
     def load_servers(self) -> None:
         """Load servers from the config file."""
-        servers_config: Dict[str, Dict[str, Any]] = self.config.get("mcp_servers", {})
+        servers_config: Dict[str, Dict[str, Any]] = dict(self.config.get("mcp_servers", {}))
+        from ..extensions import managed_servers
+        from ..broadcast import LIVE
+        if not LIVE:
+            servers_config.update(managed_servers())
         if servers_config == {}:
             logger.warning("MCPSR: No servers found in the config file.")
             return

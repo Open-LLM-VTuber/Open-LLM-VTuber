@@ -1,10 +1,30 @@
-from typing import Type
+from importlib import import_module
+from importlib.util import find_spec
+import re
 from .tts_interface import TTSInterface
 
 
 class TTSFactory:
     @staticmethod
-    def get_tts_engine(engine_type, **kwargs) -> Type[TTSInterface]:
+    def module_name(engine_type: str) -> str:
+        if not re.fullmatch(r"[a-z][a-z0-9_]*_tts", engine_type):
+            raise ValueError(f"Invalid TTS engine name: {engine_type}")
+        module = f"{__package__}.{engine_type}"
+        if find_spec(module) is None:
+            raise ValueError(f"Unknown TTS engine: {engine_type}")
+        return module
+
+    @staticmethod
+    def get_tts_engine(engine_type: str, **kwargs) -> TTSInterface:
+        try:
+            return TTSFactory._create_builtin(engine_type, **kwargs)
+        except ModuleNotFoundError as exc:
+            raise ValueError(
+                f"TTS engine {engine_type} is missing a dependency: {exc.name}"
+            ) from exc
+
+    @staticmethod
+    def _create_builtin(engine_type: str, **kwargs) -> TTSInterface:
         if engine_type == "azure_tts":
             from .azure_tts import TTSEngine as AzureTTSEngine
 
@@ -212,7 +232,13 @@ class TTSFactory:
                 use_cuda=kwargs.get("use_cuda"),
             )
         else:
-            raise ValueError(f"Unknown TTS engine type: {engine_type}")
+            module = import_module(TTSFactory.module_name(engine_type))
+            engine = getattr(module, "TTSEngine", None)
+            if not isinstance(engine, type) or not issubclass(engine, TTSInterface):
+                raise ValueError(
+                    f"{engine_type} must expose a TTSEngine implementing TTSInterface"
+                )
+            return engine(**kwargs)
 
 
 # Example usage:

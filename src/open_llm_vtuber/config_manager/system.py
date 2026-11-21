@@ -1,6 +1,6 @@
 # config_manager/system.py
 from pydantic import Field, model_validator
-from typing import Dict, ClassVar
+from typing import Dict, ClassVar, Literal
 from .i18n import I18nMixin, Description
 
 
@@ -8,6 +8,7 @@ class SystemConfig(I18nMixin):
     """System configuration settings."""
 
     conf_version: str = Field(..., alias="conf_version")
+    default_language: Literal["zh", "en"] = "zh"
     host: str = Field(..., alias="host")
     port: int = Field(..., alias="port")
     config_alts_dir: str = Field(..., alias="config_alts_dir")

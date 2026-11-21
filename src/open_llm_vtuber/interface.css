@@ -1,0 +1,76 @@
+/* Restrained neutral surfaces; retain the application's original controls. */
+.chakra-drawer__backdrop,.chakra-dialog__backdrop { background:rgba(0,0,0,.42)!important; }
+.chakra-drawer__content {
+  background:#18181b!important; color:#ededee!important;
+  width:min(520px,100vw)!important; max-width:520px!important;
+  border:0!important; border-left:1px solid #303034!important;
+  box-shadow:-8px 0 32px #0003!important;
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif;
+}
+.chakra-drawer__header { padding:24px!important; border-bottom:1px solid #2b2b30; }
+.chakra-drawer__title { font-size:18px!important; font-weight:600!important; letter-spacing:0; }
+.chakra-drawer__body { padding:20px 24px!important; scrollbar-width:thin; scrollbar-color:#46464d transparent; }
+.chakra-drawer__footer { padding:16px 24px!important; border-top:1px solid #2b2b30; gap:8px!important; }
+.chakra-drawer__closeTrigger { top:18px!important; right:18px!important; border-radius:6px!important; color:#a1a1aa!important; }
+.chakra-drawer__content [role=tablist] { gap:20px!important; padding:0!important; background:transparent!important; border:0!important; border-bottom:1px solid #303036!important; border-radius:0!important; overflow-x:auto; }
+.chakra-drawer__content [role=tab] { flex:none; padding:12px 0!important; white-space:nowrap; font-size:13px!important; font-weight:500; border-radius:0!important; color:#96969f!important; box-shadow:none!important; background:transparent!important; border-bottom:2px solid transparent; }
+.chakra-drawer__content [role=tab][aria-selected=true] { color:#f4f4f5!important; border-bottom-color:#f4f4f5; }
+.chakra-drawer__content [role=tabpanel] { padding-top:20px!important; }
+.chakra-drawer__content [role=tabpanel] > * { max-width:100%!important; }
+.chakra-drawer__content .chakra-field__root { padding:10px 0; gap:20px!important; align-items:center; }
+.chakra-drawer__content .chakra-field__label { white-space:normal!important; line-height:1.5; font-size:13px!important; color:#d4d4d8!important; flex-shrink:1; }
+.chakra-drawer__content input:not([type=checkbox]):not([type=radio]),.chakra-drawer__content select,.chakra-drawer__content textarea,.chakra-drawer__content .chakra-select__trigger { background:#222225!important; border:1px solid #3b3b41!important; border-radius:6px!important; min-height:36px; font-size:13px!important; color:#ededee!important; box-shadow:none!important; }
+.chakra-drawer__content .chakra-number-input__root { max-width:140px; }
+.chakra-drawer__footer button { min-height:36px; border-radius:6px!important; padding-inline:18px!important; font-size:13px!important; }
+.chakra-menu__content,.chakra-select__content,.chakra-popover__content { background:#232326!important; border:1px solid #3b3b41!important; border-radius:8px!important; padding:4px!important; box-shadow:0 8px 24px #0004!important; color:#ededee!important; }
+.chakra-menu__item,.chakra-select__item { border-radius:4px!important; padding:8px 10px!important; }
+.chakra-menu__item[data-highlighted],.chakra-select__item[data-highlighted] { background:#343438!important; }
+button:focus-visible,[role=tab]:focus-visible { outline:2px solid #a1a1aa!important; outline-offset:3px; }
+@media(max-width:600px) { .chakra-drawer__body { padding:18px!important; } .chakra-drawer__header { padding:20px 18px!important; } .chakra-drawer__content [role=tablist] { gap:16px!important; } }
+/* Form geometry: vertical fields for text/select, inline rows for toggles. */
+.chakra-drawer__content *, .chakra-select__content * { box-sizing:border-box; }
+.chakra-drawer__content .chakra-stack { width:100%!important; max-width:100%!important; gap:22px!important; align-items:stretch!important; }
+.chakra-drawer__content .chakra-field__root { display:flex!important; flex-direction:column!important; align-items:stretch!important; width:100%!important; min-width:0!important; gap:8px!important; padding:0!important; }
+.chakra-drawer__content .chakra-field__label { display:flex!important; justify-content:flex-start!important; text-align:left!important; width:auto!important; margin:0!important; align-self:flex-start!important; }
+.chakra-drawer__content .chakra-field__label p { margin:0!important; font-size:13px!important; }
+.chakra-drawer__content .chakra-field__root:has(.chakra-switch__root),
+.chakra-drawer__content .chakra-field__root:has(.chakra-number-input__root) { flex-direction:row!important; justify-content:space-between!important; align-items:center!important; min-height:36px; gap:16px!important; }
+.chakra-drawer__content .chakra-switch__root { flex:none!important; width:auto!important; }
+.chakra-drawer__content .chakra-select__root { width:100%!important; min-width:0!important; background:transparent!important; }
+.chakra-drawer__content .chakra-select__trigger { width:100%!important; min-width:0!important; padding:0 12px!important; height:38px!important; text-align:left!important; }
+.chakra-drawer__content .chakra-select__valueText { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.chakra-drawer__content input:not([type=checkbox]):not([type=radio]):not([type=hidden]),
+.chakra-drawer__content textarea { width:100%!important; min-width:0!important; padding:8px 12px!important; }
+.chakra-drawer__content input[type=hidden] { display:none!important; }
+.chakra-drawer__content [role=tabpanel] { min-width:0; overflow-x:clip; padding-top:24px!important; }
+.chakra-drawer__body { overflow-x:hidden!important; }
+.chakra-select__positioner { max-width:calc(100vw - 32px)!important; }
+.chakra-select__content { min-width:0!important; max-width:calc(100vw - 32px)!important; font-size:13px!important; }
+.chakra-select__item { overflow-wrap:anywhere; }
+/* Chakra's drawer positioner may retain the original 440px constraint. */
+.chakra-drawer__positioner { width:min(520px,100vw)!important; max-width:100vw!important; }
+.chakra-drawer__content { min-width:0!important; width:100%!important; max-width:100%!important; }
+.chakra-drawer__content > *, .chakra-drawer__body > *, .chakra-drawer__content .chakra-tabs__root { min-width:0!important; width:100%!important; max-width:100%!important; }
+.chakra-drawer__content .chakra-tabs__content { width:100%!important; min-width:0!important; }
+.chakra-drawer__content .chakra-field__root > * { min-width:0!important; max-width:100%!important; }
+.chakra-drawer__content .chakra-switch__control { width:36px!important; height:20px!important; min-width:36px!important; }
+.chakra-drawer__footer { justify-content:flex-end!important; }
+.chakra-drawer__footer button:first-child { background:transparent!important; color:#c4c4cb!important; border:1px solid #3b3b41!important; }
+
+/* Subtitles remain a compact overlay even for lists and long replies. */
+.vt-subtitle {
+  box-sizing:border-box!important; min-width:0!important;
+  width:fit-content!important; max-width:min(760px,90%)!important;
+  padding:10px 18px!important; border-radius:8px!important;
+  background:rgba(0,0,0,.65)!important;
+  max-height:104px!important; overflow-y:auto!important;
+  scrollbar-width:thin; scrollbar-color:#ffffff40 transparent;
+}
+.vt-subtitle > p {
+  margin:0!important; font-size:18px!important; line-height:1.55!important;
+  font-weight:400!important; white-space:normal!important;
+  overflow-wrap:anywhere!important; text-align:center!important;
+}
+@media(max-width:600px) { .vt-subtitle > p { font-size:16px!important; } }
+/* Keep the subtitle background width stable between speech cues. */
+.vt-subtitle { width:760px!important; max-width:90%!important; min-height:48px; }

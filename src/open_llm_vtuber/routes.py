@@ -29,6 +29,8 @@ def init_client_ws_route(default_context_cache: ServiceContext) -> APIRouter:
     @router.websocket("/client-ws")
     async def websocket_endpoint(websocket: WebSocket):
         """WebSocket endpoint for client connections"""
+        from .computer_use.access import LOCAL_CONTROL, local_request
+        control_token = LOCAL_CONTROL.set(local_request(websocket, require_origin=True))
         await websocket.accept()
         client_uid = str(uuid4())
 
@@ -41,6 +43,8 @@ def init_client_ws_route(default_context_cache: ServiceContext) -> APIRouter:
             logger.error(f"Error in WebSocket connection: {e}")
             await ws_handler.handle_disconnect(client_uid)
             raise
+        finally:
+            LOCAL_CONTROL.reset(control_token)
 
     return router
 

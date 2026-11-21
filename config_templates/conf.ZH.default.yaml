@@ -6,6 +6,7 @@
 
 # 系统设置：与服务器初始化相关的设置
 system_config:
+  default_language: 'zh' # zh or en
   conf_version: 'v1.2.1' # 配置文件版本
   host: 'localhost' # 服务器监听的地址，'0.0.0.0' 表示监听所有网络接口；如果需要安全，可以使用 '127.0.0.1'（仅本地访问）
   port: 12393 # 服务器监听的端口
@@ -52,7 +53,8 @@ character_config:
 
     agent_settings:
       basic_memory_agent:
-        # 基础 AI 代理，没什么特别的。
+        max_tool_rounds: 8 # LangGraph tool execution limit per conversation turn
+        # 基于 LangChain 模型和 LangGraph 对话/工具调度的代理。
         # 从 llm_config 中选择一个 llm 提供商
         # 并在相应的字段中设置所需的参数
         # 例如：

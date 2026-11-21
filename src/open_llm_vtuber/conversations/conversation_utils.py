@@ -1,4 +1,5 @@
 import asyncio
+from ..broadcast import blocked, LIVE
 import re
 from typing import Optional, Union, Any, List, Dict
 import numpy as np
@@ -52,6 +53,8 @@ async def process_agent_output(
     translate_engine: Optional[Any] = None,
 ) -> str:
     """Process agent output with character information and optional translation"""
+    if blocked(output.display_text.text) or (isinstance(output, AudioOutput) and LIVE):
+        return ""
     output.display_text.name = character_config.character_name
     output.display_text.avatar = character_config.avatar
 
@@ -101,6 +104,8 @@ async def handle_sentence_output(
         else:
             logger.debug("🚫 No translation engine available. Skipping translation.")
 
+        if blocked(display_text.text + " " + tts_text):
+            continue
         full_response += display_text.text
         await tts_manager.speak(
             tts_text=tts_text,

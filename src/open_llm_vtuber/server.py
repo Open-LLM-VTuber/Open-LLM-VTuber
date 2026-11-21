@@ -8,6 +8,9 @@ It uses FastAPI for the server and Starlette for static file serving.
 
 import os
 import shutil
+import re
+from pathlib import Path
+from fastapi.responses import HTMLResponse, FileResponse
 
 from fastapi import FastAPI
 from starlette.middleware.cors import CORSMiddleware
@@ -15,6 +18,10 @@ from starlette.responses import Response
 from starlette.staticfiles import StaticFiles as StarletteStaticFiles
 
 from .routes import init_client_ws_route, init_webtool_routes, init_proxy_route
+from .book_reader import init_book_routes
+from .media_library import init_media_routes
+from .extensions import init_extension_routes
+from .computer_use.service import CONTROL, init_control_routes
 from .service_context import ServiceContext
 from .config_manager.utils import Config
 
@@ -108,6 +115,13 @@ class WebSocketServer:
                 init_proxy_route(server_url=server_url),
             )
 
+        self.app.include_router(init_book_routes(self.default_context_cache))
+        self.app.include_router(init_extension_routes(self.default_context_cache))
+        self.app.include_router(init_control_routes())
+        self.app.add_event_handler("shutdown", CONTROL.close)
+
+        self.app.include_router(init_media_routes(self.default_context_cache))
+
         # Mount cache directory first (to ensure audio file access)
         if not os.path.exists("cache"):
             os.makedirs("cache")
@@ -141,10 +155,69 @@ class WebSocketServer:
             name="web_tool",
         )
 
+        @self.app.get("/api/broadcast/status")
+        async def broadcast_status():
+            from .broadcast import LIVE, STOP
+            return {"enabled": LIVE, "stopped": LIVE and STOP.exists()}
+
+        @self.app.get("/subtitle-sync.js")
+        async def subtitle_sync_script():
+            return FileResponse(Path(__file__).with_name("subtitle_sync.js"), media_type="application/javascript")
+
+        @self.app.get("/interface.css")
+        async def interface_styles():
+            return FileResponse(Path(__file__).with_name("interface.css"), media_type="text/css")
+
+        @self.app.get("/live2d-actions.js")
+        async def live2d_actions_script():
+            return FileResponse(
+                Path(__file__).with_name("live2d_actions.js"),
+                media_type="application/javascript",
+            )
+
+        @self.app.get("/live2d-stage.js")
+        async def live2d_stage_script():
+            return FileResponse(
+                Path(__file__).with_name("live2d_stage.js"),
+                media_type="application/javascript",
+            )
+
+        @self.app.get("/")
+        @self.app.get("/index.html")
+        async def frontend_index():
+            frontend_root = Path("frontend/dist/web") if Path("frontend/dist/web/index.html").is_file() else Path("frontend")
+            html = (frontend_root / "index.html").read_text(encoding="utf-8")
+            # Bundled filenames stay unchanged for local patches; invalidate browser caches.
+            def version_asset(match):
+                asset = frontend_root / match.group(2)
+                version = asset.stat().st_mtime_ns if asset.is_file() else 0
+                return f'{match.group(1)}"./{match.group(2)}?v={version}"'
+            html = re.sub(r'(src=|href=)"\./(assets/[^"?]+)"', version_asset, html)
+            # Source HTML includes adapters for Vite dev; inject them once in production.
+            html = re.sub(r'<script src="/(?:subtitle-sync|live2d-stage|live2d-actions)\.js"></script>', '', html)
+            html = re.sub(r'<link rel="stylesheet" href="/interface\.css">', '', html)
+            language = self.config.system_config.default_language
+            language_script = (
+                f'<script>(()=>{{const language="{language}";'
+                "document.documentElement.lang=language;"
+                'try{const key="vtuberDefaultLanguage";'
+                'if(localStorage.getItem(key)!==language || !localStorage.getItem("i18nextLng"))'
+                'localStorage.setItem("i18nextLng",language);'
+                "localStorage.setItem(key,language);"
+                "}catch{}})();</script>"
+            )
+            html = html.replace(
+                "<head>",
+                '<head><script src="/subtitle-sync.js"></script><link rel="stylesheet" href="/interface.css?v=3">' + language_script + '<script src="/live2d-stage.js?v=4"></script>'
+                '<script src="/live2d-actions.js"></script>',
+                1,
+            )
+            return HTMLResponse(html, headers={"Cache-Control": "no-store"})
+
         # Mount main frontend last (as catch-all)
         self.app.mount(
             "/",
-            CORSStaticFiles(directory="frontend", html=True),
+            CORSStaticFiles(directory="frontend/dist/web" if Path("frontend/dist/web/index.html").is_file() else "frontend", html=True),
             name="frontend",
         )
 

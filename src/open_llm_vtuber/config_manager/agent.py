@@ -29,12 +29,18 @@ class BasicMemoryAgentConfig(I18nMixin, BaseModel):
         "mistral_llm",
     ] = Field(..., alias="llm_provider")
 
+    max_tool_rounds: int = Field(8, ge=1, le=100)
+
     faster_first_response: Optional[bool] = Field(True, alias="faster_first_response")
     segment_method: Literal["regex", "pysbd"] = Field("pysbd", alias="segment_method")
     use_mcpp: Optional[bool] = Field(False, alias="use_mcpp")
     mcp_enabled_servers: Optional[List[str]] = Field([], alias="mcp_enabled_servers")
 
     DESCRIPTIONS: ClassVar[Dict[str, Description]] = {
+        "max_tool_rounds": Description(
+            en="Maximum tool execution rounds per turn",
+            zh="每轮对话允许的最大工具执行轮数",
+        ),
         "llm_provider": Description(
             en="LLM provider to use for this agent",
             zh="Basic Memory Agent 智能体使用的大语言模型选项",

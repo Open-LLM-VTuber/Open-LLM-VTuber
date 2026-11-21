@@ -45,7 +45,7 @@ class AgentFactory:
                 raise ValueError("LLM provider not specified for basic memory agent")
 
             # Get the LLM config for this provider
-            llm_config: dict = llm_configs.get(llm_provider)
+            llm_config: dict = dict(llm_configs.get(llm_provider) or {})
             interrupt_method: Literal["system", "user"] = llm_config.pop(
                 "interrupt_method", "user"
             )
@@ -69,6 +69,7 @@ class AgentFactory:
 
             # Create the agent with the LLM and live2d_model
             return BasicMemoryAgent(
+                max_tool_rounds=basic_memory_settings.get("max_tool_rounds", 8),
                 llm=llm,
                 system=system_prompt,
                 live2d_model=live2d_model,

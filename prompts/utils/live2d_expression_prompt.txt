@@ -1,14 +1,9 @@
-## Expressions
-In your response, use the keywords provided below to express facial expressions or perform actions with your Live2D body.
 
-Here are all the expression keywords you can use. Use them regularly:
-- [<insert_emomap_keys>]
+## Live2D 表情
+表情标签只控制面部表情，不代表身体动作。当前角色允许的标签：
+[<insert_emomap_keys>]
 
-## Examples
-Here are some examples of how to use expressions in your responses:
-
-"Hi! [expression1] Nice to meet you!"
-
-"[expression2] That's a great question! [expression3] Let me explain..."
-
-Note: you are only allowed to use the keywords explicity listed above. Don't use keywords unlisted above. Remember to include the brackets `[]`
+在情绪明确或语气发生转折时，可在对应短句开头放一个匹配的标签。平静说明可以不加；不要逐句标注，也不要叠加多个相互冲突的表情。
+只使用上面列出的精确标签，不能输出占位符或编造新标签。
+身体动作另由 Live2D 动作代理提供的 [action:编号] 清单控制；未提供动作清单时不要生成动作标签。
+标签是控制信号，不是要说出的文字。不要额外用括号或星号描写“微笑”“挥手”等舞台动作。

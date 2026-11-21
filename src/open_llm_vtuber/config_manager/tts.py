@@ -1,5 +1,8 @@
 # config_manager/tts.py
-from pydantic import ValidationInfo, Field, model_validator
+import os
+
+from pydantic import BaseModel, ConfigDict, Field, model_validator
+from ..tts.tts_factory import TTSFactory
 from typing import Literal, Optional, Dict, ClassVar
 from .i18n import I18nMixin, Description
 
@@ -683,26 +686,9 @@ class CartesiaTTSConfig(I18nMixin):
 class TTSConfig(I18nMixin):
     """Configuration for Text-to-Speech."""
 
-    tts_model: Literal[
-        "azure_tts",
-        "bark_tts",
-        "edge_tts",
-        "cosyvoice_tts",
-        "cosyvoice2_tts",
-        "melo_tts",
-        "coqui_tts",
-        "x_tts",
-        "gpt_sovits_tts",
-        "fish_api_tts",
-        "sherpa_onnx_tts",
-        "siliconflow_tts",
-        "openai_tts",  # Add openai_tts here
-        "spark_tts",
-        "minimax_tts",
-        "elevenlabs_tts",
-        "cartesia_tts",
-        "piper_tts",
-    ] = Field(..., alias="tts_model")
+    model_config = ConfigDict(extra="allow")
+
+    tts_model: str = Field(..., alias="tts_model")
 
     azure_tts: Optional[AzureTTSConfig] = Field(None, alias="azure_tts")
     bark_tts: Optional[BarkTTSConfig] = Field(None, alias="bark_tts")
@@ -771,46 +757,32 @@ class TTSConfig(I18nMixin):
         "piper_tts": Description(en="Configuration for Piper TTS", zh="Piper TTS 配置"),
     }
 
+    @model_validator(mode="before")
+    @classmethod
+    def select_engine(cls, data):
+        if isinstance(data, dict) and (engine := os.getenv("VTUBER_TTS_ENGINE")):
+            return {**data, "tts_model": engine}
+        return data
+
     @model_validator(mode="after")
-    def check_tts_config(cls, values: "TTSConfig", info: ValidationInfo):
-        tts_model = values.tts_model
+    def check_tts_config(self):
+        TTSFactory.module_name(self.tts_model)
+        self.engine_options()
+        return self
 
-        # Only validate the selected TTS model
-        if tts_model == "azure_tts" and values.azure_tts is not None:
-            values.azure_tts.model_validate(values.azure_tts.model_dump())
-        elif tts_model == "bark_tts" and values.bark_tts is not None:
-            values.bark_tts.model_validate(values.bark_tts.model_dump())
-        elif tts_model == "edge_tts" and values.edge_tts is not None:
-            values.edge_tts.model_validate(values.edge_tts.model_dump())
-        elif tts_model == "cosyvoice_tts" and values.cosyvoice_tts is not None:
-            values.cosyvoice_tts.model_validate(values.cosyvoice_tts.model_dump())
-        elif tts_model == "cosyvoice2_tts" and values.cosyvoice2_tts is not None:
-            values.cosyvoice2_tts.model_validate(values.cosyvoice2_tts.model_dump())
-        elif tts_model == "melo_tts" and values.melo_tts is not None:
-            values.melo_tts.model_validate(values.melo_tts.model_dump())
-        elif tts_model == "coqui_tts" and values.coqui_tts is not None:
-            values.coqui_tts.model_validate(values.coqui_tts.model_dump())
-        elif tts_model == "x_tts" and values.x_tts is not None:
-            values.x_tts.model_validate(values.x_tts.model_dump())
-        elif tts_model == "gpt_sovits_tts" and values.gpt_sovits_tts is not None:
-            values.gpt_sovits_tts.model_validate(values.gpt_sovits_tts.model_dump())
-        elif tts_model == "fish_api_tts" and values.fish_api_tts is not None:
-            values.fish_api_tts.model_validate(values.fish_api_tts.model_dump())
-        elif tts_model == "sherpa_onnx_tts" and values.sherpa_onnx_tts is not None:
-            values.sherpa_onnx_tts.model_validate(values.sherpa_onnx_tts.model_dump())
-        elif tts_model == "siliconflow_tts" and values.siliconflow_tts is not None:
-            values.siliconflow_tts.model_validate(values.siliconflow_tts.model_dump())
-        elif tts_model == "openai_tts" and values.openai_tts is not None:
-            values.openai_tts.model_validate(values.openai_tts.model_dump())
-        elif tts_model == "spark_tts" and values.spark_tts is not None:
-            values.spark_tts.model_validate(values.spark_tts.model_dump())
-        elif tts_model == "minimax_tts" and values.minimax_tts is not None:
-            values.minimax_tts.model_validate(values.minimax_tts.model_dump())
-        elif tts_model == "elevenlabs_tts" and values.elevenlabs_tts is not None:
-            values.elevenlabs_tts.model_validate(values.elevenlabs_tts.model_dump())
-        elif tts_model == "cartesia_tts" and values.cartesia_tts is not None:
-            values.cartesia_tts.model_validate(values.cartesia_tts.model_dump())
-
-        elif tts_model == "piper_tts" and values.piper_tts is not None:
-            values.piper_tts.model_validate(values.piper_tts.model_dump())
-        return values
+    def engine_options(self) -> dict:
+        options = getattr(self, self.tts_model, None)
+        if isinstance(options, BaseModel):
+            return options.model_dump()
+        if options is None:
+            if field := type(self).model_fields.get(self.tts_model):
+                config_type = next(
+                    option
+                    for option in field.annotation.__args__
+                    if option is not type(None)
+                )
+                return config_type.model_validate({}).model_dump()
+            return {}
+        if not isinstance(options, dict):
+            raise ValueError(f"{self.tts_model} options must be a mapping")
+        return options

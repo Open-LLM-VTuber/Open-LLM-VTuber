@@ -48,6 +48,9 @@ class Live2dModel:
         self.emo_map: dict = {
             k.lower(): v for k, v in self.model_info["emotionMap"].items()
         }
+        from .agent.live2d_agent import Live2DActionAgent
+
+        self.action_agent = Live2DActionAgent(self.model_info)
         self.emo_str: str = " ".join([f"[{key}]," for key in self.emo_map.keys()])
         # emo_str is a string of the keys in the emoMap dictionary. The keys are enclosed in square brackets.
         # example: `"[fear], [anger], [disgust], [sadness], [joy], [neutral], [surprise]"`

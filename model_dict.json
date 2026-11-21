@@ -26,5 +26,84 @@
                 "": 1
             }
         }
+    },
+    {
+        "name": "pink_sakura",
+        "description": "和樱",
+        "url": "/live2d-models/pink_sakura/runtime/PinkSakura.model3.json",
+        "kScale": 0.5,
+        "initialXshift": 0,
+        "initialYshift": 0,
+        "kXOffset": 1150,
+        "idleMotionGroupName": "Idle",
+        "emotionMap": {},
+        "actionAgent": {
+            "traits": "温和细致的花艺师，经营一间街角花店，收集顾客留下的手写故事。常用短句，喜欢用鲜花比喻，有时会忘记给自己留休息时间。",
+            "motionDescriptions": {
+                "Blink:0": "轻眨眼",
+                "Nod:0": "点头，表示认同或理解",
+                "Shake:0": "摇头，表示否定"
+            }
+        }
+    },
+    {
+        "name": "xing_ling",
+        "description": "星铃",
+        "url": "/live2d-models/xing_ling/runtime/XingLing.model3.json",
+        "kScale": 0.5,
+        "initialXshift": 0,
+        "initialYshift": 0,
+        "kXOffset": 1150,
+        "idleMotionGroupName": "Idle",
+        "emotionMap": {
+            "joy": 1,
+            "shy": 2
+        },
+        "actionAgent": {
+            "traits": "热情的业余观星者，也是社区天文电台的外景主持。喜欢把复杂现象讲清楚，偶尔因为太兴奋说得太快。",
+            "motionDescriptions": {
+                "Blink:0": "轻眨眼",
+                "Nod:0": "点头，表示认同或理解",
+                "Shake:0": "摇头，表示否定",
+                "Run:0": "跑动表演",
+                "Jump:0": "跳跃，适合庆祝",
+                "Cute:0": "俏皮卖萌"
+            }
+        }
+    },
+    {
+        "name": "yue_li",
+        "description": "月璃",
+        "url": "/live2d-models/yue_li/runtime/YueLi.model3.json",
+        "kScale": 0.5,
+        "initialXshift": 0,
+        "initialYshift": 0,
+        "kXOffset": 1150,
+        "idleMotionGroupName": "Idle",
+        "emotionMap": {
+            "joy": 0,
+            "surprise": 1,
+            "serious": 2,
+            "soft": 3
+        },
+        "actionAgent": {
+            "traits": "开夜间电台的公主，擅长在正式礼仪与私下幽默之间切换。喜欢读来信、讨论书籍，也愿意听不同意见。",
+            "motionDescriptions": {
+                "Blink:0": "轻眨眼",
+                "Nod:0": "点头，表示认同或理解",
+                "Shake:0": "摇头，表示否定",
+                "Run:0": "跑动表演",
+                "Jump:0": "跳跃，适合庆祝",
+                "Cute:0": "俏皮卖萌",
+                "Wave:0": "挥手问候或告别",
+                "Dance:0": "跳舞表演",
+                "Bow:0": "行礼致意",
+                "Laugh:0": "笑",
+                "Hair:0": "头发摆动表演",
+                "Talk:0": "说话动作",
+                "Look:0": "转头看",
+                "Cheer:0": "欢呼庆祝"
+            }
+        }
     }
 ]

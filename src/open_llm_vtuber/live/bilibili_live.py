@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import http.cookies
 import random
@@ -28,6 +30,7 @@ except ImportError as e:
     logger.warning(f"blivedm import failed: {e}")
     logger.warning("BiliBili live functionality will not be available.")
     BLIVEDM_AVAILABLE = False
+    BLIVEDM_IMPORT_ERROR = e
 
 
 class BiliBiliLivePlatform(LivePlatformInterface):
@@ -46,8 +49,10 @@ class BiliBiliLivePlatform(LivePlatformInterface):
         """
         if not BLIVEDM_AVAILABLE:
             raise ImportError(
-                "blivedm library is required for BiliBili live functionality"
-            )
+                "blivedm library and its dependencies are required for BiliBili live "
+                "functionality. Keep the blivedm checkout in the project root and run "
+                "`uv sync --extra bilibili`."
+            ) from BLIVEDM_IMPORT_ERROR
 
         self._room_ids = room_ids
         self._sessdata = sessdata
@@ -259,7 +264,7 @@ class BiliBiliLivePlatform(LivePlatformInterface):
             except Exception as e:
                 logger.error(f"Error in message handler: {e}")
 
-    class VtuberHandler(BaseHandler):
+    class VtuberHandler(BaseHandler if BLIVEDM_AVAILABLE else object):
         """
         Handler for BiliBili Live danmaku messages.
         """

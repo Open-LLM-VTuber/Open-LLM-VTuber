@@ -1,0 +1,15 @@
+<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>书籍朗读</title>
+<style>body{max-width:780px;margin:50px auto;padding:20px;font:18px/1.8 system-ui;background:#f6f3ed;color:#292623}button,input{font:inherit;margin:6px;padding:8px}#text{padding:24px;background:white;border-radius:12px;min-height:160px}progress{width:100%}</style>
+<h1>书籍朗读</h1><p>上传 PDF、EPUB 或 TXT，使用当前角色配置的声音逐段朗读。扫描版 PDF 请先进行 OCR。</p>
+<input id="file" type="file" accept=".pdf,.epub,.txt"><p id="title"></p>
+<button id="play">开始 / 继续</button><button id="pause">暂停</button><button id="stop">停止</button>
+<label>语速 <input id="rate" type="number" min="0.5" max="2" step="0.1" value="1"></label>
+<progress id="progress" value="0" max="1"></progress><p id="status">请选择书籍（最大 30 MB）</p><div id="text"></div>
+<script>
+const $=id=>document.getElementById(id);let chunks=[],index=0,running=false,audio=null,generation=0;
+function stop(){running=false;generation++;if(audio){audio.pause();audio.src='';audio=null}}
+$('file').onchange=async()=>{stop();chunks=[];index=0;const f=$('file').files[0];if(!f)return;const form=new FormData();form.append('file',f);$('status').textContent='正在读取…';try{const r=await fetch('/api/reader/import',{method:'POST',body:form});const d=await r.json();if(!r.ok)throw Error(d.detail);chunks=d.chunks;$('title').textContent=d.title;$('progress').max=chunks.length;$('progress').value=0;$('text').textContent=chunks[0];$('status').textContent=`共 ${chunks.length} 段，点击开始朗读`;}catch(e){$('status').textContent=e.message}};
+$('play').onclick=async()=>{if(running||!chunks.length)return;running=true;const token=generation;try{while(running&&index<chunks.length){$('text').textContent=chunks[index];$('status').textContent=`正在朗读 ${index+1} / ${chunks.length}`;if(!audio){const r=await fetch('/api/reader/speech',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:chunks[index]})});if(!r.ok)throw Error('语音合成失败，请检查 TTS 配置');const blob=await r.blob();if(token!==generation)return;audio=new Audio(URL.createObjectURL(blob));}audio.playbackRate=Number($('rate').value)||1;const current=audio;const ended=new Promise((resolve,reject)=>{current.onended=resolve;current.onerror=()=>reject(Error('音频播放失败'));current.onpause=()=>{if(!current.ended)resolve()}});await current.play();await ended;if(token!==generation||!running)return;URL.revokeObjectURL(current.src);audio=null;index++;$('progress').value=index;}running=false;if(index===chunks.length){$('status').textContent='朗读完成';index=0;}}catch(e){running=false;$('status').textContent=e.message}};
+$('pause').onclick=()=>{running=false;if(audio)audio.pause();$('status').textContent='已暂停'};
+$('stop').onclick=()=>{stop();index=0;$('progress').value=0;$('status').textContent='已停止，继续将从头朗读'};
+</script></html>
